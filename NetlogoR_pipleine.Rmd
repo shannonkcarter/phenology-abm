@@ -1,0 +1,75 @@
+---
+title: "Netlogo to R Pipeline"
+author: "Shannon Carter"
+date: "March 11, 2019"
+output: html_document
+---
+
+Working on optimizing the pipeline between Netlogo behavior space data and R. Behavior spece data comes in a wonky format, and the goal is to do as much of the tidying in R (vs. on spreadsheet) as possible.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+## Set working directory and clear memory
+setwd("C:\\Users\\Shannon\\Desktop\\GitHub Repos\\phenology-abm")
+rm(list = ls(all = T))
+
+## Load required packages
+library(tidyverse)
+library(reshape2)
+library(RColorBrewer)
+library(lme4)
+#library(RNetLogo)    # maybe worthwhile looking into this, so far can't figure it out
+
+## Load universal plotting elements
+mytheme <- theme(panel.background = element_blank(),
+                 panel.grid.minor = element_blank(), 
+                 panel.grid.major = element_blank(),
+                 axis.text  = element_text(size = rel(1.3), colour = "black"),
+                 axis.title = element_text(size = rel(2.0)),
+                 axis.line  = element_line(colour = "black"))
+
+```
+
+When the raw data is exported as a spreadsheet, it comes in a really gnarly format. R can't read it because it's not even close to rectangular, big header, mix of space delimited and bracket delimited. It's a mess.
+```{r load spreadsheet data}
+
+test <- read.csv("bs1.csv", header = T)
+
+```
+
+So be sure you export as a table. 
+```{r load table data}
+
+test_table <- read.table("bs1_table.csv",
+                         header = T,
+                         sep = ',',
+                         skip = 6,         # 6 header rows we don't need
+                         quote = "\"",
+                         fill = T)         # add blank fields if rows have unequal length
+head(test_table)  # [1:11,] are parameter values (some consistent across all, some representing trts)
+str(test_table)   # [13:16,] are the output we designated
+
+```
+
+Now, we can drop some columns that are the same across all model runs
+```{r}
+# we can select and rename at the same time since we're renaming every variable we need
+test_table <- test_table %>% 
+  select(n_fish = n.fishes,
+         n_dfly = n.dflies,
+         sync_dfly = var.hatch.dflies,   
+         mean_dfly = mean.hatch.dflies, 
+         surv_dfly = n.meta.dflies, 
+         surv_fish = n.meta.fishes, 
+         sizes_dfly = X.dfly.size.list..of.dflies, 
+         sizes_fish = X.fish.size.list..of.fishes)
+```
+
+The 'sizes' columns has a time series of size for each individual. Let's separate that. This warning is ok. The last individual ends with double closed bracket, so we're just deleting that extra bracket.
+```{r}
+test_table <- test_table %>% 
+  separate(sizes_dfly, into = as.character(paste("d_",c(1:test_table$n_dfly))), sep = "]") %>% 
+  separate(sizes_fish, into = as.character(paste("f_",c(1:test_table$n_fish))), sep = "]")
+```
+

@@ -541,7 +541,7 @@ mean-hatch-dflies
 mean-hatch-dflies
 0
 100
-22.0
+40.0
 1
 1
 NIL
@@ -1633,12 +1633,10 @@ NetLogo 6.0
       <value value="5"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="var-hatch-dflies">
-      <value value="1"/>
       <value value="5"/>
       <value value="10"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="mean-hatch-dflies">
-      <value value="10"/>
       <value value="25"/>
       <value value="40"/>
     </enumeratedValueSet>

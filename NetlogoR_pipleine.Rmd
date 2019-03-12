@@ -5,7 +5,7 @@ date: "March 11, 2019"
 output: html_document
 ---
 
-Working on optimizing the pipeline between Netlogo behavior space data and R. Behavior spece data comes in a wonky format, and the goal is to do as much of the tidying in R (vs. on spreadsheet) as possible.
+The goal here is to make a clean reproducible pipeline to transform Netlogo output into a tidy rectangular dataframe. Here, I import behavior space data (i.e., experiment results) from Netlogo to R. Netlogo's behavior space data comes in a wonky format, and the goal is to do as much of the tidying in R (vs. on spreadsheet) as possible. The data I've imported here does several 'runs' (multiple treatments and replicates) of an simulation testing effects of phenology on species interactions. There is summary data for each run and there's also time series info on size for each turtle/agent.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -31,32 +31,34 @@ mytheme <- theme(panel.background = element_blank(),
 
 ```
 
-When the raw data is exported as a spreadsheet, it comes in a really gnarly format. R can't read it because it's not even close to rectangular, big header, mix of space delimited and bracket delimited. It's a mess.
-```{r load spreadsheet data}
+First, be sure you export behavior space data in "table" format. When the raw data is exported as a spreadsheet, it comes in a really gnarly format. R can't read it because it's not even close to rectangular, big header, mix of space delimited and bracket delimited. It's a mess. The table is still a bit messy, but much easier to wrangle.
 
-test <- read.csv("bs1.csv", header = T)
-
-```
-
-So be sure you export as a table. 
 ```{r load table data}
 
-test_table <- read.table("bs1_table.csv",
-                         header = T,
-                         sep = ',',
-                         skip = 6,         # 6 header rows we don't need
-                         quote = "\"",
-                         fill = T)         # add blank fields if rows have unequal length
-head(test_table)  # [1:11,] are parameter values (some consistent across all, some representing trts)
-str(test_table)   # [13:16,] are the output we designated
+test <- read.table("bs1_table.csv",
+                   header = T,
+                   sep = ',',
+                   skip = 6,         # 6 header rows we don't need
+                   quote = "\"",
+                   fill = T)         # add blank fields if rows have unequal length
+
+# [,1:12] are parameter values (some consistent across all, some representing trts)
+# [,13:16] are the output we designated
+str(test)  
+
+# extract and keep this for reference
+params <- test[,1:12]
 
 ```
 
-Now, we can drop some columns that are the same across all model runs
+First, let's rename columns and drop some that we don't need. I keep some columns that are the same across all model runs because it will be useful to call them later, especially since different runs of the experiment might have differetn values. Some columns will always be the same, or are irrelevant. These I drop. 
 ```{r}
-# we can select and rename at the same time since we're renaming every variable we need
-test_table <- test_table %>% 
-  select(n_fish = n.fishes,
+# select and rename columns. new_name = old name. 
+# renaming everything I keep, so can rename with select
+test <- test %>% 
+  select(run_num = X.run.number.,
+         total_time = X.step.,
+         n_fish = n.fishes,
          n_dfly = n.dflies,
          sync_dfly = var.hatch.dflies,   
          mean_dfly = mean.hatch.dflies, 
@@ -66,10 +68,37 @@ test_table <- test_table %>%
          sizes_fish = X.fish.size.list..of.fishes)
 ```
 
-The 'sizes' columns has a time series of size for each individual. Let's separate that. This warning is ok. The last individual ends with double closed bracket, so we're just deleting that extra bracket.
+The 'sizes' columns has a time series of size for each individual. Let's separate that. This warning is ok. The last individual ends with double closed bracket, so we're just deleting that extra bracket, and still end up with the 50 individuals for each species that we expect.
 ```{r}
-test_table <- test_table %>% 
-  separate(sizes_dfly, into = as.character(paste("d_",c(1:test_table$n_dfly))), sep = "]") %>% 
-  separate(sizes_fish, into = as.character(paste("f_",c(1:test_table$n_fish))), sep = "]")
+test <- test %>% 
+  separate(sizes_dfly,                                      # separate sizes_dfly
+           into = paste("d_", c(1:test$n_dfly), sep = ""),  # levels for new var
+           sep = "]") %>%                                   # every ] marks a new ind
+  separate(sizes_fish, 
+           into = paste("f_", c(1:test$n_fish), sep = ""), 
+           sep = "]")
 ```
 
+Now, gather it so that individuals appear in rows instead of columns
+```{r}
+test <- test %>%
+  group_by(run_num) %>% 
+  gather(d_1:d_50, key = "dfly_id", value = 'size_dfly') %>% 
+  gather(f_1:f_50, key = "fish_id", value = "size_fish") %>% 
+  arrange(run_num)
+```
+
+```{r}
+test$size_dfly <- gsub("[", "", test$size_dfly, fixed = T)
+test$size_fish <- gsub("[", "", test$size_fish, fixed = T)
+```
+
+```{r}
+test1 <- test %>% 
+  separate(size_dfly,                                      # separate size_dfly
+           into = paste("td_", c(1:test$total_time), sep = ""),  # levels for new var
+           sep = " ") %>%                                   # every ] marks a new ind
+  separate(size_fish, 
+           into = paste("tf_", c(1:test$total_time), sep = ""), 
+           sep = " ")
+```

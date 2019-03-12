@@ -96,9 +96,28 @@ test$size_fish <- gsub("[", "", test$size_fish, fixed = T)
 ```{r}
 test1 <- test %>% 
   separate(size_dfly,                                      # separate size_dfly
-           into = paste("td_", c(1:test$total_time), sep = ""),  # levels for new var
-           sep = " ") %>%                                   # every ] marks a new ind
-  separate(size_fish, 
-           into = paste("tf_", c(1:test$total_time), sep = ""), 
-           sep = " ")
+           into = paste("t_", c(0:test$total_time), sep = ""),  # levels for new var
+           sep = " ") %>% 
+  select(-t_0)
+
+test2 <- test1 %>% 
+  group_by(run_num) %>% 
+  gather(t_1:t_149, key = "time", value = 'current_size_dfly') %>% 
+  arrange(run_num)
+  
+test2 <- test2 %>% 
+  separate(size_fish,
+           into = paste("t_", c(0:test$total_time), sep = ""),
+           sep = " ") %>% 
+  select(-t_0)
+
+
+test2 <- test1 %>% 
+  group_by(run_num) %>% 
+  gather(t_1:t_149, key = "time", value = 'current_size_dfly') %>% 
+  gather(t_1:t_149, key = "time", value = "current_size_fish") %>% 
+  arrange(run_num)
+  #separate(size_fish, 
+  #         into = paste("tf_", c(1:test$total_time), sep = ""), 
+  #         sep = " ")
 ```

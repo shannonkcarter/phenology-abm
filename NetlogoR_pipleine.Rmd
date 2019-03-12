@@ -100,14 +100,15 @@ test1 <- test %>%
            sep = " ") %>% 
   separate(size_fish,
            into = paste("tf_", c(0:test$total_time), sep = ""),
-           sep = " ") %>%
+           sep = " ") #%>%
+test1 <- test1 %>% 
   select(-td_0) %>% 
   select(-tf_0)
 
 test2 <- test1 %>% 
   group_by(run_num) %>% 
-  gather(td_1:td_149, key = "time_d", value = 'current_size_dfly') %>% 
-  #gather(tf_1:tf_149, key = "time_f", value = "current_size_fish") %>% 
+  gather(td_1:td_149, key = "time_d", value = 'current_size_dfly') %>%
+  gather(tf_1:tf_149, key = "time_f", value = "current_size_fish") %>% 
   arrange(run_num)
 
 ```

@@ -7,8 +7,8 @@ output: html_document
 
 The goal here is to make a clean reproducible pipeline to transform Netlogo output into a tidy rectangular dataframe. Here, I import behavior space data (i.e., experiment results) from Netlogo to R. Netlogo's behavior space data comes in a wonky format, and the goal is to do as much of the tidying in R (vs. on spreadsheet) as possible. The data I've imported here does several 'runs' (multiple treatments and replicates) of an simulation testing effects of phenology on species interactions. There is summary data for each run and there's also time series info on size for each turtle/agent.
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup, include = F}
+knitr::opts_chunk$set(echo = T, warning = F)
 
 ## Set working directory and clear memory
 setwd("C:\\Users\\Shannon\\Desktop\\GitHub Repos\\phenology-abm")
@@ -46,9 +46,6 @@ test <- read.table("bs1_table.csv",
 # [,13:16] are the output we designated
 str(test)  
 
-# extract and keep this for reference
-params <- test[,1:12]
-
 ```
 
 First, let's rename columns and drop some that we don't need. I keep some columns that are the same across all model runs because it will be useful to call them later, especially since different runs of the experiment might have differetn values. Some columns will always be the same, or are irrelevant. These I drop. 
@@ -66,6 +63,9 @@ test <- test %>%
          surv_fish = n.meta.fishes, 
          sizes_dfly = X.dfly.size.list..of.dflies, 
          sizes_fish = X.fish.size.list..of.fishes)
+
+# extract and keep this for reference
+params <- test[,1:8]
 ```
 
 The 'sizes' columns has a time series of size for each individual. Let's separate that. This warning is ok. The last individual ends with double closed bracket, so we're just deleting that extra bracket, and still end up with the 50 individuals for each species that we expect.
@@ -81,17 +81,29 @@ test <- test %>%
 
 Now, gather it so that individuals appear in rows instead of columns
 ```{r}
-test <- test %>%
-  group_by(run_num) %>% 
+# first dragonflies. Need to be careful here or will get 
+test_dfly <- test %>%
+  select(run_num, d_1:d_50) %>% 
+  unique(.) %>% 
   gather(d_1:d_50, key = "dfly_id", value = 'size_dfly') %>% 
+  arrange(run_num)
+  
+# do separately for each sp, otherwise it will do full factorial pairing
+test_fish <- test %>% 
+  select(run_num, f_1:f_50) %>% 
+  unique(.) %>% 
   gather(f_1:f_50, key = "fish_id", value = "size_fish") %>% 
   arrange(run_num)
+
+test <- merge(test_dfly, test_fish, by = "run_num")
+test <- left_join(test, params, by = "run_num")
 ```
 
 ```{r}
 test$size_dfly <- gsub("[", "", test$size_dfly, fixed = T)
 test$size_fish <- gsub("[", "", test$size_fish, fixed = T)
 ```
+
 
 ```{r}
 test1 <- test %>% 
@@ -102,13 +114,25 @@ test1 <- test %>%
            into = paste("tf_", c(0:test$total_time), sep = ""),
            sep = " ") #%>%
 test1 <- test1 %>% 
-  select(-td_0) %>% 
-  select(-tf_0)
+  select(-td_0, tf_0)
+test1 <- unique(test1)
 
+```
+
+```{r}
+testb <- test1 %>% 
+  summarise(max_size = pmax(test1$td_1:test1$td:149))
+
+a <- filter(test1, run_num == 1, dfly_id == 'd_1')
+```
+
+Computationally, will not run on my computer. Can I work with time series saved in strings?
+
+```{r}
 test2 <- test1 %>% 
   group_by(run_num) %>% 
   gather(td_1:td_149, key = "time_d", value = 'current_size_dfly') %>%
   gather(tf_1:tf_149, key = "time_f", value = "current_size_fish") %>% 
   arrange(run_num)
-
 ```
+

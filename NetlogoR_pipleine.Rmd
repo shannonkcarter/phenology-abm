@@ -59,13 +59,14 @@ test <- test %>%
          n_dfly = n.dflies,
          sync_dfly = var.hatch.dflies,   
          mean_dfly = mean.hatch.dflies, 
-         surv_dfly = n.meta.dflies, 
+         surv_dfly = n.meta.dflies,
+         sync_fish = var.hatch.fishes, 
          surv_fish = n.meta.fishes, 
          sizes_dfly = X.dfly.size.list..of.dflies, 
          sizes_fish = X.fish.size.list..of.fishes)
 
 # extract and keep this for reference
-params <- test[,1:8]
+params <- test[,1:9]
 ```
 
 The 'sizes' columns has a time series of size for each individual. Let's separate that. This warning is ok. The last individual ends with double closed bracket, so we're just deleting that extra bracket, and still end up with the 50 individuals for each species that we expect.
@@ -131,25 +132,15 @@ test_fish <- test_fish %>%
 
 Now, join the dataframes together and rejoin with the treatment information.
 ```{r}
-test1 <- merge(test_dfly, test_fish, by = c("run_num", "time"))
+test <- cbind(test_dfly, test_fish)
+test <- test %>% 
+  select(-c(run_num1, time1))
+
 test <- left_join(test, params, by = "run_num")
+test1 <- test %>%
+  select(run_num, n_fish, n_dfly, sync_fish, sync_dfly, mean_dfly,
+         total_time, surv_fish, surv_dfly, 
+         fish_id, current_size_fish, dfly_id, current_size_dfly)
 ```
 
-
-```{r}
-testb <- test1 %>% 
-  summarise(max_size = pmax(test1$td_1:test1$td:149))
-
-a <- filter(test1, run_num == 1, dfly_id == 'd_1')
-```
-
-Computationally, will not run on my computer. Can I work with time series saved in strings?
-
-```{r}
-test2 <- test1 %>% 
-  group_by(run_num) %>% 
-  gather(td_1:td_149, key = "time_d", value = 'current_size_dfly') %>%
-  gather(tf_1:tf_149, key = "time_f", value = "current_size_fish") %>% 
-  arrange(run_num)
-```
 

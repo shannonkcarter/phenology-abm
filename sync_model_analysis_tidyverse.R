@@ -11,7 +11,7 @@ library(tidyverse)
 library(reshape2)
 library(RColorBrewer)
 library(lme4)
-library(RNetLogo)    # maybe worthwhile looking into this
+#library(RNetLogo)    # maybe worthwhile looking into this, so far can't figure it out
 
 ## Load universal plotting elements
 mytheme <- theme(panel.background = element_blank(),
@@ -112,6 +112,7 @@ test7supersum <- test7supersum %>%
 
 ## Re-write to a csv file
 write.csv(test7supersum, "test7supersum.csv")
+
 
 
 #############################################################

@@ -35,7 +35,7 @@ First, be sure you export behavior space data in "table" format. When the raw da
 
 ```{r load table data}
 
-test <- read.table("bs1_table.csv",
+test <- read.table("bs1_table2.csv",
                    header = T,
                    sep = ',',
                    skip = 6,         # 6 header rows we don't need
@@ -65,7 +65,7 @@ test <- test %>%
          sizes_dfly = X.dfly.size.list..of.dflies, 
          sizes_fish = X.fish.size.list..of.fishes)
 
-# extract and keep this for reference
+# extract and keep this for reference-- will need it for rejoining data with params later
 params <- test[,1:9]
 ```
 
@@ -134,13 +134,36 @@ Now, join the dataframes together and rejoin with the treatment information.
 ```{r}
 test <- cbind(test_dfly, test_fish)
 test <- test %>% 
-  select(-c(run_num1, time1))
+  select(-c(run_num1, time1)) 
+test$dfly <- paste(test$dfly_id, test$current_size_dfly)
+test$fish <- paste(test$fish_id, test$current_size_fish)
+test1 <- test %>% 
+  select(run_num, time, dfly, fish)
+test2 <- test1 %>% 
+  gather(key = "species", "size", dfly, fish)
+test2$time <- as.numeric(test2$time)
+test2 <- test2 %>% 
+  separate(size, into = c("id", "size"), sep = " ") %>% 
+  separate(id, into = c("sp", "id"), sep = "_") %>% 
+  select(-sp) %>% 
+  arrange(run_num, id, time)
 
-test <- left_join(test, params, by = "run_num")
-test1 <- test %>%
+test <- left_join(test2, params, by = "run_num")
+test <- test %>%
   select(run_num, n_fish, n_dfly, sync_fish, sync_dfly, mean_dfly,
-         total_time, surv_fish, surv_dfly, 
-         fish_id, current_size_fish, dfly_id, current_size_dfly)
+         surv_fish, surv_dfly, time, species,
+         id, size)
+
+
 ```
 
+
+```{r}
+plot <- ggplot(data = test, aes(x = time, y = size, color = species)) + 
+  geom_smooth() +
+  facet_grid(sync_dfly ~ mean_dfly)
+plot
+
+plot1 <- ggplot(test, aes(x = mean_dfly, y = surv_dfly))
+```
 

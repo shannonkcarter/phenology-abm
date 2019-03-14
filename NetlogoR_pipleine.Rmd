@@ -132,9 +132,13 @@ test_fish <- test_fish %>%
 
 Now, join the dataframes together and rejoin with the treatment information.
 ```{r}
+
+# paste dfs together and remove redundant variables
 test <- cbind(test_dfly, test_fish)
 test <- test %>% 
   select(-c(run_num1, time1)) 
+
+# this is clunkier than it needs to be, but allows some double checking
 test$dfly <- paste(test$dfly_id, test$current_size_dfly)
 test$fish <- paste(test$fish_id, test$current_size_fish)
 test1 <- test %>% 
@@ -142,28 +146,59 @@ test1 <- test %>%
 test2 <- test1 %>% 
   gather(key = "species", "size", dfly, fish)
 test2$time <- as.numeric(test2$time)
+
 test2 <- test2 %>% 
   separate(size, into = c("id", "size"), sep = " ") %>% 
   separate(id, into = c("sp", "id"), sep = "_") %>% 
   select(-sp) %>% 
   arrange(run_num, id, time)
+test2$size <- as.numeric(test2$size)
 
+# rejoin with treatment identifiers for each run number
 test <- left_join(test2, params, by = "run_num")
-test <- test %>%
+ind_time <- test %>%
   select(run_num, n_fish, n_dfly, sync_fish, sync_dfly, mean_dfly,
          surv_fish, surv_dfly, time, species,
          id, size)
 
+write.csv(ind_time, "individual_time.csv")
 
 ```
 
 
 ```{r}
 plot <- ggplot(data = test, aes(x = time, y = size, color = species)) + 
-  geom_smooth() +
+  geom_point() +
+  #geom_smooth() +
   facet_grid(sync_dfly ~ mean_dfly)
 plot
 
-plot1 <- ggplot(test, aes(x = mean_dfly, y = surv_dfly))
+plot1 <- ggplot(test, aes(x = mean_dfly, y = surv_dfly)) +
+  geom_jitter(alpha = 1/4) +
+  facet_grid(. ~ sync_dfly)
+plot1
+```
+
+## Summarize by individual
+
+Now, I want to make some summarised datasets. First with one row per individual, then with one row per run number 
+
+```{r}
+ind_time <- read.csv("individual_time.csv", header = T)
+
+ind <- ind_time %>% 
+  group_by(run_num, species, id, sync_fish, sync_dfly, mean_dfly, surv_dfly, surv_fish) %>%
+  summarise(max_size = max(size),
+            meta = if_else(max_size >= 10, "Y", "N"),
+            hatch_date = min(time[size > 0]),
+            meta_date = min(time[size >= 10]),
+            growth_time = meta_date - hatch_date)
+p3 <- ggplot(ind, aes(x = ))
+
+# currently, number of metamorphs doesn't match raw data. think it might be a >= mismatch. check.
+check <- ind %>% 
+  group_by(run_num, species, surv_dfly, surv_fish) %>%
+  summarise(no_meta = sum(meta))
+
 ```
 

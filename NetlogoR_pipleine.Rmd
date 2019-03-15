@@ -196,17 +196,35 @@ ind_time <- read.csv("individual_time.csv", header = T)
 ind <- ind_time %>% 
   group_by(run_num, species, id, sync_fish, sync_dfly, mean_dfly, surv_dfly, surv_fish) %>%
   summarise(max_size = max(size),
-            meta = if_else(max_size >= 10, "Y", "N"),
+            meta = if_else(max_size >= 10, 1, 0),
             hatch_date = min(time[size > 0]),
             # use base R ifelse here, so we can have 2 data types for T/F
-            meta_date = ifelse(meta == "Y", min(time[size >= 10]), NA), 
-            death_date = ifelse(meta == "N", min(time[size = max(max_size)]), NA),
+            meta_date = ifelse(meta == 1, min(time[size >= 10]), NA), 
+            death_date = ifelse(meta == 0, min(time[size = max(max_size)]), NA),
             growth_time = meta_date - hatch_date)
 
 # currently, number of metamorphs doesn't match raw data. think it might be a >= mismatch. check.
-#check <- ind %>% 
-#  group_by(run_num, species, surv_dfly, surv_fish) %>%
-#  summarise(no_meta = sum(meta))
+check <- ind %>% 
+  group_by(run_num, species, surv_dfly, surv_fish) %>%
+  summarise(no_meta = sum(meta))
+ggplot(subset(check, subset = (species == "fish")), aes(x = surv_fish, y = no_meta)) +
+  geom_point() + theme_bw() +
+  geom_abline(slope = 1, intercept = 0)
 
+```
+## Summarize by Treatment
+```{r}
+View(params)
+trt <- params %>% 
+  group_by(sync_dfly, mean_dfly) %>% 
+  summarise(mean_surv_dfly = mean(surv_dfly),
+            mean_surv_fish = mean(surv_fish),
+            se_surv_dfly   = sd(surv_dfly)/sqrt(length(surv_dfly)),
+            se_surv_fish   = sd(surv_fish)/sqrt(length(surv_fish)))
+ggplot(trt, aes(x = mean_dfly, y = mean_surv_dfly, color = as.factor(sync_dfly))) +
+  geom_point() + 
+  geom_errorbar(width = 0,
+    aes(max = mean_surv_dfly + se_surv_dfly, 
+        min = mean_surv_dfly - se_surv_dfly))
 ```
 

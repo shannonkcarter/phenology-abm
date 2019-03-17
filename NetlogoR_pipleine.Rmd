@@ -40,7 +40,7 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 
 ```{r load table data}
 
-test <- read.table("bs1_table2.csv",
+test <- read.table("bs2.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
@@ -76,11 +76,13 @@ test <- test %>%
 # here, it'd also be a good idea to give qualitative/ranked levels to treatments (i.e., high, med, low)
 # this will be different for each behavior space
 params <- test[,1:9]
+params$mean_dfly_num <- params$mean_dfly
+params$sync_dfly_num <- params$sync_dfly
 params$sync_dfly <- as.factor(params$sync_dfly)
 params$mean_dfly <- as.factor(params$mean_dfly)
 levels(params$sync_dfly)
-levels(params$sync_dfly) <- c("high", "low")
-levels(params$mean_dfly) <- c("same", "fish early")
+levels(params$sync_dfly) <- c("high", "med", "low")
+levels(params$mean_dfly) <- c("dfly v early", "dfly early", "same", "fish early", "fish v early")
 
 ```
 
@@ -223,18 +225,18 @@ ggplot(subset(check, subset = (species == "fish")), aes(x = surv_fish, y = no_me
 ```
 ## Summarize by Treatment
 ```{r}
-View(params)
 trt <- params %>% 
-  group_by(sync_dfly, mean_dfly) %>% 
+  group_by(sync_dfly, mean_dfly, mean_dfly_num, sync_dfly_num) %>% 
   summarise(mean_surv_dfly = mean(surv_dfly),
             mean_surv_fish = mean(surv_fish),
             se_surv_dfly   = sd(surv_dfly)/sqrt(length(surv_dfly)),
             se_surv_fish   = sd(surv_fish)/sqrt(length(surv_fish)))
-ggplot(trt, aes(x = mean_dfly, y = mean_surv_dfly, color = as.factor(sync_dfly))) +
-  geom_point() + 
-  geom_errorbar(width = 0,
-    aes(max = mean_surv_dfly + se_surv_dfly, 
-        min = mean_surv_dfly - se_surv_dfly))
+
+ind$sync_dfly <- factor(ind$sync_dfly, levels = c("low", "med", "high"))
+ind$mean_dfly <- factor(ind$mean_dfly, levels = c("dfly v early", "dfly early", "same", "fish early", "fish v early"))
+trt$sync_dfly <- factor(trt$sync_dfly, levels = c("low", "med", "high"))
+trt$mean_dfly <- factor(trt$mean_dfly, levels = c("dfly v early", "dfly early", "same", "fish early", "fish v early"))
+
 ```
 
 ## Plots
@@ -251,7 +253,6 @@ ggplot(ind, aes(x = hatch_date, color = species, fill = species)) + theme_bw() +
 
 Final size by hatch date
 ```{r}
-
 plot3 <- ggplot(ind, aes(x = hatch_date, y = max_size, color = species)) +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
   stat_smooth() +
@@ -279,12 +280,13 @@ plot4
 Survivors by treatment
 ```{r}
 
-plot5 <- ggplot(trt, aes(x = mean_dfly, y = mean_surv_dfly, color = sync_dfly)) + mytheme +
+plot5 <- ggplot(trt, aes(x = mean_dfly_num, y = mean_surv_dfly, color = sync_dfly)) + mytheme +
   geom_point(size = 2) + 
-  geom_errorbar(width = 0, aes(max = mean_surv_dfly + se_surv_dfly, min = mean_surv_dfly - se_surv_dfly)) +
-  stat_smooth(size = 4, method = "lm", se = T, aes(x = mean_dfly, fill = sync_dfly)) +
-  xlab("synchrony") + ylab("proportion survivors") #+
-  #theme(legend.position = "none") 
+  #geom_errorbar(width = 0, aes(max = mean_surv_dfly + se_surv_dfly, min = mean_surv_dfly - se_surv_dfly)) +
+  stat_smooth(size = 4, method = "lm", se = T, aes(x = mean_dfly_num, fill = sync_dfly)) +
+  xlab("mean arrival") + ylab("number survivors")  +
+  scale_fill_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
+  scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) 
 plot5
 
 ```

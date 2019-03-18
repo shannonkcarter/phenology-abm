@@ -4,7 +4,10 @@ author: "Shannon Carter"
 date: "March 11, 2019"
 output: 
   html_document:
-  theme: united
+    toc: true
+    toc_float: true
+    theme: united
+    highlight: tango 
 ---
 
 The goal here is to make a clean reproducible pipeline to transform Netlogo output into a tidy rectangular dataframe. Here, I import behavior space data (i.e., experiment results) from Netlogo to R. Netlogo's behavior space data comes in a wonky format, and the goal is to do all tidying in R (vs. on spreadsheet) so it's easy to feed through new data. The data I've imported here does several 'runs' (multiple treatments and replicates) of an simulation testing effects of phenology on species interactions. There is summary data for each run and there's also time series info on size for each turtle/agent.
@@ -242,9 +245,10 @@ trt$mean_dfly <- factor(trt$mean_dfly, levels = c("dfly v early", "dfly early", 
 
 ```
 
-## Plots
+# Plots
 
-# First, a visualization of the treatments
+## First, a visualization of the treatments
+
 ```{r, echo = F}
 ggplot(ind, aes(x = hatch_date, color = species, fill = species)) + theme_bw() +
   geom_density(alpha = 0.5, size = 1.2) +
@@ -253,7 +257,7 @@ ggplot(ind, aes(x = hatch_date, color = species, fill = species)) + theme_bw() +
   scale_fill_manual(values = c("#F28335", "#489C92"))
 ```
 
-# Final size by hatch date
+## Final size by hatch date
 
 ```{r, echo = F}
 plot3 <- ggplot(ind, aes(x = hatch_date, y = max_size, color = species)) +
@@ -265,7 +269,7 @@ plot3
 
 ```
 
-# Survival probability based on hatching date
+## Survival probability based on hatching date
 
 Looks like in 'fish early' scenarios, there are some fish hatching on the last day. Check.
 
@@ -281,7 +285,7 @@ plot4 <- ggplot(ind, aes(x = hatch_date, y = meta, color = species)) + theme_bw(
 plot4
 ```
 
-# Dragonfly survivors by treatment
+## Dragonfly survivors by treatment
 
 ```{r, echo = F}
 plot5 <- ggplot(trt, aes(x = mean_dfly_num, y = mean_surv_dfly, color = sync_dfly)) +
@@ -297,7 +301,7 @@ plot5
 
 ```
 
-# Phenological synchrony from hatching to metamorphosis
+## Phenological synchrony from hatching to metamorphosis
 
 ```{r, echo = F}
 
@@ -319,7 +323,7 @@ plot6
 
 ```
 
-# Growth rates by hatching date for all treatments
+## Growth rates by hatching date for all treatments
 
 ```{r, echo = F}
 
@@ -337,7 +341,7 @@ plot7
 
 ```
 
-# Probability of metamorphosis by hatching date
+## Probability of metamorphosis by hatching date
 
 ```{r, echo = F}
 

@@ -223,7 +223,10 @@ ggplot(subset(check, subset = (species == "fish")), aes(x = surv_fish, y = no_me
   geom_abline(slope = 1, intercept = 0)
 
 ```
+
 ## Summarize by Treatment
+
+Now, make a df with 1 row per unique treatment with means/se's 
 ```{r}
 trt <- params %>% 
   group_by(sync_dfly, mean_dfly, mean_dfly_num, sync_dfly_num) %>% 
@@ -241,8 +244,8 @@ trt$mean_dfly <- factor(trt$mean_dfly, levels = c("dfly v early", "dfly early", 
 
 ## Plots
 
-First, a visualization of the treatments
-```{r}
+# First, a visualization of the treatments
+```{r, echo = F}
 ggplot(ind, aes(x = hatch_date, color = species, fill = species)) + theme_bw() +
   geom_density(alpha = 0.5, size = 1.2) +
   facet_grid(sync_dfly ~ mean_dfly) +
@@ -250,9 +253,9 @@ ggplot(ind, aes(x = hatch_date, color = species, fill = species)) + theme_bw() +
   scale_fill_manual(values = c("#F28335", "#489C92"))
 ```
 
+# Final size by hatch date
 
-Final size by hatch date
-```{r}
+```{r, echo = F}
 plot3 <- ggplot(ind, aes(x = hatch_date, y = max_size, color = species)) +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
   stat_smooth() +
@@ -262,13 +265,14 @@ plot3
 
 ```
 
-Survival probability based on hatching date
+# Survival probability based on hatching date
 
-Looks like in 'fish early' scenarios, there are some fish hatching on the last day. Look into this.
-```{r}
+Looks like in 'fish early' scenarios, there are some fish hatching on the last day. Check.
+
+```{r, echo = F}
 plot4 <- ggplot(ind, aes(x = hatch_date, y = meta, color = species)) + theme_bw() +
   geom_point(alpha = 0.25) + 
-  stat_smooth(method = 'glm', method.args = 'binomial') +
+  stat_smooth(method = 'glm', method.args = 'binomial', se = F) +
   facet_grid(sync_dfly ~ mean_dfly, scales = "free") + 
   xlab("hatch date") + ylab("probability of survival") +
   theme(strip.text.x = element_text(size = 14),
@@ -277,118 +281,72 @@ plot4 <- ggplot(ind, aes(x = hatch_date, y = meta, color = species)) + theme_bw(
 plot4
 ```
 
-Survivors by treatment
-```{r}
+# Dragonfly survivors by treatment
 
-plot5 <- ggplot(trt, aes(x = mean_dfly_num, y = mean_surv_dfly, color = sync_dfly)) + mytheme +
+```{r, echo = F}
+plot5 <- ggplot(trt, aes(x = mean_dfly_num, y = mean_surv_dfly, color = sync_dfly)) +
   geom_point(size = 2) + 
   #geom_errorbar(width = 0, aes(max = mean_surv_dfly + se_surv_dfly, min = mean_surv_dfly - se_surv_dfly)) +
-  stat_smooth(size = 4, method = "lm", se = T, aes(x = mean_dfly_num, fill = sync_dfly)) +
+  stat_smooth(size = 2, method = "lm", se = T, 
+              aes(x = mean_dfly_num, fill = sync_dfly)) +
   xlab("mean arrival") + ylab("number survivors")  +
   scale_fill_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
-  scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) 
+  scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
+  theme_bw()
 plot5
 
 ```
 
-```{r}
-###---6. Synchrony across stages-----------------------------
+# Phenological synchrony from hatching to metamorphosis
+
+```{r, echo = F}
 
 ## Subset to include only individuals that metamorphed
-test7surv <- subset(test7sum, subset = (meta == 1))
+ind_surv <- subset(ind, subset = (meta == 1 & species == "dfly"))
 
 ## Original hatching and metamorph
-plot6 <- ggplot(test7sum, aes(hatch_adj)) + mytheme +
+plot6 <- ggplot(ind_surv, aes(hatch_date)) + theme_bw() +
   # gray: original/imposed hatching synchrony
-  geom_density(size = 1.5, alpha = 0.25, fill = "black", color = "gray39", linetype = "dashed") + 
+  geom_density(size = 1, alpha = 0.25, fill = "black", color = "gray39") + 
   # blue: metamorphosis dates of survivors, scaled to day 0
-  geom_density(data = test7sum, size = 1.5, alpha = 0.5, color = "steelblue4", fill = "steelblue4",
-               aes(x = meta_adj)) +
-  facet_grid(density ~ synchrony , scales = "free_y") + 
+  geom_density(data = ind_surv, size = 1, alpha = 0.5, color = "steelblue4", fill = "steelblue4",
+               aes(x = meta_date)) +
+  facet_grid(sync_dfly ~ mean_dfly , scales = "free_y") + 
   xlab("date") + ylab("proportion") +
   theme(strip.text.x = element_text(size = 14),
         strip.text.y = element_text(size = 14)) 
 plot6
 
-## Original hatching and hatching of survivors
-plot6b <- ggplot(test7sum, aes(hatch_adj)) + mytheme +
-  # gray: original/imposed hatching synchrony
-  geom_density(size = 1.5, alpha = 0.25, fill = "black", color = "gray39", linetype = "dashed") + 
-  # blue: hatching dates of survivors
-  geom_density(data = test7surv, size = 1.5, alpha = 0.5, color = "steelblue4", fill = "steelblue4",
-               aes(x = hatch_adj)) +
-  facet_grid(density ~ synchrony, scales = "free_y") + 
-  xlab("date") + ylab("proportion") +
-  theme(strip.text.x = element_text(size = 14),
-        strip.text.y = element_text(size = 14))
-plot6b 
-
-## original hatching, survival hatching and metamorph
-plot6c <- ggplot(test7sum, aes(hatch_adj)) + mytheme +
-  # gray: original/imposed hatching synchrony
-  geom_density(size = 1.5, alpha = 0.25, fill = "black", color = "gray39", linetype = "dashed") + 
-  # blue: hatching dates of the ones that survived and metamorphed
-  #geom_density(data = test7surv, size = 1.5, alpha = 0.5, color = "steelblue4", fill = "steelblue4",
-  #              aes(x = hatch_adj)) +
-  # red: the date of metamorphosis for survivors
-  geom_density(data = test7sum, size = 1.5, alpha = 0.5, color = "tomato4", fill = "tomato4",
-               aes(x = meta_adj + 5)) +
-  facet_wrap(density ~ synchrony, scales = "free_y") +
-  xlab("days after first individual") + ylab("proportion of individuals") +
-  theme(strip.background = element_blank(),
-        strip.text = element_blank(),
-        axis.text.y = element_blank())
-plot6c 
-
-## Synchrony treatments - for methods in ppt
-plot6x <- ggplot(test7sum, aes(hatch_tick, color = synchrony)) + mytheme +
-  geom_density(adjust = 2, size = 3, alpha = 0.25) +
-  xlab("hatch date") + ylab("proportion") +
-  theme(legend.position = "none",
-        axis.title = element_text(size = rel(1.25))) +
-  scale_color_manual(values = c("black", "black", "black", "black"))
-plot6x
-
-## Single synchrony trts - for methods in ppt
-plot6xa <- ggplot(subset(test7sum, sync == 7), aes(hatch_tick)) + mytheme +
-  geom_density(adjust = 2, size = 2, alpha = 0.25) +
-  xlab("hatch date") + ylab("proportion of individuals") +
-  theme(legend.position = "none",
-        axis.title = element_text(size = rel(1.25)))
-plot6xa
 ```
 
-```{r}
-###---7. Growth rates by hatch date---------------------------------
-z <- subset(test7sum, subset = (rep == 3))  ## resource starts at 20, but ~50% survival even if they beat resource by 6 days
-plot7 <- ggplot(z, aes(x = hatch_tick, y = growthrate)) + 
-  geom_point(alpha = 0.65, size = 2, aes(color = as.factor(meta))) +
-  stat_smooth(method = "lm", formula = y ~ poly(x, 2), se = T, size = 2, color = "gray39") +
-  facet_grid(density ~ synchrony, scales = "free") + mytheme +
-  theme(legend.position = "none",
+# Growth rates by hatching date for all treatments
+
+```{r, echo = F}
+
+# even if they beat resource by 6 days
+plot7 <- ggplot(ind, aes(x = hatch_date, y = growth_time, color = species)) + theme_bw() +
+  geom_point(alpha = 0.65, size = 2) +
+  stat_smooth(method = "lm", formula = y ~ poly(x, 2), se = T, size = 2) +
+  facet_grid(sync_dfly ~ mean_dfly, scales = "free") + 
+  theme(#legend.position = "none",
         strip.text.x = element_text(size = 14),
         strip.text.y = element_text(size = 14)) +
-  xlab("hatch date") + ylab("growth rate")
+  xlab("hatch date") + ylab("growth rate") +
+  scale_color_manual(values = c("#F28335", "#489C92"))
 plot7
 
 ```
 
-```{r}
-###---8. Growth rates variation-------------------------------------
-plot8 <- ggplot(subset(test7sum, meta == 1), aes(x = growthrate, color = synchrony)) + mytheme +
-  geom_density(size = 2) + 
-  facet_grid(density ~ .) +
-  xlab("growth rate") + ylab("proportion")
-plot8
-```
+# Probability of metamorphosis by hatching date
 
+```{r, echo = F}
 
-```{r}
-###---9. Probability of metamorphing-------------------------------- 
-plot9 <- ggplot(test7sum, aes(x = hatch_tick, y = meta, color = as.factor(dens))) +
-  geom_point(alpha = 0.25) + mytheme +
+plot9 <- ggplot(subset(ind, subset = (species == "dfly")), 
+                aes(x = hatch_date, y = meta, color = sync_dfly)) +
+  geom_point(alpha = 0.25) + theme_bw() +
   stat_smooth(method = 'glm', method.args = 'binomial', size = 2, alpha = 0.5, se = F) +
-  facet_wrap(~sync)
+  facet_wrap(~mean_dfly) +
+  scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) 
 plot9  
 ```
 

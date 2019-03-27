@@ -86,7 +86,7 @@ ask fishes
 
         ; DEATH PROCEDURE
         [
-          ;set size 0           ; for visualizing in-program, turn this off. but necessary to determine death date in BS data;
+          set size 0           ; for visualizing in-program, turn this off. but necessary to determine death date in BS data;
           ;set size 2            ; if not doing BS, makes it easier to see everything else. But turn off to see a size distribution
           set color red         ; ones that starve turn red
           stamp                 ; and mark their final location- I think I have to turn this off to run behavior space
@@ -318,7 +318,7 @@ var-hatch-fishes
 var-hatch-fishes
 0
 20
-20.0
+15.0
 1
 1
 NIL
@@ -348,7 +348,7 @@ sprout-tick
 sprout-tick
 0
 100
-0.0
+5.0
 5
 1
 NIL
@@ -1535,6 +1535,38 @@ NetLogo 6.0
     </enumeratedValueSet>
     <enumeratedValueSet variable="var-hatch-fishes">
       <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="grass-death-rate">
+      <value value="1"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="CR-run1" repetitions="4" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <metric>n-meta-fishes</metric>
+    <metric>[fish-size-list] of fishes</metric>
+    <enumeratedValueSet variable="show-label?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="n-fishes">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="sprout-tick">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="var-hatch-fishes">
+      <value value="5"/>
+      <value value="10"/>
+      <value value="15"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mean-hatch-fishes">
+      <value value="20"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="growth-per-patch">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="grass-grow-rate">
+      <value value="6"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="grass-death-rate">
       <value value="1"/>

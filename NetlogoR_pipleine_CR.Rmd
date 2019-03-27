@@ -170,24 +170,6 @@ ggplot(check, aes(x = surv_fish, y = no_meta)) +
 
 ```
 
-## Summarize by Treatment
-
-Now, make a df with 1 row per unique treatment with means/se's 
-```{r}
-trt <- params %>% 
-  group_by(sync_dfly, mean_dfly, mean_dfly_num, sync_dfly_num) %>% 
-  summarise(mean_surv_dfly = mean(surv_dfly),
-            mean_surv_fish = mean(surv_fish),
-            se_surv_dfly   = sd(surv_dfly)/sqrt(length(surv_dfly)),
-            se_surv_fish   = sd(surv_fish)/sqrt(length(surv_fish)))
-
-ind$sync_dfly <- factor(ind$sync_dfly, levels = c("low", "med", "high"))
-ind$mean_dfly <- factor(ind$mean_dfly, levels = c("dfly v early", "dfly early", "same", "fish early", "fish v early"))
-trt$sync_dfly <- factor(trt$sync_dfly, levels = c("low", "med", "high"))
-trt$mean_dfly <- factor(trt$mean_dfly, levels = c("dfly v early", "dfly early", "same", "fish early", "fish v early"))
-
-```
-
 # Plots
 
 Here are some diagnostic plots to get a quick look at the data. These will give an idea of what parameter space is reasonable and interesting to explore in future behavior space runs.

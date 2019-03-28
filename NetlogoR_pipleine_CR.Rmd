@@ -44,14 +44,21 @@ mytheme <- theme(panel.background = element_blank(),
 First, be sure you export behavior space data from Netlogo in "table" format. When the raw data is exported as a spreadsheet, it comes in a really gnarly format. R can't read it because it's not even close to rectangular, big header, mix of space delimited and bracket delimited. It's a mess. The table is still a bit messy, but much easier to wrangle.
 
 ```{r load table data}
+## first test with 1 consumer and resource. Size scaled consumption
+#testa <- read.table("bs_CR1.csv",
+#                   header = T,  
+#                   sep = ',',        # define the separator between columns
+#                   skip = 6,         # 6 header rows we don't need
+#                   quote = "\"",     # correct the column separator
+#                   fill = T)         # add blank fields if rows have unequal length
 
-test <- read.table("bs_CR1.csv",
+## second test with 1 consumer and resource. size-independent consumption
+test <- read.table("bs_CR3.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
                    quote = "\"",     # correct the column separator
                    fill = T)         # add blank fields if rows have unequal length
-
 # [,1:12] are parameter values (some consistent across all, some representing trts)
 # [,13:ncol] are the output we designated
 str(test)  
@@ -152,21 +159,20 @@ ind_time <- read.csv("individual_time_CR.csv", header = T)
 
 ind <- ind_time %>% 
   group_by(run_num, id, sync_fish, surv_fish) %>%
-  summarise(max_size = max(size),
-            meta = if_else(max_size >= 10, 1, 0),
+  summarise(max_size = min(max(size), 11),
+            meta = if_else(max_size == 11, 1, 0),
             hatch_date = min(time[size > 0]),
             # use base R ifelse here, so we can have 2 data types for T/F
-            meta_date = ifelse(meta == 1, min(time[size >= 10]), NA), 
-            death_date = ifelse(meta == 0, min(time[size = max(max_size)]), NA),
-            growth_time = meta_date - hatch_date)
+            end_date = ifelse(meta == 1, min(time[size == 20]), min(time[size == -1])),
+            growth_time = end_date - hatch_date)
 
-# Currently, number of metamorphs doesn't match raw data. think it might be a >= mismatch. check.
+# On some data runs, number of metamorphs doesn't match raw data. always double check.
 check <- ind %>% 
   group_by(run_num, surv_fish) %>%
   summarise(no_meta = sum(meta))
 ggplot(check, aes(x = surv_fish, y = no_meta)) +
   geom_point() + theme_bw() +
-  geom_abline(slope = 1, intercept = 0) + xlim(45, 75) + ylim(45, 75)
+  geom_abline(slope = 1, intercept = 0) #+ xlim(10, 60) + ylim(10, 60)
 
 ```
 
@@ -182,6 +188,19 @@ ggplot(ind, aes(x = hatch_date)) + theme_bw() +
   labs(title = "Hatching timing treatments",
        x = "hatching date",
        y = "density of individuals")
+```
+
+```{r}
+ggplot(subset(ind_time, subset = (run_num == 1 & id == "f_10")), 
+       aes(x = time, y = size, color = id)) +
+  geom_point() +
+  geom_line() + theme_bw()
+  
+ggplot(ind, aes(x = hatch_date, y = growth_time, color = as.factor(meta))) +
+  geom_jitter()
+
+ggplot(ind, aes(x = max_size, y = growth_time, color = as.factor(meta))) +
+  geom_jitter()
 ```
 
 

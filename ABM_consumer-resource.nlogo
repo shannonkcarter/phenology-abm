@@ -74,19 +74,20 @@ ask fishes
       ;set size-list lput round(size) size-list  ; start the size-list before they hatch so it's the same for all trts
 
       if ticks = hatch-tick [set size 1]                                 ; first time where size = 1 is hatch tick in BS output data
-      if ticks > hatch-tick and size < 10;growth-per-patch * 100        ; turtles hatch at different times, before this and after they reach size threshold they're inert
+      if ticks > hatch-tick and size < 10 and color != red ;growth-per-patch * 100        ; turtles hatch at different times, before this and after they reach size threshold they're inert
       [
         ifelse (item 0 meals + item 1 meals + item 2 meals + item 3 meals + item 4 meals + item 5 meals + item 6 meals + item 7 meals + item 8 meals) > size ^ 0.75
         [
         set color blue             ; indicates hatching and let's them be cannibalized
         ;move
-        eat-grass                  ; eat & gain energy-- radius and meal size scaled by size
+        eat-grass-sizedependent                  ; eat & gain energy-- radius and meal size scaled by size
+        ;eat-grass-sizeindependent
         metamorph-fish
         ]
 
         ; DEATH PROCEDURE
         [
-          set size 0           ; for visualizing in-program, turn this off. but necessary to determine death date in BS data;
+          set size -1           ; for visualizing in-program, turn this off. but necessary to determine death date in BS data;
           ;set size 2            ; if not doing BS, makes it easier to see everything else. But turn off to see a size distribution
           set color red         ; ones that starve turn red
           stamp                 ; and mark their final location- I think I have to turn this off to run behavior space
@@ -142,10 +143,36 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;;; EAT-GRASS PROCEDURE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-to eat-grass      ; turtle procedure-- separate into breeds?
+to eat-grass-sizedependent      ; turtle procedure-- separate into breeds?
 
   ;; WHICH AND HOW MANY PATCHES CAN I EAT?
   let max-meal (min (list (round (0.8 * size)) (count patches with [pcolor = 52]))) ; have to make a list otherwise it will call for too many agents. take out in-radius to make non-spatial, totally deterministic
+
+  ;; LOCAL VARIABLES FOR FEEDING GAINS
+  let growth-this-tick 0                                           ; at the start of each tick, they haven't grown that tick
+
+  ;; EAT PATCHES
+  ask n-of max-meal patches with [pcolor = 52] ; identify all patches I can eat-- what happens if there are 2 turtles that could eat the same patch? check
+  [
+    set pcolor black                                               ; eaten patches turn black and don't regenerate
+    set growth-this-tick growth-this-tick + growth-per-patch       ; use this to calculate grass patches needed to metamorph, i.e., with size 1 -> 10 and 0.1, need to eat 100 patches
+  ]
+
+  ;; ADD GROWTH AND ENERGY FROM THIS FEEDING                       ; these have to be outside previous block since patches can't access turtle variables
+  set size size + growth-this-tick                                 ; grow proportional to the number of patches they ate that tick- more for larger turtles
+  set meals fput round (growth-this-tick / growth-per-patch) meals ; adding their n-patches eaten to a list containing info on feeding each tick.
+
+  ;; OPTION TO SHOW MEAL LIST
+  ifelse show-label?
+  [set label fish-size-list]  ; can be useful to show size progression when troubleshooting. can also make the label age or hatch tick
+  [set label ""]
+
+end
+
+to eat-grass-sizeindependent      ; turtle procedure-- separate into breeds?
+
+  ;; WHICH AND HOW MANY PATCHES CAN I EAT?
+  let max-meal (min (list (2) (count patches with [pcolor = 52]))) ; have to make a list otherwise it will call for too many agents. take out in-radius to make non-spatial, totally deterministic
 
   ;; LOCAL VARIABLES FOR FEEDING GAINS
   let growth-this-tick 0                                           ; at the start of each tick, they haven't grown that tick
@@ -176,7 +203,7 @@ to metamorph-fish                          ; fish procedure-- separate breeds he
   [
     set n-meta-fishes n-meta-fishes + 1    ; tally as reaching metamorphosis
     set color 57                           ; ones that metamorph turn green
-    ;set size 0                             ; for visualizing in-program, turn this off. but necessary for BS output to see when they metamorphed
+    set size 20                             ; for visualizing in-program, turn this off. but necessary for BS output to see when they metamorphed
     stamp                                  ; I think I also have to turn this off for BS, but useful for visualizing/troubleshooting
   ]
 

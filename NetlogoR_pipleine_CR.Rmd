@@ -99,16 +99,17 @@ The 'sizes_fish' columns have a time series of size for each individual (so each
 # having a hard time dealing with different density levels atm
 test <- test %>% 
   separate(sizes_fish,                                      # separate sizes_fish
-           into = as.character(c(1:test$n_fish)),  # levels for new var
+           into = paste("f_", c(1:max(test$n_fish)), sep = ""),
+           #into = as.character(c(1:max(test$n_fish))),  # levels for new var
            sep = "]")                # every ] marks a new ind                                       
 
 # Next, I'll gather individuals so that they appear in rows
 
 # Select only unique fish individuals and gather to long format
 test_fish <- test %>%
-  select(run_num, as.character(c(1:test$n_fish))) %>% 
+  select(run_num, f_1:f_100) %>% 
   unique(.) %>% 
-  gather(as.character(c(1:test$n_fish)), key = "fish_id", value = 'size_fish') %>% 
+  gather(f_1:f_100, key = "fish_id", value = 'size_fish') %>% 
   arrange(run_num)
 
 # Remove the brackets
@@ -170,7 +171,7 @@ ind <- ind_time %>%
 # On some data runs, number of metamorphs doesn't match raw data. always double check.
 check <- ind %>% 
   group_by(run_num, surv_fish, n_fish) %>%
-  summarise(no_meta = sum(meta))
+  summarise(no_meta = sum(meta, na.rm = T))
 ggplot(check, aes(x = surv_fish, y = no_meta, color = as.factor(n_fish))) +
   geom_jitter() + theme_bw() +
   geom_abline(slope = 1, intercept = 0) #+ xlim(10, 60) + ylim(10, 60)

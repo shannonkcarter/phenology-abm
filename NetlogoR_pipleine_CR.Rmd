@@ -53,7 +53,7 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 #                   fill = T)         # add blank fields if rows have unequal length
 
 ## second test with 1 consumer and resource. size-independent consumption
-test <- read.table("bs_CR3.csv",
+test <- read.table("bs_CR4.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
@@ -96,18 +96,19 @@ The 'sizes_fish' columns have a time series of size for each individual (so each
 ```{r}
 
 # First, separate so that each individual has it's own column
+# having a hard time dealing with different density levels atm
 test <- test %>% 
   separate(sizes_fish,                                      # separate sizes_fish
-           into = paste("f_", c(1:test$n_fish), sep = ""),  # levels for new var
-           sep = "]")                                       # every ] marks a new ind
+           into = as.character(c(1:test$n_fish)),  # levels for new var
+           sep = "]")                # every ] marks a new ind                                       
 
 # Next, I'll gather individuals so that they appear in rows
 
 # Select only unique fish individuals and gather to long format
 test_fish <- test %>%
-  select(run_num, f_1:f_100) %>% 
+  select(run_num, as.character(c(1:test$n_fish))) %>% 
   unique(.) %>% 
-  gather(f_1:f_100, key = "fish_id", value = 'size_fish') %>% 
+  gather(as.character(c(1:test$n_fish)), key = "fish_id", value = 'size_fish') %>% 
   arrange(run_num)
 
 # Remove the brackets
@@ -158,20 +159,20 @@ Now, I want to make some summarised datasets. First with one row per individual,
 ind_time <- read.csv("individual_time_CR.csv", header = T)
 
 ind <- ind_time %>% 
-  group_by(run_num, id, sync_fish, surv_fish) %>%
+  group_by(run_num, id, sync_fish, surv_fish, n_fish) %>%
   summarise(max_size = min(max(size), 11),
             meta = if_else(max_size == 11, 1, 0),
             hatch_date = min(time[size > 0]),
             # use base R ifelse here, so we can have 2 data types for T/F
-            end_date = ifelse(meta == 1, min(time[size == 20]), min(time[size == -1])),
+            end_date = ifelse(meta == 1, min(time[size == 12]), min(time[size == max_size])),
             growth_time = end_date - hatch_date)
 
 # On some data runs, number of metamorphs doesn't match raw data. always double check.
 check <- ind %>% 
-  group_by(run_num, surv_fish) %>%
+  group_by(run_num, surv_fish, n_fish) %>%
   summarise(no_meta = sum(meta))
-ggplot(check, aes(x = surv_fish, y = no_meta)) +
-  geom_point() + theme_bw() +
+ggplot(check, aes(x = surv_fish, y = no_meta, color = as.factor(n_fish))) +
+  geom_jitter() + theme_bw() +
   geom_abline(slope = 1, intercept = 0) #+ xlim(10, 60) + ylim(10, 60)
 
 ```
@@ -191,10 +192,11 @@ ggplot(ind, aes(x = hatch_date)) + theme_bw() +
 ```
 
 ```{r}
-ggplot(subset(ind_time, subset = (run_num == 1 & id == "f_10")), 
+ggplot(subset(ind_time, subset = (run_num == 1)), 
        aes(x = time, y = size, color = id)) +
-  geom_point() +
-  geom_line() + theme_bw()
+  #geom_point() +
+  theme(legend.position = "none") +
+  geom_smooth(se = F) + theme_bw()
   
 ggplot(ind, aes(x = hatch_date, y = growth_time, color = as.factor(meta))) +
   geom_jitter()

@@ -87,7 +87,7 @@ ask fishes
 
         ; DEATH PROCEDURE
         [
-          set size -1           ; for visualizing in-program, turn this off. but necessary to determine death date in BS data;
+          ;set size -1           ; for visualizing in-program, turn this off. but necessary to determine death date in BS data;
           ;set size 2            ; if not doing BS, makes it easier to see everything else. But turn off to see a size distribution
           set color red         ; ones that starve turn red
           stamp                 ; and mark their final location- I think I have to turn this off to run behavior space
@@ -133,6 +133,7 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;; MOVE PROCEDURE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+; have this turned off for now. adds some stochasticty, but don't think it's too important or interesting
 to move           ; turtle procedure-- no difference between breeds
   rt random 50    ; right turn
   lt random 50    ; left turn
@@ -203,7 +204,7 @@ to metamorph-fish                          ; fish procedure-- separate breeds he
   [
     set n-meta-fishes n-meta-fishes + 1    ; tally as reaching metamorphosis
     set color 57                           ; ones that metamorph turn green
-    set size 20                             ; for visualizing in-program, turn this off. but necessary for BS output to see when they metamorphed
+    set size 12                             ; for visualizing in-program, turn this off. but necessary for BS output to see when they metamorphed
     stamp                                  ; I think I also have to turn this off for BS, but useful for visualizing/troubleshooting
   ]
 
@@ -1576,6 +1577,7 @@ NetLogo 6.0
       <value value="false"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="n-fishes">
+      <value value="25"/>
       <value value="100"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="sprout-tick">

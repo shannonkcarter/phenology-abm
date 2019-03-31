@@ -173,7 +173,7 @@ check <- ind %>%
   group_by(run_num, surv_fish, n_fish) %>%
   summarise(no_meta = sum(meta, na.rm = T))
 ggplot(check, aes(x = surv_fish, y = no_meta, color = as.factor(n_fish))) +
-  geom_jitter() + theme_bw() +
+  geom_point() + theme_bw() +
   geom_abline(slope = 1, intercept = 0) #+ xlim(10, 60) + ylim(10, 60)
 
 ```
@@ -193,11 +193,11 @@ ggplot(ind, aes(x = hatch_date)) + theme_bw() +
 ```
 
 ```{r}
-ggplot(subset(ind_time, subset = (run_num == 1)), 
-       aes(x = time, y = size, color = id)) +
+ggplot(ind_time, aes(x = time, y = size, color = id)) +
   #geom_point() +
-  theme(legend.position = "none") +
-  geom_smooth(se = F) + theme_bw()
+  geom_smooth(se = F) + theme_bw() +
+  facet_wrap(~run_num) +
+  theme(legend.position = "none") 
   
 ggplot(ind, aes(x = hatch_date, y = growth_time, color = as.factor(meta))) +
   geom_jitter()

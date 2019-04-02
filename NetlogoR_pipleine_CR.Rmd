@@ -206,6 +206,7 @@ ggplot(ind_time, aes(x = time, y = size, color = id)) +
   
 ggplot(ind, aes(x = hatch_date, y = growth_time, color = as.factor(meta))) +
   geom_jitter()
+
 # tons of NA-- look into this
 ggplot(ind, aes(x = max_size, y = growth_time, color = as.factor(meta))) +
   geom_jitter()

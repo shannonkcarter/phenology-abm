@@ -96,12 +96,13 @@ The 'sizes_fish' columns have a time series of size for each individual (so each
 ```{r}
 
 # First, separate so that each individual has it's own column
-# having a hard time dealing with different density levels atm
 test <- test %>% 
   separate(sizes_fish,                                      # separate sizes_fish
            into = paste("f_", c(1:max(test$n_fish)), sep = ""),
            #into = as.character(c(1:max(test$n_fish))),  # levels for new var
            sep = "]")                # every ] marks a new ind                                       
+# some cells are left blank and not NA (because of "]]" ending), so fill those with NA
+test[test==""] <- NA
 
 # Next, I'll gather individuals so that they appear in rows
 
@@ -111,6 +112,9 @@ test_fish <- test %>%
   unique(.) %>% 
   gather(f_1:f_100, key = "fish_id", value = 'size_fish') %>% 
   arrange(run_num)
+
+# remove NA cases, i.e. for runs where n_fish < max(n_fish)
+test_fish <- test_fish[complete.cases(test_fish), ]
 
 # Remove the brackets
 test_fish$size_fish <- gsub("[", "", test_fish$size_fish, fixed = T)
@@ -159,6 +163,7 @@ Now, I want to make some summarised datasets. First with one row per individual,
 ```{r}
 ind_time <- read.csv("individual_time_CR.csv", header = T)
 
+# producing a lot of NAs
 ind <- ind_time %>% 
   group_by(run_num, id, sync_fish, surv_fish, n_fish) %>%
   summarise(max_size = min(max(size), 11),
@@ -201,7 +206,7 @@ ggplot(ind_time, aes(x = time, y = size, color = id)) +
   
 ggplot(ind, aes(x = hatch_date, y = growth_time, color = as.factor(meta))) +
   geom_jitter()
-
+# tons of NA-- look into this
 ggplot(ind, aes(x = max_size, y = growth_time, color = as.factor(meta))) +
   geom_jitter()
 ```

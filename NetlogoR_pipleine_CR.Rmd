@@ -53,7 +53,7 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 #                   fill = T)         # add blank fields if rows have unequal length
 
 ## second test with 1 consumer and resource. size-independent consumption
-test <- read.table("bs_CR4.csv",
+test <- read.table("bs_CR5.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
@@ -79,13 +79,14 @@ test <- test %>%
          total_time = X.step.,                     # length of time the experiment ran
          n_fish = n.fishes,                        # two types of "turtles" here: fish & dfly
          sync_fish = var.hatch.fishes,             # amount of variation in ind hatching timing
+         asymmetry = asymmetry.slope,              # controls size dependent per capita effects
          surv_fish = n.meta.fishes,                # number that 'metamorphed', i.e., size >10
          sizes_fish = X.fish.size.list..of.fishes) # list of size for each ind for each time step
 
 # Extract parameter values-- these are the 'treatments' and inputs of the model for each run
 # I'll rejoin the output data with params later, after some summarizing/processing
 # Here, add qualitative levels for the treatment parameters. This will be different for each BS
-params <- test[,1:5]
+params <- test[,1:6]
 
 ```
 
@@ -108,9 +109,9 @@ test[test==""] <- NA
 
 # Select only unique fish individuals and gather to long format
 test_fish <- test %>%
-  select(run_num, f_1:f_100) %>% 
+  select(run_num, f_1:f_150) %>% 
   unique(.) %>% 
-  gather(f_1:f_100, key = "fish_id", value = 'size_fish') %>% 
+  gather(f_1:f_150, key = "fish_id", value = 'size_fish') %>% 
   arrange(run_num)
 
 # remove NA cases, i.e. for runs where n_fish < max(n_fish)
@@ -147,7 +148,7 @@ Now, rejoin with the treatment information, and write a csv. This csv has one li
 # Rejoin with treatment identifiers for each run number
 test <- left_join(test_fish, params, by = "run_num")
 ind_time <- test %>%
-  select(run_num, n_fish, sync_fish,
+  select(run_num, n_fish, sync_fish, asymmetry,
          surv_fish, time, fish_id, current_size_fish) %>% 
   rename(size = current_size_fish, id = fish_id)
 
@@ -165,7 +166,7 @@ ind_time <- read.csv("individual_time_CR.csv", header = T)
 
 # producing a lot of NAs
 ind <- ind_time %>% 
-  group_by(run_num, id, sync_fish, surv_fish, n_fish) %>%
+  group_by(run_num, id, sync_fish, surv_fish, asymmetry) %>%
   summarise(max_size = min(max(size), 11),
             meta = if_else(max_size == 11, 1, 0),
             hatch_date = min(time[size > 0]),
@@ -175,9 +176,9 @@ ind <- ind_time %>%
 
 # On some data runs, number of metamorphs doesn't match raw data. always double check.
 check <- ind %>% 
-  group_by(run_num, surv_fish, n_fish) %>%
+  group_by(run_num, surv_fish) %>%
   summarise(no_meta = sum(meta, na.rm = T))
-ggplot(check, aes(x = surv_fish, y = no_meta, color = as.factor(n_fish))) +
+ggplot(check, aes(x = surv_fish, y = no_meta)) +
   geom_point() + theme_bw() +
   geom_abline(slope = 1, intercept = 0) #+ xlim(10, 60) + ylim(10, 60)
 
@@ -201,13 +202,12 @@ ggplot(ind, aes(x = hatch_date)) + theme_bw() +
 ggplot(ind_time, aes(x = time, y = size, color = id)) +
   #geom_point() +
   geom_smooth(se = F) + theme_bw() +
-  facet_grid(sync_fish ~ n_fish) +
+  facet_grid(sync_fish ~ asymmetry) +
   theme(legend.position = "none") 
   
 ggplot(ind, aes(x = hatch_date, y = growth_time, color = as.factor(meta))) +
   geom_jitter() + theme_bw()
 
-# tons of NA-- look into this
 ggplot(ind, aes(x = max_size, y = growth_time, color = as.factor(meta))) +
   geom_jitter()
 ```
@@ -217,7 +217,7 @@ ggplot(ind, aes(x = max_size, y = growth_time, color = as.factor(meta))) +
 ggplot(ind, aes(x = hatch_date, y = max_size)) +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
   stat_smooth() +
-  facet_grid(n_fish ~ sync_fish, scales = 'free') + theme_bw() +
+  facet_grid(asymmetry ~ sync_fish, scales = 'free') + theme_bw() +
   labs(title = "Final size by hatching date",
        x = "hatching date",
        y = "final size")
@@ -229,7 +229,7 @@ ggplot(ind, aes(x = hatch_date, y = max_size)) +
 ggplot(ind, aes(x = hatch_date, y = growth_time)) + theme_bw() +
   geom_point(alpha = 0.65, size = 2) +
   stat_smooth(method = "lm", formula = y ~ poly(x, 2), se = T, size = 2) +
-  facet_grid(n_fish ~ sync_fish, scales = "free") + 
+  facet_grid(asymmetry ~ sync_fish, scales = "free") + 
   theme(#legend.position = "none",
         strip.text.x = element_text(size = 14),
         strip.text.y = element_text(size = 14)) +
@@ -244,7 +244,7 @@ ggplot(ind, aes(x = hatch_date, y = growth_time)) + theme_bw() +
 ggplot(ind, aes(x = hatch_date, y = meta)) + theme_bw() +
   geom_point(alpha = 0.25) + 
   stat_smooth(method = 'glm', method.args = 'binomial', se = F) +
-  facet_grid(n_fish ~ sync_fish, scales = "free") + 
+  facet_grid(asymmetry ~ sync_fish, scales = "free") + 
   xlab("hatch date") + ylab("probability of survival") +
   theme(strip.text.x = element_text(size = 14),
         strip.text.y = element_text(size = 14)) +
@@ -255,10 +255,11 @@ ggplot(ind, aes(x = hatch_date, y = meta)) + theme_bw() +
 
 ```{r, echo = F}
 
-ggplot(ind, aes(x = hatch_date, y = meta, color = as.factor(sync_fish))) +
+# asymmetry not making the difference I would expect...look into this
+ggplot(ind, aes(x = hatch_date, y = meta, color = as.factor(asymmetry))) +
   geom_point(alpha = 0.25) + theme_bw() +
   stat_smooth(method = 'glm', method.args = 'binomial', size = 2, alpha = 0.5, se = T) +
-  facet_grid(. ~ n_fish) +
+  facet_grid(. ~ sync_fish) +
   labs(title = "Probability of survival by hatching date",
        x = "hatching date",
        y = "probability of survival")
@@ -295,7 +296,7 @@ These are things pulled from the model to take a look at to examine scaling rela
 df <- data.frame(size = 1:10)
 df$starvation <- df$size ^ 0.75
 df$maxmeal <- df$size*0.8
-df$growthperpatch <- 0.1
+df$growthperpatch <- rep("0.1", length(df$size))
 
 ggplot(df, aes(x = size, y = maxmeal)) + theme_bw() +
   geom_point() +

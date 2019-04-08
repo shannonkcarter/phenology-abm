@@ -80,8 +80,8 @@ ask fishes
         [
         set color blue             ; indicates hatching and let's them be cannibalized
         ;move
-        eat-grass-sizedependent                  ; eat & gain energy-- radius and meal size scaled by size
-        ;eat-grass-sizeindependent
+        eat-grass                  ; eat & gain energy-- radius and meal size scaled by size
+
         metamorph-fish
         ]
 
@@ -144,10 +144,17 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;;; EAT-GRASS PROCEDURE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-to eat-grass-sizedependent      ; turtle procedure-- separate into breeds?
+to eat-grass      ; turtle procedure-- separate into breeds?
 
   ;; WHICH AND HOW MANY PATCHES CAN I EAT?
-  let max-meal (min (list (round (0.8 * size)) (count patches with [pcolor = 52]))) ; have to make a list otherwise it will call for too many agents. take out in-radius to make non-spatial, totally deterministic
+  let max-meal (min
+    (list
+      ;(round
+        (asymmetry-slope * size + (5 - 5 * asymmetry-slope))
+        (count patches with [pcolor = 52])
+      ;)
+      )
+    ) ; have to make a list otherwise it will call for too many agents. take out in-radius to make non-spatial, totally deterministic
 
   ;; LOCAL VARIABLES FOR FEEDING GAINS
   let growth-this-tick 0                                           ; at the start of each tick, they haven't grown that tick
@@ -170,31 +177,6 @@ to eat-grass-sizedependent      ; turtle procedure-- separate into breeds?
 
 end
 
-to eat-grass-sizeindependent      ; turtle procedure-- separate into breeds?
-
-  ;; WHICH AND HOW MANY PATCHES CAN I EAT?
-  let max-meal (min (list (2) (count patches with [pcolor = 52]))) ; have to make a list otherwise it will call for too many agents. take out in-radius to make non-spatial, totally deterministic
-
-  ;; LOCAL VARIABLES FOR FEEDING GAINS
-  let growth-this-tick 0                                           ; at the start of each tick, they haven't grown that tick
-
-  ;; EAT PATCHES
-  ask n-of max-meal patches with [pcolor = 52] ; identify all patches I can eat-- what happens if there are 2 turtles that could eat the same patch? check
-  [
-    set pcolor black                                               ; eaten patches turn black and don't regenerate
-    set growth-this-tick growth-this-tick + growth-per-patch       ; use this to calculate grass patches needed to metamorph, i.e., with size 1 -> 10 and 0.1, need to eat 100 patches
-  ]
-
-  ;; ADD GROWTH AND ENERGY FROM THIS FEEDING                       ; these have to be outside previous block since patches can't access turtle variables
-  set size size + growth-this-tick                                 ; grow proportional to the number of patches they ate that tick- more for larger turtles
-  set meals fput round (growth-this-tick / growth-per-patch) meals ; adding their n-patches eaten to a list containing info on feeding each tick.
-
-  ;; OPTION TO SHOW MEAL LIST
-  ifelse show-label?
-  [set label fish-size-list]  ; can be useful to show size progression when troubleshooting. can also make the label age or hatch tick
-  [set label ""]
-
-end
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;; METAMORPHOSIS PROCEDURE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -330,8 +312,8 @@ SLIDER
 n-fishes
 n-fishes
 0
-100
-100.0
+200
+150.0
 1
 1
 NIL
@@ -361,7 +343,7 @@ grass-death-rate
 grass-death-rate
 0
 10
-1.0
+0.0
 1
 1
 NIL
@@ -497,8 +479,23 @@ mean-hatch-fishes
 mean-hatch-fishes
 0
 100
-20.0
+30.0
 1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+6
+83
+144
+116
+asymmetry-slope
+asymmetry-slope
+0
+1
+1.0
+0.1
 1
 NIL
 HORIZONTAL
@@ -1568,7 +1565,7 @@ NetLogo 6.0
       <value value="1"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="CR-run1" repetitions="4" runMetricsEveryStep="false">
+  <experiment name="CR-run2" repetitions="4" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
     <metric>n-meta-fishes</metric>
@@ -1577,8 +1574,7 @@ NetLogo 6.0
       <value value="false"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="n-fishes">
-      <value value="25"/>
-      <value value="100"/>
+      <value value="150"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="sprout-tick">
       <value value="5"/>
@@ -1589,7 +1585,7 @@ NetLogo 6.0
       <value value="15"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="mean-hatch-fishes">
-      <value value="20"/>
+      <value value="30"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="growth-per-patch">
       <value value="0.1"/>
@@ -1598,6 +1594,11 @@ NetLogo 6.0
       <value value="6"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="grass-death-rate">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="asymmetry-slope">
+      <value value="0"/>
+      <value value="0.5"/>
       <value value="1"/>
     </enumeratedValueSet>
   </experiment>

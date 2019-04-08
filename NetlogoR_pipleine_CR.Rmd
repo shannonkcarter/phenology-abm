@@ -201,11 +201,11 @@ ggplot(ind, aes(x = hatch_date)) + theme_bw() +
 ggplot(ind_time, aes(x = time, y = size, color = id)) +
   #geom_point() +
   geom_smooth(se = F) + theme_bw() +
-  facet_wrap(~run_num) +
+  facet_grid(sync_fish ~ n_fish) +
   theme(legend.position = "none") 
   
 ggplot(ind, aes(x = hatch_date, y = growth_time, color = as.factor(meta))) +
-  geom_jitter()
+  geom_jitter() + theme_bw()
 
 # tons of NA-- look into this
 ggplot(ind, aes(x = max_size, y = growth_time, color = as.factor(meta))) +
@@ -217,7 +217,7 @@ ggplot(ind, aes(x = max_size, y = growth_time, color = as.factor(meta))) +
 ggplot(ind, aes(x = hatch_date, y = max_size)) +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
   stat_smooth() +
-  facet_grid(. ~ sync_fish, scales = 'free') + theme_bw() +
+  facet_grid(n_fish ~ sync_fish, scales = 'free') + theme_bw() +
   labs(title = "Final size by hatching date",
        x = "hatching date",
        y = "final size")
@@ -229,7 +229,7 @@ ggplot(ind, aes(x = hatch_date, y = max_size)) +
 ggplot(ind, aes(x = hatch_date, y = growth_time)) + theme_bw() +
   geom_point(alpha = 0.65, size = 2) +
   stat_smooth(method = "lm", formula = y ~ poly(x, 2), se = T, size = 2) +
-  facet_grid(. ~ sync_fish, scales = "free") + 
+  facet_grid(n_fish ~ sync_fish, scales = "free") + 
   theme(#legend.position = "none",
         strip.text.x = element_text(size = 14),
         strip.text.y = element_text(size = 14)) +
@@ -244,7 +244,7 @@ ggplot(ind, aes(x = hatch_date, y = growth_time)) + theme_bw() +
 ggplot(ind, aes(x = hatch_date, y = meta)) + theme_bw() +
   geom_point(alpha = 0.25) + 
   stat_smooth(method = 'glm', method.args = 'binomial', se = F) +
-  facet_grid(. ~ sync_fish, scales = "free") + 
+  facet_grid(n_fish ~ sync_fish, scales = "free") + 
   xlab("hatch date") + ylab("probability of survival") +
   theme(strip.text.x = element_text(size = 14),
         strip.text.y = element_text(size = 14)) +
@@ -257,7 +257,8 @@ ggplot(ind, aes(x = hatch_date, y = meta)) + theme_bw() +
 
 ggplot(ind, aes(x = hatch_date, y = meta, color = as.factor(sync_fish))) +
   geom_point(alpha = 0.25) + theme_bw() +
-  stat_smooth(method = 'glm', method.args = 'binomial', size = 2, alpha = 0.5, se = F) +
+  stat_smooth(method = 'glm', method.args = 'binomial', size = 2, alpha = 0.5, se = T) +
+  facet_grid(. ~ n_fish) +
   labs(title = "Probability of survival by hatching date",
        x = "hatching date",
        y = "probability of survival")
@@ -274,13 +275,30 @@ ggplot(ind_surv, aes(hatch_date)) + theme_bw() +
   geom_density(size = 1, alpha = 0.25, fill = "black", color = "gray39") + 
   # blue: metamorphosis dates of survivors, scaled to day 0
   geom_density(data = ind_surv, size = 1, alpha = 0.5, color = "steelblue4", fill = "steelblue4",
-               aes(x = meta_date)) +
-  facet_grid(. ~ sync_fish, scales = "free_y") + 
+               aes(x = end_date)) +
+  facet_grid(n_fish ~ sync_fish, scales = "free_y") + 
   theme(strip.text.x = element_text(size = 14),
         strip.text.y = element_text(size = 14)) +
   labs(title = "Phenology across ontogeny",
        x = "date",
        y = "density of individuals")
 
+# weak competition = phenology maintained. more competition = longer tail
+# I should make sure the left tail isn't truncated on low sync distributions
+```
+
+## Taking a look at scaling relationships in the model
+
+These are things pulled from the model to take a look at to examine scaling relationships between an individuals size, consumption rate, and growth rate. Some of these parameters come directly from the model formulation, and some come from data of model runs.
+
+```{r}
+df <- data.frame(size = 1:10)
+df$starvation <- df$size ^ 0.75
+df$maxmeal <- df$size*0.8
+df$growthperpatch <- 0.1
+
+ggplot(df, aes(x = size, y = maxmeal)) + theme_bw() +
+  geom_point() +
+  geom_line()
 ```
 

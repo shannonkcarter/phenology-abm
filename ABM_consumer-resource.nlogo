@@ -39,7 +39,7 @@ to setup
     set hatch-tick round (random-normal mean-hatch-fishes var-hatch-fishes)  ; can control mean and variance of fish hatch time- sliders on interface
     set meals [10 10 10 10 10 10 10 10 10]        ; initializes an empty list to store meal data in. start with values so that they don't starve out the gate
     set fish-size-list []
-    set consumption-list []
+    set consumption-list []                ; this isn't working properly atm. R can't load table output with this reporter in behavior space
   ]
 
 
@@ -180,7 +180,7 @@ to eat-grass      ; turtle procedure-- separate into breeds?
   [set label ""]
 
 ask fishes [
-  set consumption-list lput (growth-this-tick) consumption-list
+  set consumption-list lput (round (growth-this-tick)) consumption-list
 ]
 
 end

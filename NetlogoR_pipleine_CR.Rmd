@@ -53,6 +53,7 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 #                   fill = T)         # add blank fields if rows have unequal length
 
 ## second test with 1 consumer and resource. size-independent consumption
+## bs_CR6 won't load-- something is wrong with consumption-list and the file is too big, or doesn't match this loading criteria
 test <- read.table("bs_CR5.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
@@ -61,7 +62,7 @@ test <- read.table("bs_CR5.csv",
                    fill = T)         # add blank fields if rows have unequal length
 # [,1:12] are parameter values (some consistent across all, some representing trts)
 # [,13:ncol] are the output we designated
-str(test)  
+#str(test)  
 
 ```
 

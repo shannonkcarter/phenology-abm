@@ -19,6 +19,7 @@ fishes-own
   hatch-tick         ; each turtle has a time they become hatch/enter environment
   meals              ; a list of how many patches it eats each time step. used for growth rate and starvation
   fish-size-list
+  consumption-list
 ]
 
 
@@ -38,6 +39,7 @@ to setup
     set hatch-tick round (random-normal mean-hatch-fishes var-hatch-fishes)  ; can control mean and variance of fish hatch time- sliders on interface
     set meals [10 10 10 10 10 10 10 10 10]        ; initializes an empty list to store meal data in. start with values so that they don't starve out the gate
     set fish-size-list []
+    set consumption-list []
   ]
 
 
@@ -66,7 +68,8 @@ to go
 
 ask fishes
 [
-  set fish-size-list lput round (size) fish-size-list
+  set fish-size-list lput (size) fish-size-list   ; can put round() in here to show more summarized growth
+
 ]
 
     ask turtles
@@ -146,6 +149,7 @@ end
 
 to eat-grass      ; turtle procedure-- separate into breeds?
 
+
   ;; WHICH AND HOW MANY PATCHES CAN I EAT?
   let max-meal (min
     (list
@@ -174,6 +178,10 @@ to eat-grass      ; turtle procedure-- separate into breeds?
   ifelse show-label?
   [set label fish-size-list]  ; can be useful to show size progression when troubleshooting. can also make the label age or hatch tick
   [set label ""]
+
+ask fishes [
+  set consumption-list lput (growth-this-tick) consumption-list
+]
 
 end
 
@@ -1570,6 +1578,44 @@ NetLogo 6.0
     <go>go</go>
     <metric>n-meta-fishes</metric>
     <metric>[fish-size-list] of fishes</metric>
+    <enumeratedValueSet variable="show-label?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="n-fishes">
+      <value value="150"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="sprout-tick">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="var-hatch-fishes">
+      <value value="5"/>
+      <value value="10"/>
+      <value value="15"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mean-hatch-fishes">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="growth-per-patch">
+      <value value="0.1"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="grass-grow-rate">
+      <value value="6"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="grass-death-rate">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="asymmetry-slope">
+      <value value="0"/>
+      <value value="0.5"/>
+      <value value="1"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="CR-run2" repetitions="4" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <metric>n-meta-fishes</metric>
+    <metric>[fish-size-list] of fishes</metric>
+    <metric>[consumption-list] of fishes</metric>
     <enumeratedValueSet variable="show-label?">
       <value value="false"/>
     </enumeratedValueSet>

@@ -184,6 +184,19 @@ ggplot(check, aes(x = surv_fish, y = no_meta)) +
   geom_abline(slope = 1, intercept = 0) #+ xlim(10, 60) + ylim(10, 60)
 
 ```
+# Summarize by treatment 
+
+```{r}
+trt <- params %>% 
+  group_by(sync_fish, asymmetry) %>% 
+  summarise(mean_surv_fish = mean(surv_fish),
+            se_surv_fish   = sd(surv_fish)/sqrt(length(surv_fish)))
+trt$sync_fish <- as.factor(trt$sync_fish)
+trt$asymmetry <- as.factor(trt$asymmetry)
+levels(trt$sync_fish) <- list("low" = 15, "med" = 10, "high" = 5)
+levels(trt$asymmetry) <- list("symm" = 0, "low_asym" = 0.5, "high_asym" = 1)
+
+```
 
 # Plots
 
@@ -207,7 +220,7 @@ ggplot(ind_time, aes(x = time, y = size, color = id)) +
   theme(legend.position = "none") 
   
 ggplot(ind, aes(x = hatch_date, y = growth_time, color = as.factor(meta))) +
-  geom_jitter() + theme_bw()
+  geom_jitter() + theme_bw() + facet_grid(sync_fish ~ asymmetry)
 
 ggplot(ind, aes(x = max_size, y = growth_time, color = as.factor(meta))) +
   geom_jitter()
@@ -287,6 +300,15 @@ ggplot(ind_surv, aes(hatch_date)) + theme_bw() +
 
 # weak competition = phenology maintained. more competition = longer tail
 # I should make sure the left tail isn't truncated on low sync distributions
+```
+
+```{r}
+# expecting much bigger differences! 
+ggplot(trt, aes(x = sync_fish, y = mean_surv_fish, color = asymmetry)) +
+  geom_point() + 
+  geom_errorbar(aes(min = mean_surv_fish - se_surv_fish, max = mean_surv_fish + se_surv_fish),
+                width = 0) + 
+  theme_bw()
 ```
 
 ## Taking a look at scaling relationships in the model

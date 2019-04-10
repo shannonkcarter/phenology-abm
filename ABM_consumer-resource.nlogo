@@ -154,7 +154,7 @@ to eat-grass      ; turtle procedure-- separate into breeds?
   let max-meal (min
     (list
       ;(round
-        (asymmetry-slope * size + (5 - 5 * asymmetry-slope))
+        (asymmetry-slope * size + (5 - 5 * asymmetry-slope))   ; max-meal = slope*size + intercept. put intercept in terms of slope so that they're controlled by the same variable. easier for BS
         (count patches with [pcolor = 52])
       ;)
       )
@@ -176,10 +176,11 @@ to eat-grass      ; turtle procedure-- separate into breeds?
 
   ;; OPTION TO SHOW MEAL LIST
   ifelse show-label?
-  [set label fish-size-list]  ; can be useful to show size progression when troubleshooting. can also make the label age or hatch tick
+  [set label consumption-list]  ; can be useful to show size progression when troubleshooting. can also make the label age or hatch tick
   [set label ""]
 
-ask fishes [
+ask fishes
+[
   set consumption-list lput (round (growth-this-tick)) consumption-list
 ]
 
@@ -336,7 +337,7 @@ var-hatch-fishes
 var-hatch-fishes
 0
 20
-15.0
+5.0
 1
 1
 NIL
@@ -502,7 +503,7 @@ asymmetry-slope
 asymmetry-slope
 0
 1
-1.0
+0.0
 0.1
 1
 NIL
@@ -1610,7 +1611,7 @@ NetLogo 6.0
       <value value="1"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="CR-run2" repetitions="4" runMetricsEveryStep="false">
+  <experiment name="CR-run2" repetitions="1" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
     <metric>n-meta-fishes</metric>
@@ -1627,7 +1628,6 @@ NetLogo 6.0
     </enumeratedValueSet>
     <enumeratedValueSet variable="var-hatch-fishes">
       <value value="5"/>
-      <value value="10"/>
       <value value="15"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="mean-hatch-fishes">

@@ -54,7 +54,7 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 
 ## second test with 1 consumer and resource. size-independent consumption
 ## bs_CR6 won't load-- something is wrong with consumption-list and the file is too big, or doesn't match this loading criteria
-test <- read.table("bs_CR5.csv",
+test <- read.table("bs_CR8.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
@@ -110,9 +110,9 @@ test[test==""] <- NA
 
 # Select only unique fish individuals and gather to long format
 test_fish <- test %>%
-  select(run_num, f_1:f_150) %>% 
+  select(run_num, f_1:f_60) %>% 
   unique(.) %>% 
-  gather(f_1:f_150, key = "fish_id", value = 'size_fish') %>% 
+  gather(f_1:f_60, key = "fish_id", value = 'size_fish') %>% 
   arrange(run_num)
 
 # remove NA cases, i.e. for runs where n_fish < max(n_fish)
@@ -222,6 +222,8 @@ ggplot(ind_time, aes(x = time, y = size, color = id)) +
 ggplot(ind, aes(x = hatch_date, y = growth_time, color = as.factor(meta))) +
   geom_jitter() + theme_bw() + facet_grid(sync_fish ~ asymmetry)
 
+# don't really know what I should be looking for in this pattern...
+# individuals can have a range of growth rates and either survive or die, which seems good
 ggplot(ind, aes(x = max_size, y = growth_time, color = as.factor(meta))) +
   geom_jitter()
 ```
@@ -231,7 +233,7 @@ ggplot(ind, aes(x = max_size, y = growth_time, color = as.factor(meta))) +
 ggplot(ind, aes(x = hatch_date, y = max_size)) +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
   stat_smooth() +
-  facet_grid(asymmetry ~ sync_fish, scales = 'free') + theme_bw() +
+  facet_grid(asymmetry ~ sync_fish) + theme_bw() +
   labs(title = "Final size by hatching date",
        x = "hatching date",
        y = "final size")
@@ -255,10 +257,10 @@ ggplot(ind, aes(x = hatch_date, y = growth_time)) + theme_bw() +
 
 ```{r, echo = F}
 # Looks like in several cases, there are some individuals hatching on the last day, way later than the others. Check.
-ggplot(ind, aes(x = hatch_date, y = meta)) + theme_bw() +
+ggplot(ind, aes(x = hatch_date, y = meta, color = as.factor(asymmetry))) + theme_bw() +
   geom_point(alpha = 0.25) + 
   stat_smooth(method = 'glm', method.args = 'binomial', se = F) +
-  facet_grid(asymmetry ~ sync_fish, scales = "free") + 
+  facet_grid(sync_fish ~ .) + 
   xlab("hatch date") + ylab("probability of survival") +
   theme(strip.text.x = element_text(size = 14),
         strip.text.y = element_text(size = 14)) +
@@ -291,7 +293,7 @@ ggplot(ind_surv, aes(hatch_date)) + theme_bw() +
   # blue: metamorphosis dates of survivors, scaled to day 0
   geom_density(data = ind_surv, size = 1, alpha = 0.5, color = "steelblue4", fill = "steelblue4",
                aes(x = end_date)) +
-  facet_grid(n_fish ~ sync_fish, scales = "free_y") + 
+  facet_grid(asymmetry ~ sync_fish, scales = "free_y") + 
   theme(strip.text.x = element_text(size = 14),
         strip.text.y = element_text(size = 14)) +
   labs(title = "Phenology across ontogeny",
@@ -324,5 +326,7 @@ df$growthperpatch <- rep("0.1", length(df$size))
 ggplot(df, aes(x = size, y = maxmeal)) + theme_bw() +
   geom_point() +
   geom_line()
+
+
 ```
 

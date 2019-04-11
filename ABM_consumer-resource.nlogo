@@ -337,7 +337,7 @@ var-hatch-fishes
 var-hatch-fishes
 0
 20
-5.0
+15.0
 1
 1
 NIL
@@ -503,7 +503,7 @@ asymmetry-slope
 asymmetry-slope
 0
 1
-0.0
+1.0
 0.1
 1
 NIL
@@ -1574,7 +1574,7 @@ NetLogo 6.0
       <value value="1"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="CR-run2" repetitions="4" runMetricsEveryStep="false">
+  <experiment name="CR-run2" repetitions="12" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
     <metric>n-meta-fishes</metric>
@@ -1607,7 +1607,6 @@ NetLogo 6.0
     </enumeratedValueSet>
     <enumeratedValueSet variable="asymmetry-slope">
       <value value="0"/>
-      <value value="0.5"/>
       <value value="1"/>
     </enumeratedValueSet>
   </experiment>

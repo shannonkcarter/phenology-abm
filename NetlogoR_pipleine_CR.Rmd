@@ -310,7 +310,7 @@ ggplot(trt, aes(x = sync_fish, y = mean_surv_fish, color = asymmetry)) +
   geom_point() + 
   geom_errorbar(aes(min = mean_surv_fish - se_surv_fish, max = mean_surv_fish + se_surv_fish),
                 width = 0) + 
-  theme_bw()
+  theme_classic()
 ```
 
 ## Taking a look at scaling relationships in the model

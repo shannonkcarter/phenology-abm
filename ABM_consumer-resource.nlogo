@@ -79,7 +79,7 @@ ask fishes
       if ticks = hatch-tick [set size 1]                                 ; first time where size = 1 is hatch tick in BS output data
       if ticks > hatch-tick and size < 10 and color != red ;growth-per-patch * 100        ; turtles hatch at different times, before this and after they reach size threshold they're inert
       [
-        ifelse (item 0 meals + item 1 meals + item 2 meals + item 3 meals + item 4 meals + item 5 meals + item 6 meals + item 7 meals + item 8 meals) > size ^ 0.75
+        ifelse (item 0 meals + item 1 meals + item 2 meals + item 3 meals + item 4 meals + item 5 meals + item 6 meals + item 7 meals + item 8 meals) > 3;size ^ 0.75
         [
         set color blue             ; indicates hatching and let's them be cannibalized
         ;move
@@ -149,7 +149,6 @@ end
 
 to eat-grass      ; turtle procedure-- separate into breeds?
 
-
   ;; WHICH AND HOW MANY PATCHES CAN I EAT?
   let max-meal (min
     (list
@@ -181,7 +180,7 @@ to eat-grass      ; turtle procedure-- separate into breeds?
 
 ask fishes
 [
-  set consumption-list lput (round (growth-this-tick)) consumption-list
+  set consumption-list lput (round (growth-this-tick)) consumption-list  ; currently not working, storing a list of 0's
 ]
 
 end
@@ -322,7 +321,7 @@ n-fishes
 n-fishes
 0
 200
-150.0
+1.0
 1
 1
 NIL
@@ -382,7 +381,7 @@ growth-per-patch
 growth-per-patch
 0
 0.5
-0.1
+0.05
 0.01
 1
 NIL
@@ -464,7 +463,7 @@ SWITCH
 379
 show-label?
 show-label?
-1
+0
 1
 -1000
 
@@ -1574,7 +1573,7 @@ NetLogo 6.0
       <value value="1"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="CR-run2" repetitions="12" runMetricsEveryStep="false">
+  <experiment name="CR-run2" repetitions="6" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
     <metric>n-meta-fishes</metric>
@@ -1583,7 +1582,7 @@ NetLogo 6.0
       <value value="false"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="n-fishes">
-      <value value="150"/>
+      <value value="60"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="sprout-tick">
       <value value="5"/>
@@ -1597,7 +1596,7 @@ NetLogo 6.0
       <value value="30"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="growth-per-patch">
-      <value value="0.1"/>
+      <value value="0.05"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="grass-grow-rate">
       <value value="6"/>

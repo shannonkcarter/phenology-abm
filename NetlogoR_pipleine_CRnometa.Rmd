@@ -1,0 +1,319 @@
+---
+title: "Netlogo to R Pipeline: Consumer-Resource"
+author: "Shannon Carter"
+date: "March 11, 2019"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: united
+    highlight: tango 
+---
+
+# Goal
+
+The objective here is to make a clean reproducible pipeline to transform Netlogo output into a tidy rectangular dataframe. Here, I import behavior space data (i.e., experiment results) from Netlogo to R. The data I've imported here does several 'runs' (multiple treatments and replicates) of an simulation testing effects of phenology on consumer-resource interaction. There is summary data for each run and there's also time series info on size for each turtle/agent. Here, I process the data and make some diagnostic plots to finetune the model.
+
+```{r setup, include = F}
+knitr::opts_chunk$set(echo = T, warning = F, message = F)
+
+## Set working directory and clear memory
+setwd("C:\\Users\\Shannon\\Desktop\\GitHub Repos\\phenology-abm")
+rm(list = ls(all = T))
+
+## Load required packages
+library(tidyverse)
+library(reshape2)
+library(RColorBrewer)
+library(lme4)
+library(wesanderson)
+#library(RNetLogo)    # maybe worthwhile looking into this, so far can't figure it out
+
+## Load universal plotting elements
+mytheme <- theme(panel.background = element_blank(),
+                 panel.grid.minor = element_blank(), 
+                 panel.grid.major = element_blank(),
+                 axis.text  = element_text(size = rel(1.3), colour = "black"),
+                 axis.title = element_text(size = rel(2.0)),
+                 axis.line  = element_line(colour = "black"))
+
+```
+
+# Import Data
+
+First, be sure you export behavior space data from Netlogo in "table" format. When the raw data is exported as a spreadsheet, it comes in a really gnarly format. R can't read it because it's not even close to rectangular, big header, mix of space delimited and bracket delimited. It's a mess. The table is still a bit messy, but much easier to wrangle.
+
+```{r load table data}
+
+## second test with 1 consumer and resource. size-independent consumption
+## bs_CR6 won't load-- something is wrong with consumption-list and the file is too big, or doesn't match this loading criteria
+test <- read.table("bs_CRnometa_3.csv",
+                   header = T,  
+                   sep = ',',        # define the separator between columns
+                   skip = 6,         # 6 header rows we don't need
+                   quote = "\"",     # correct the column separator
+                   fill = T)         # add blank fields if rows have unequal length
+# [,1:12] are parameter values (some consistent across all, some representing trts)
+# [,13:ncol] are the output we designated
+#str(test)  
+
+```
+
+# Inspect Data
+
+First, let's rename columns and drop some that we don't need. I keep some columns that are the same across all model runs because it will be useful to call them later, especially since different runs of the experiment might have differetn values. Some columns will always be the same, or are irrelevant. These I drop. 
+
+For this model, I had two turtle types (fishes and dflies), and varied the timing of hatching and densities of each. Outputs I collected from Netlogo were number of survivors of each turtle type and a vector of sizes for each individual turtle.
+
+```{r}
+# select and rename columns. new_name = old name. 
+# renaming everything I keep, so can rename with select
+test <- test %>% 
+  select(run_num = X.run.number.,                  # each run number is an experimental unit
+         total_time = X.step.,                     # length of time the experiment ran
+         n_fish = n.fishes,                        # two types of "turtles" here: fish & dfly
+         sync_fish = var.hatch.fishes,             # amount of variation in ind hatching timing
+         asymmetry = asymmetry.slope,              # controls size dependent per capita effects
+         #surv_fish = n.meta.fishes,                # number that 'metamorphed', i.e., size >10
+         sizes_fish = X.fish.size.list..of.fishes) # list of size for each ind for each time step
+
+# Extract parameter values-- these are the 'treatments' and inputs of the model for each run
+# I'll rejoin the output data with params later, after some summarizing/processing
+# Here, add qualitative levels for the treatment parameters. This will be different for each BS
+params <- test[,1:6]
+
+```
+
+# Parse Individuals
+
+The 'sizes_fish' columns have a time series of size for each individual (so each 'sizes_fish' column has 50 individuals x 150 time steps values). We ultimately want one row per individual per time step. Let's first separate by individual. 
+
+```{r}
+
+# First, separate so that each individual has it's own column
+test <- test %>% 
+  separate(sizes_fish,                                      # separate sizes_fish
+           into = paste("f_", c(1:max(test$n_fish)), sep = ""),
+           #into = as.character(c(1:max(test$n_fish))),  # levels for new var
+           sep = "]")                # every ] marks a new ind                                       
+# some cells are left blank and not NA (because of "]]" ending), so fill those with NA
+test[test==""] <- NA
+
+# Next, I'll gather individuals so that they appear in rows
+
+# Select only unique fish individuals and gather to long format
+test_fish <- test %>%
+  select(run_num, f_1:f_60) %>% 
+  unique(.) %>% 
+  gather(f_1:f_60, key = "fish_id", value = 'size_fish') %>% 
+  arrange(run_num)
+
+# remove NA cases, i.e. for runs where n_fish < max(n_fish)
+test_fish <- test_fish[complete.cases(test_fish), ]
+
+# Remove the brackets
+test_fish$size_fish <- gsub("[", "", test_fish$size_fish, fixed = T)
+```
+
+# Parse Time Series
+
+Now, do the same separate and gather operations to parse the time vector and put in long format.
+
+```{r}
+
+# Separate the size time series- each space represents a new time point
+test_fish <- test_fish %>% 
+  separate(size_fish, into = as.character(c(0:149)), sep = " ") %>% 
+  select(-c(as.character(0))) # I drop this because there's only a value for ind 1
+
+# Gather to long format, so we now have one line per fish per time step
+test_fish <- test_fish %>% 
+  group_by(run_num) %>% 
+  gather(as.character(1:149), key = "time", value = 'current_size_fish') %>%
+  arrange(run_num, fish_id)
+
+```
+
+# Compile & Tidy
+
+Now, rejoin with the treatment information, and write a csv. This csv has one line per individual per time step. So nrow should be max(run_num) x (ndfly + nfish) x total_time
+```{r}
+
+# Rejoin with treatment identifiers for each run number
+test <- left_join(test_fish, params, by = "run_num")
+ind_time <- test %>%
+  select(run_num, n_fish, sync_fish, asymmetry,
+         time, fish_id, current_size_fish) %>% 
+  rename(size = current_size_fish, id = fish_id)
+ind_time$size <- as.numeric(ind_time$size)
+write.csv(ind_time, "individual_time_CR.csv")
+
+```
+
+
+## Summarize by Individual
+
+Now, I want to make some summarised datasets. First with one row per individual, then with one row per run number 
+
+```{r}
+ind_time <- read.csv("individual_time_CR.csv", header = T)
+
+# producing a lot of NAs
+ind <- ind_time %>% 
+  group_by(run_num, id, sync_fish, asymmetry) %>%
+  summarise(max_size = max(size),
+            meta = if_else(max_size >= 12, 1, 0),
+            hatch_date = min(time[size > 0]))
+            # use base R ifelse here, so we can have 2 data types for T/F
+            #end_date = ifelse(meta == 1, min(time[size == 12]), min(time[size == max_size])),
+            #growth_time = end_date - hatch_date)
+
+```
+# Summarize by treatment 
+
+```{r}
+# first, by run number
+run <- ind %>% 
+  group_by(run_num, sync_fish, asymmetry) %>%
+  filter(meta == 1) %>% 
+  summarise(surv_fish = sum(meta),
+            mean_size = mean(max_size),
+            se_size   = sd(max_size)/sqrt(length(max_size)))
+
+# now by treatment
+trt <- run %>% 
+  group_by(sync_fish, asymmetry) %>% 
+  summarise(mean_surv_fish = mean(surv_fish),
+            se_surv_fish   = sd(surv_fish)/sqrt(length(surv_fish)),
+            mean_size      = mean(mean_size),
+            se_size        = sd(mean_size)/sqrt(length(mean_size)))
+
+trt$sync_fish <- as.factor(trt$sync_fish)
+trt$asymmetry <- as.factor(trt$asymmetry)
+levels(trt$sync_fish) <- list("low" = 15, "med" = 10, "high" = 5)
+levels(trt$asymmetry) <- list("symm" = 0, "low_asym" = 0.5, "high_asym" = 1)
+
+```
+
+# Plots
+
+Here are some diagnostic plots to get a quick look at the data. These will give an idea of what parameter space is reasonable and interesting to explore in future behavior space runs.
+
+
+```{r, echo = F}
+ggplot(ind, aes(x = hatch_date)) + theme_bw() +
+  geom_density(alpha = 0.5, size = 1.2) +
+  facet_grid(. ~ sync_fish) +
+  labs(title = "Hatching timing treatments",
+       x = "hatching date",
+       y = "density of individuals")
+```
+
+```{r}
+ggplot(ind_time, aes(x = time, y = size, color = id)) + theme_bw() +
+  geom_point() +
+  #geom_line() +
+  geom_smooth(se = F) + 
+  facet_grid(sync_fish ~ asymmetry) +
+  theme(legend.position = "none") 
+
+```
+
+
+```{r, echo = F}
+
+# don't really know what I should be looking for in this pattern...
+# individuals can have a range of growth rates and either survive or die, which seems good
+ggplot(ind, aes(x = hatch_date, y = max_size)) +
+  geom_point(size = 1, alpha = 0.2, position = 'jitter') +
+  stat_smooth() +
+  facet_grid(asymmetry ~ sync_fish) + theme_bw() +
+  labs(title = "Final size by hatching date",
+       x = "hatching date",
+       y = "final size")
+
+```
+
+
+```{r, echo = F}
+# Looks like in several cases, there are some individuals hatching on the last day, way later than the others. Check.
+ggplot(ind, aes(x = hatch_date, y = meta, color = as.factor(asymmetry))) + theme_bw() +
+  geom_point(alpha = 0.25) + 
+  stat_smooth(method = 'glm', method.args = 'binomial', se = F) +
+  facet_grid(sync_fish ~ .) + 
+  xlab("hatch date") + ylab("probability of survival") +
+  theme(strip.text.x = element_text(size = 14),
+        strip.text.y = element_text(size = 14)) +
+  labs(title = "Survival probability by hatching date",
+       x = "hatching date",
+       y = "probability of survival")
+
+
+```
+
+
+```{r}
+# treatment means
+surv_means <- ggplot(trt, aes(x = asymmetry, y = mean_surv_fish, group = sync_fish, 
+                              fill = sync_fish, color = sync_fish, shape = sync_fish)) +   
+  geom_line(size = 0.7, position = position_dodge(width = 0.2)) +
+  geom_errorbar(size = 1, width = 0, position = position_dodge(width = 0.2),                   
+                aes(ymin = mean_surv_fish - se_surv_fish, 
+                   ymax = mean_surv_fish + se_surv_fish)) +  
+  geom_point(size = 5, color = 'black', position = position_dodge(width = 0.2)) +   
+  labs(shape = "synchrony", 
+       fill = 'synchrony', 
+       color = "synchrony",
+       x = "size-dependent per capita effects",
+       y = "number of survivors") +
+  theme(legend.position = c(0.1, 0.22),
+        axis.title = element_text(size = 12),
+        axis.text  = element_text(size = 10)) +
+  scale_fill_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
+  scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
+  scale_shape_manual(values = c(21, 24, 23))  
+surv_means + theme_bw()
+```
+
+
+```{r}
+# treatment means
+# need to see how succeptible both of these are to "survive" criteria
+size_means <- ggplot(trt, aes(x = asymmetry, y = mean_size, group = sync_fish, 
+                              fill = sync_fish, color = sync_fish, shape = sync_fish)) +   
+  geom_line(size = 0.7, position = position_dodge(width = 0.2)) +
+  #geom_errorbar(size = 1, width = 0, position = position_dodge(width = 0.2),                   
+  #              aes(ymin = mean_surv_fish - se_surv_fish, 
+  #                 ymax = mean_surv_fish + se_surv_fish)) +  
+  geom_point(size = 5, color = 'black', position = position_dodge(width = 0.2)) +   
+  labs(shape = "synchrony", 
+       fill = 'synchrony', 
+       color = "synchrony",
+       x = "size-dependent per capita effects",
+       y = "mean per capita size") +
+  theme(legend.position = c(0.1, 0.22),
+        axis.title = element_text(size = 12),
+        axis.text  = element_text(size = 10)) +
+  scale_fill_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
+  scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
+  scale_shape_manual(values = c(21, 24, 23))  
+size_means + theme_bw()
+```
+
+## Taking a look at scaling relationships in the model
+
+These are things pulled from the model to take a look at to examine scaling relationships between an individuals size, consumption rate, and growth rate. Some of these parameters come directly from the model formulation, and some come from data of model runs.
+
+```{r}
+df <- data.frame(size = 1:10)
+df$starvation <- df$size ^ 0.75
+df$maxmeal <- df$size*0.8
+df$growthperpatch <- rep("0.1", length(df$size))
+
+ggplot(df, aes(x = size, y = maxmeal)) + theme_bw() +
+  geom_point() +
+  geom_line()
+
+
+```
+

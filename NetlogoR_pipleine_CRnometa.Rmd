@@ -39,7 +39,7 @@ mytheme <- theme(panel.background = element_blank(),
 
 ```
 
-# Import Data
+# Import Data 
 
 First, be sure you export behavior space data from Netlogo in "table" format. When the raw data is exported as a spreadsheet, it comes in a really gnarly format. R can't read it because it's not even close to rectangular, big header, mix of space delimited and bracket delimited. It's a mess. The table is still a bit messy, but much easier to wrangle.
 

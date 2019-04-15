@@ -162,7 +162,7 @@ ind_time <- read.csv("individual_time_CR.csv", header = T)
 ind <- ind_time %>% 
   group_by(run_num, id, sync_fish, asymmetry) %>%
   summarise(max_size = max(size),
-            meta = if_else(max_size >= 12, 1, 0),
+            meta = if_else(max_size >= 10, 1, 0),
             hatch_date = min(time[size > 0]))
             # use base R ifelse here, so we can have 2 data types for T/F
             #end_date = ifelse(meta == 1, min(time[size == 12]), min(time[size == max_size])),
@@ -175,7 +175,7 @@ ind <- ind_time %>%
 # first, by run number
 run <- ind %>% 
   group_by(run_num, sync_fish, asymmetry) %>%
-  filter(meta == 1) %>% 
+  #filter(meta == 1) %>% 
   summarise(surv_fish = sum(meta),
             mean_size = mean(max_size),
             se_size   = sd(max_size)/sqrt(length(max_size)))
@@ -198,7 +198,6 @@ levels(trt$asymmetry) <- list("symm" = 0, "low_asym" = 0.5, "high_asym" = 1)
 # Plots
 
 Here are some diagnostic plots to get a quick look at the data. These will give an idea of what parameter space is reasonable and interesting to explore in future behavior space runs.
-
 
 ```{r, echo = F}
 ggplot(ind, aes(x = hatch_date)) + theme_bw() +
@@ -246,7 +245,9 @@ ggplot(ind, aes(x = hatch_date, y = meta, color = as.factor(asymmetry))) + theme
         strip.text.y = element_text(size = 14)) +
   labs(title = "Survival probability by hatching date",
        x = "hatching date",
-       y = "probability of survival")
+       y = "probability of survival") +
+  #scale_fill_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
+  scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1"))
 
 
 ```
@@ -254,17 +255,17 @@ ggplot(ind, aes(x = hatch_date, y = meta, color = as.factor(asymmetry))) + theme
 
 ```{r}
 # treatment means
-surv_means <- ggplot(trt, aes(x = asymmetry, y = mean_surv_fish, group = sync_fish, 
-                              fill = sync_fish, color = sync_fish, shape = sync_fish)) +   
+surv_means <- ggplot(trt, aes(x = sync_fish, y = mean_surv_fish, group = asymmetry, 
+                              fill = asymmetry, color = asymmetry, shape = asymmetry)) +   
   geom_line(size = 0.7, position = position_dodge(width = 0.2)) +
   geom_errorbar(size = 1, width = 0, position = position_dodge(width = 0.2),                   
                 aes(ymin = mean_surv_fish - se_surv_fish, 
                    ymax = mean_surv_fish + se_surv_fish)) +  
   geom_point(size = 5, color = 'black', position = position_dodge(width = 0.2)) +   
-  labs(shape = "synchrony", 
-       fill = 'synchrony', 
-       color = "synchrony",
-       x = "size-dependent per capita effects",
+  labs(shape = "asymmetry", 
+       fill = 'asymmetry', 
+       color = "asymmetry",
+       x = "hatching synchrony",
        y = "number of survivors") +
   theme(legend.position = c(0.1, 0.22),
         axis.title = element_text(size = 12),
@@ -279,17 +280,17 @@ surv_means + theme_bw()
 ```{r}
 # treatment means
 # need to see how succeptible both of these are to "survive" criteria
-size_means <- ggplot(trt, aes(x = asymmetry, y = mean_size, group = sync_fish, 
-                              fill = sync_fish, color = sync_fish, shape = sync_fish)) +   
+size_means <- ggplot(trt, aes(x = sync_fish, y = mean_size, group = asymmetry, 
+                              fill = asymmetry, color = asymmetry, shape = asymmetry)) +   
   geom_line(size = 0.7, position = position_dodge(width = 0.2)) +
   #geom_errorbar(size = 1, width = 0, position = position_dodge(width = 0.2),                   
   #              aes(ymin = mean_surv_fish - se_surv_fish, 
   #                 ymax = mean_surv_fish + se_surv_fish)) +  
   geom_point(size = 5, color = 'black', position = position_dodge(width = 0.2)) +   
-  labs(shape = "synchrony", 
-       fill = 'synchrony', 
-       color = "synchrony",
-       x = "size-dependent per capita effects",
+  labs(shape = "asymmetry", 
+       fill = 'asymmetry', 
+       color = "asymmetry",
+       x = "hatching synchrony",
        y = "mean per capita size") +
   theme(legend.position = c(0.1, 0.22),
         axis.title = element_text(size = 12),
@@ -310,9 +311,10 @@ df$starvation <- df$size ^ 0.75
 df$maxmeal <- df$size*0.8
 df$growthperpatch <- rep("0.1", length(df$size))
 
-ggplot(df, aes(x = size, y = maxmeal)) + theme_bw() +
+ggplot(df, aes(x = size, y = size)) + theme_bw() +
   geom_point() +
-  geom_line()
+  geom_line() +
+  xlim(0, 10) + ylim(0, 10)
 
 
 ```

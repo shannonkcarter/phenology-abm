@@ -169,7 +169,7 @@ ind_time$asymmetry <- ordered(ind_time$asymmetry, levels = c("symm", "low_asym",
 ind <- ind_time %>% 
   group_by(run_num, id, sync, asym, synchrony, asymmetry) %>%
   summarise(max_size = max(size),
-            meta = if_else(max_size >= 10, 1, 0),
+            meta = if_else(max_size >= 8, 1, 0),
             hatch_date = min(time[size > 0]))
             # use base R ifelse here, so we can have 2 data types for T/F
             #end_date = ifelse(meta == 1, min(time[size == 12]), min(time[size == max_size])),
@@ -253,7 +253,7 @@ Probability of individuals surviving based on hatching date for each treatment
 
 ```{r, echo = F}
 # Looks like in several cases, there are some individuals hatching on the last day, way later than the others. Check.
-ggplot(ind, aes(x = hatch_date, y = meta, color = as.factor(asymmetry))) + theme_bw() +
+ggplot(ind, aes(x = hatch_date, y = meta, color = asymmetry)) + theme_bw() +
   geom_point(alpha = 0.05) + 
   stat_smooth(size = 1.5, method = 'glm', method.args = 'binomial', se = F) +
   facet_grid(synchrony ~ .) + 

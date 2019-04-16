@@ -208,6 +208,18 @@ ggplot(ind, aes(x = hatch_date)) + theme_bw() +
        y = "density of individuals")
 ```
 
+
+```{r}
+ggplot(ind, aes(x = max_size)) + theme_bw() +
+  geom_density(alpha = 0.5, size = 1.2) +
+  facet_grid(asymmetry ~ sync_fish) +
+  geom_vline(xintercept = c(8, 10, 12), linetype = 'dashed') + 
+  labs(title = "Distribution of individual body sizes by treatment",
+       x = "size",
+       y = "density of individuals")
+```
+
+
 ```{r}
 ggplot(ind_time, aes(x = time, y = size, color = id)) + theme_bw() +
   geom_point() +

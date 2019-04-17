@@ -58,57 +58,41 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 to go
 
-;if not any? turtles with [color = orange] and not any? turtles with [color = blue] and not any? turtles with [color = gray] [ stop ]      ; simulation ends if no more live turtles.
+if count patches with [pcolor = 52] + count patches with [pcolor = brown] < 200 [stop]   ; simulation ends when resource runs out
 
     ;; GRASS GROWTH AND DEATH
     grass-production                ; background grass growth and senescence
 
- ;; TURTLES MOVE AND EAT
-
-
+    ;; TURTLES MOVE AND EAT
 ask fishes
 [
   set fish-size-list lput (size) fish-size-list   ; can put round() in here to show more summarized growth
-
 ]
 
     ask turtles
      [
-      ;set size-list lput round(size) size-list  ; start the size-list before they hatch so it's the same for all trts
-
-      if ticks = hatch-tick [set size 1]                                 ; first time where size = 1 is hatch tick in BS output data
-      if ticks > hatch-tick ;and size < 10
+      if ticks = hatch-tick [set size 1]                     ; first time where size = 1 is hatch tick in BS output data
+      if ticks > hatch-tick and color != red                 ; once you're hatched but before you're dead, you start doing stuff
       [
-        set color blue
-        eat-grass
-      ]
-      ;and color != red ;growth-per-patch * 100        ; turtles hatch at different times, before this and after they reach size threshold they're inert
-      ;[
-      ;  ifelse (item 0 meals + item 1 meals + item 2 meals + item 3 meals + item 4 meals + item 5 meals + item 6 meals + item 7 meals + item 8 meals) > 3;size ^ 0.75
-      ;  [
-      ;  set color blue             ; indicates hatching and let's them be cannibalized
-        ;move
-      ;  eat-grass                  ; eat & gain energy-- radius and meal size scaled by size
-
-        ;metamorph-fish
-      ;  ]
-
-        ; DEATH PROCEDURE
-      ;  [
-          ;set size -1           ; for visualizing in-program, turn this off. but necessary to determine death date in BS data;
-          ;set size 2            ; if not doing BS, makes it easier to see everything else. But turn off to see a size distribution
-       ;   set color red         ; ones that starve turn red
-       ;   stamp                 ; and mark their final location- I think I have to turn this off to run behavior space
+        ifelse (item 0 meals + item 1 meals + item 2 meals + item 3 meals + item 4 meals + item 5 meals + item 6 meals + item 7 meals + item 8 meals) > 20 ;size ^ 0.75 ; should this be size-scaled?
+        [
+          set color blue
+          eat-grass
+          ;metamorph-fish
         ]
-      ;]
-    ;]
+        [
+          set color red
+          stamp
+        ]
+      ]
+     ]
 
     set biomass sum [size] of turtles ; this may or may not be interesting
 
     tick
-    ;update-output
-    if ticks = 150 [stop]
+    ;if ticks = 85 [stop]
 end
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;; GRASS GROWTH & DEATH PROCEDURE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -117,20 +101,24 @@ end
 ;; BACKGROUND GRASS GROWTH AND DEATH
 to grass-production
 
-  ;; GROWTH- 6% GROSS GROWTH RATE PER TICK
+  ;; GROWTH- X% GROSS GROWTH RATE PER TICK (controlled by slider)
   if ticks > sprout-tick                ; makes a delay on grass growth-- can adjust for now, make sure turtles don't beat resource
   [
-  ask patches [
-    if pcolor = brown [                 ; only brown patches can sprout; sometimes I might start with some black patches
-      if random 100 < grass-grow-rate   ; ggr% of brown patches sprout each tick
-      [set pcolor 52]                   ; sprouted = can be eaten by turtles = green. make it dark green so it's distinguishable from metamorphs
+    ask patches
+    [
+      if pcolor = brown                   ; only brown patches can sprout; don't want patches regenerating
+      [
+        if random 100 < grass-grow-rate   ; ggr% of brown patches sprout each tick
+        [set pcolor 52]                   ; sprouted = can be eaten by turtles = green. make it dark green so it's distinguishable from metamorphs
+      ]
     ]
   ]
-  ]
 
-  ;; DEATH- 1% GROSS DEATH RATE PER TICK
-  ask patches [
-    if pcolor = 52 [                    ; only green patches can die
+  ;; DEATH- Y% GROSS DEATH RATE PER TICK (controlled by slider)
+  ask patches
+  [
+    if pcolor = 52                      ; only green patches can die
+    [
       if random 100 < grass-death-rate  ; gdr% of green patches die each tick
       [set pcolor black]                ; black patches do not regenerate
     ]
@@ -145,30 +133,31 @@ end
 to move           ; turtle procedure-- no difference between breeds
   rt random 50    ; right turn
   lt random 50    ; left turn
-  fd random 10            ; forward-- undirected movement
+  fd random 10    ; forward-- undirected movement
 end
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;; EAT-GRASS PROCEDURE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-to eat-grass      ; turtle procedure-- separate into breeds?
+to eat-grass      ; turtle procedure-- consider separating into breeds for 2-sp model
 
   ;; WHICH AND HOW MANY PATCHES CAN I EAT?
-  let max-meal (min
-    (list
-      ;(round
+  let max-meal
+  (
+    min
+    (
+      list                                                     ; have to make a list otherwise it will call for too many agents.
         (asymmetry-slope * size + (5 - 5 * asymmetry-slope))   ; max-meal = slope*size + intercept. put intercept in terms of slope so that they're controlled by the same variable. easier for BS
         (count patches with [pcolor = 52])
-      ;)
       )
-    ) ; have to make a list otherwise it will call for too many agents. take out in-radius to make non-spatial, totally deterministic
+    )
 
   ;; LOCAL VARIABLES FOR FEEDING GAINS
   let growth-this-tick 0                                           ; at the start of each tick, they haven't grown that tick
 
   ;; EAT PATCHES
-  ask n-of max-meal patches with [pcolor = 52] ; identify all patches I can eat-- what happens if there are 2 turtles that could eat the same patch? check
+  ask n-of max-meal patches with [pcolor = 52]                     ; identify all patches I can eat-- what happens if there are 2 turtles that could eat the same patch? check
   [
     set pcolor black                                               ; eaten patches turn black and don't regenerate
     set growth-this-tick growth-this-tick + growth-per-patch       ; use this to calculate grass patches needed to metamorph, i.e., with size 1 -> 10 and 0.1, need to eat 100 patches
@@ -194,6 +183,8 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;; METAMORPHOSIS PROCEDURE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; have this turned off for now, and all fish that don't starve are assumed to metamorph
 to metamorph-fish                          ; fish procedure-- separate breeds here to keep separate tallies
   if size >= 10 and breed = fishes    ; final size is a fixed value. can also make it proportional to the growth parameter. have to eat 100 patches to metamorph
   [
@@ -209,6 +200,7 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;; UPDATE OUTPUT PROCEDURE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+; haven't figured out this file export method. from the behaviorspace works fine
 to update-output
 
   file-open "test11.csv"
@@ -507,7 +499,7 @@ asymmetry-slope
 asymmetry-slope
 0
 1
-1.0
+0.1
 0.1
 1
 NIL

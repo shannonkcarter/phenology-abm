@@ -74,7 +74,7 @@ ask fishes
       if ticks = hatch-tick [set size 1]                     ; first time where size = 1 is hatch tick in BS output data
       if ticks > hatch-tick and color != red                 ; once you're hatched but before you're dead, you start doing stuff
       [
-        ifelse (item 0 meals + item 1 meals + item 2 meals + item 3 meals + item 4 meals + item 5 meals + item 6 meals + item 7 meals + item 8 meals) > 7 ;size ^ 0.75 ; should this be size-scaled?
+        ifelse (item 0 meals + item 1 meals + item 2 meals + item 3 meals + item 4 meals + item 5 meals + item 6 meals + item 7 meals + item 8 meals) > size ^ 0.75  ; should this be size-scaled?
         [
           set color blue
           eat-grass
@@ -82,7 +82,9 @@ ask fishes
         ]
         [
           set color red
+          set size 0.0001
           stamp
+          set n-dead-fishes n-dead-fishes + 1
         ]
       ]
      ]
@@ -123,17 +125,6 @@ to grass-production
       [set pcolor black]                ; black patches do not regenerate
     ]
   ]
-end
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;; MOVE PROCEDURE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-; have this turned off for now. adds some stochasticty, but don't think it's too important or interesting
-to move           ; turtle procedure-- no difference between breeds
-  rt random 50    ; right turn
-  lt random 50    ; left turn
-  fd random 10    ; forward-- undirected movement
 end
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -318,7 +309,7 @@ n-fishes
 n-fishes
 0
 200
-60.0
+80.0
 1
 1
 NIL
@@ -333,7 +324,7 @@ var-hatch-fishes
 var-hatch-fishes
 0
 20
-15.0
+5.0
 1
 1
 NIL
@@ -363,7 +354,7 @@ sprout-tick
 sprout-tick
 0
 100
-5.0
+0.0
 5
 1
 NIL
@@ -499,7 +490,7 @@ asymmetry-slope
 asymmetry-slope
 0
 1
-1.0
+0.5
 0.1
 1
 NIL
@@ -1536,16 +1527,17 @@ NetLogo 6.0
     <setup>setup</setup>
     <go>go</go>
     <metric>n-meta-fishes</metric>
+    <metric>n-dead-fishes</metric>
     <metric>biomass</metric>
     <metric>[fish-size-list] of fishes</metric>
     <enumeratedValueSet variable="show-label?">
       <value value="false"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="n-fishes">
-      <value value="60"/>
+      <value value="80"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="sprout-tick">
-      <value value="5"/>
+      <value value="0"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="var-hatch-fishes">
       <value value="5"/>

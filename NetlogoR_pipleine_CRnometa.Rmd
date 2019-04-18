@@ -46,7 +46,7 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 
 ## second test with 1 consumer and resource. size-independent consumption
 ## bs_CR6 won't load-- something is wrong with consumption-list and the file is too big, or doesn't match this loading criteria
-test <- read.table("bs_CRnometa_5.csv",
+test <- read.table("bs_CRnometa_6.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need

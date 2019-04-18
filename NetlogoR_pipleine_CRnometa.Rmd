@@ -46,7 +46,7 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 
 ## second test with 1 consumer and resource. size-independent consumption
 ## bs_CR6 won't load-- something is wrong with consumption-list and the file is too big, or doesn't match this loading criteria
-test <- read.table("bs_CRnometa_4.csv",
+test <- read.table("bs_CRnometa_5.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
@@ -173,7 +173,8 @@ ind_time$asymmetry <- ordered(ind_time$asymmetry, levels = c("symm", "low_asym",
 ind <- ind_time %>% 
   group_by(run_num, id, sync, asym, synchrony, asymmetry, survival, biomass) %>%
   summarise(max_size = max(size),
-            #meta = if_else(max_size >= 8, 1, 0),
+            min_size = min(size),
+            meta = if_else(min_size == -1, 0, 1),
             hatch_date = min(time[size > 0]))
             # use base R ifelse here, so we can have 2 data types for T/F
             #end_date = ifelse(meta == 1, min(time[size == 12]), min(time[size == max_size])),
@@ -187,8 +188,8 @@ ind <- ind_time %>%
 # first, by run number
 run <- ind %>% 
   group_by(run_num, sync, synchrony, asym, asymmetry, survival, biomass) %>%
-  #filter(meta == 1) %>% 
-  summarise(#surv_fish = sum(meta),
+  filter(meta == 1) %>% 
+  summarise(surv_fish = sum(meta),
             mean_size = mean(max_size),
             se_size   = sd(max_size)/sqrt(length(max_size)))
 
@@ -199,6 +200,14 @@ trt <- run %>%
             se_surv_fish   = sd(survival)/sqrt(length(survival)),
             mean_size      = mean(mean_size),
             se_size        = sd(mean_size)/sqrt(length(mean_size)))
+
+# On some data runs, number of metamorphs doesn't match raw data. always double check.
+check <- ind %>% 
+  group_by(run_num, surv_fish) %>%
+  summarise(no_meta = sum(meta, na.rm = T))
+ggplot(check, aes(x = surv_fish, y = no_meta)) +
+  geom_point() + theme_bw() +
+  geom_abline(slope = 1, intercept = 0) #+ xlim(10, 60) + ylim(10, 60)
 
 ```
 

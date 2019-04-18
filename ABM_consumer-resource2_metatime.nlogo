@@ -58,7 +58,7 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 to go
 
-if count patches with [pcolor = 52] + count patches with [pcolor = brown] < 200 [stop]   ; simulation ends when resource runs out
+if count patches with [pcolor = 52] + count patches with [pcolor = brown] < 200 [stop] set n-meta-fishes count fishes with [color = blue]   ; simulation ends when resource runs out
 
     ;; GRASS GROWTH AND DEATH
     grass-production                ; background grass growth and senescence
@@ -82,7 +82,7 @@ ask fishes
         ]
         [
           set color red
-          set size 0.0001
+          set size -1
           stamp
           set n-dead-fishes n-dead-fishes + 1
         ]
@@ -324,7 +324,7 @@ var-hatch-fishes
 var-hatch-fishes
 0
 20
-5.0
+15.0
 1
 1
 NIL
@@ -490,7 +490,7 @@ asymmetry-slope
 asymmetry-slope
 0
 1
-0.5
+1.0
 0.1
 1
 NIL

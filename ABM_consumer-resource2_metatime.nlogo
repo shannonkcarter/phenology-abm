@@ -74,7 +74,7 @@ ask fishes
       if ticks = hatch-tick [set size 1]                     ; first time where size = 1 is hatch tick in BS output data
       if ticks > hatch-tick and color != red                 ; once you're hatched but before you're dead, you start doing stuff
       [
-        ifelse (item 0 meals + item 1 meals + item 2 meals + item 3 meals + item 4 meals + item 5 meals + item 6 meals + item 7 meals + item 8 meals) > 20 ;size ^ 0.75 ; should this be size-scaled?
+        ifelse (item 0 meals + item 1 meals + item 2 meals + item 3 meals + item 4 meals + item 5 meals + item 6 meals + item 7 meals + item 8 meals) > 7 ;size ^ 0.75 ; should this be size-scaled?
         [
           set color blue
           eat-grass
@@ -499,7 +499,7 @@ asymmetry-slope
 asymmetry-slope
 0
 1
-0.1
+1.0
 0.1
 1
 NIL
@@ -1452,44 +1452,6 @@ NetLogo 6.0
       <value value="20"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="test11" repetitions="2" runMetricsEveryStep="false">
-    <setup>setup</setup>
-    <go>go</go>
-    <enumeratedValueSet variable="show-label?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="n-fishes">
-      <value value="50"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="sprout-tick">
-      <value value="20"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="var-hatch-dflies">
-      <value value="5"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="mean-hatch-dflies">
-      <value value="10"/>
-      <value value="30"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="n-dflies">
-      <value value="50"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="grass-grow-rate">
-      <value value="3"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="growth-per-patch">
-      <value value="0.1"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="var-hatch-fishes">
-      <value value="5"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="grass-death-rate">
-      <value value="1"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="mean-hatch-fishes">
-      <value value="20"/>
-    </enumeratedValueSet>
-  </experiment>
   <experiment name="2sp_mean&amp;sync_pop" repetitions="10" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
@@ -1573,6 +1535,8 @@ NetLogo 6.0
   <experiment name="CR-run9" repetitions="6" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
+    <metric>n-meta-fishes</metric>
+    <metric>biomass</metric>
     <metric>[fish-size-list] of fishes</metric>
     <enumeratedValueSet variable="show-label?">
       <value value="false"/>

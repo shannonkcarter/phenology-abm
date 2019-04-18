@@ -27,7 +27,6 @@ library(reshape2)
 library(RColorBrewer)
 library(lme4)
 library(wesanderson)
-#library(RNetLogo)    # maybe worthwhile looking into this, so far can't figure it out
 
 ## Load universal plotting elements
 mytheme <- theme(panel.background = element_blank(),
@@ -47,7 +46,7 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 
 ## second test with 1 consumer and resource. size-independent consumption
 ## bs_CR6 won't load-- something is wrong with consumption-list and the file is too big, or doesn't match this loading criteria
-test <- read.table("bs_CRnometa_3.csv",
+test <- read.table("bs_CRnometa_4.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
@@ -74,13 +73,14 @@ test <- test %>%
          n_fish = n.fishes,                        # two types of "turtles" here: fish & dfly
          sync = var.hatch.fishes,                  # amount of variation in ind hatching timing
          asym = asymmetry.slope,                   # controls size dependent per capita effects
-         #surv_fish = n.meta.fishes,                # number that 'metamorphed', i.e., size >10
+         surv_fish = n.meta.fishes,                # number that 'metamorphed', i.e., size >10
+         biomass = biomass,                        # sum mass of all survivors of a run
          sizes_fish = X.fish.size.list..of.fishes) # list of size for each ind for each time step
 
 # Extract parameter values-- these are the 'treatments' and inputs of the model for each run
 # I'll rejoin the output data with params later, after some summarizing/processing
 # Add qualitative levels for the treatment params, bc useful for plotting. This will be different for each BS
-params <- test[,1:5]
+params <- test[,1:7]
 params$synchrony <- as.factor(params$sync)
 params$asymmetry <- as.factor(params$asym)
 levels(params$synchrony) <- list("low" = 15, "med" = 10, "high" = 5)
@@ -108,7 +108,7 @@ test[test==""] <- NA
 # Select only unique fish individuals and gather to long format
 # For now, need to hardcode max number of fish
 test <- test %>%
-  select(run_num, f_1:f_60) %>% 
+  select(run_num, total_time, f_1:f_60) %>% 
   unique(.) %>% 
   gather(f_1:f_60, key = "fish_id", value = 'size_fish') %>% 
   arrange(run_num)
@@ -128,13 +128,13 @@ Now, do the same separate and gather operations to parse the time vector and put
 
 # Separate the size time series- each space represents a new time point
 test <- test %>% 
-  separate(size_fish, into = as.character(c(0:149)), sep = " ") %>% 
+  separate(size_fish, into = as.character(c(0:max(test$total_time))), sep = " ") %>% 
   select(-c(as.character(0))) # I drop this because there's only a value for ind 1
 
 # Gather to long format, so we now have one line per fish per time step
 test <- test %>% 
   group_by(run_num) %>% 
-  gather(as.character(1:149), key = "time", value = 'current_size_fish') %>%
+  gather(as.character(1:total_time), key = "time", value = 'current_size_fish') %>%
   arrange(run_num, fish_id)
 
 ```

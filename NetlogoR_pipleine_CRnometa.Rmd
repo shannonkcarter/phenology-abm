@@ -246,7 +246,7 @@ growthrates <- ggplot(ind_time, aes(x = time, y = size, color = id)) + theme_bw(
   geom_smooth(se = F) + 
   facet_grid(synchrony ~ asymmetry) +
   theme(legend.position = "none") 
-#growthrates
+growthrates
 ```
 
 

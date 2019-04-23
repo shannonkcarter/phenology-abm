@@ -73,14 +73,15 @@ test <- test %>%
          n_fish = n.fishes,                        # two types of "turtles" here: fish & dfly
          sync = var.hatch.fishes,                  # amount of variation in ind hatching timing
          asym = asymmetry.slope,                   # controls size dependent per capita effects
-         surv_fish = n.meta.fishes,                # number that 'metamorphed', i.e., size >10
+         survival = n.meta.fishes,                 # number that 'metamorphed', i.e., survived to the end
+         n_dead   = n.dead.fishes,                 # number that starved before metamorphosis
          biomass = biomass,                        # sum mass of all survivors of a run
          sizes_fish = X.fish.size.list..of.fishes) # list of size for each ind for each time step
 
 # Extract parameter values-- these are the 'treatments' and inputs of the model for each run
 # I'll rejoin the output data with params later, after some summarizing/processing
 # Add qualitative levels for the treatment params, bc useful for plotting. This will be different for each BS
-params <- test[,1:7]
+params <- test[,1:8]
 params$synchrony <- as.factor(params$sync)
 params$asymmetry <- as.factor(params$asym)
 levels(params$synchrony) <- list("low" = 15, "med" = 10, "high" = 5)
@@ -150,10 +151,9 @@ Now, rejoin with the treatment information, and write a csv. This csv has one li
 test <- left_join(test, params, by = "run_num")
 ind_time <- test %>%
   select(run_num,total_time.x, n_fish, sync, asym, synchrony, asymmetry,
-         time, surv_fish, biomass, fish_id, current_size_fish) %>% 
+         time, survival, n_dead, biomass, fish_id, current_size_fish) %>% 
   rename(size = current_size_fish, id = fish_id, 
-         total_time = total_time.x,
-         survival = surv_fish)
+         total_time = total_time.x)
 ind_time$size <- as.numeric(ind_time$size)
 write.csv(ind_time, "individual_time_CR.csv")
 
@@ -171,7 +171,7 @@ ind_time$asymmetry <- ordered(ind_time$asymmetry, levels = c("symm", "low_asym",
 
 # Here, set a minimum threshold for metamorphosis. Future runs will have this modeled implicitly
 ind <- ind_time %>% 
-  group_by(run_num, id, sync, asym, synchrony, asymmetry, survival, biomass) %>%
+  group_by(run_num, id, sync, asym, synchrony, asymmetry, survival, n_dead, biomass) %>%
   summarise(max_size = max(size),
             min_size = min(size),
             meta = if_else(min_size == -1, 0, 1),
@@ -187,12 +187,12 @@ ind <- ind_time %>%
 ```{r}
 # first, by run number
 run <- ind %>% 
-  group_by(run_num, sync, synchrony, asym, asymmetry, survival, biomass) %>%
+  group_by(run_num, sync, synchrony, asym, asymmetry, survival, n_dead, biomass) %>%
   filter(meta == 1) %>% 
   summarise(surv_fish = sum(meta),
             mean_size = mean(max_size),
             se_size   = sd(max_size)/sqrt(length(max_size)))
-
+run$surv_check <- 80 - (run$survival + run$n_dead)
 # now by treatment
 trt <- run %>% 
   group_by(sync, synchrony, asym, asymmetry) %>% 
@@ -203,11 +203,11 @@ trt <- run %>%
 
 # On some data runs, number of metamorphs doesn't match raw data. always double check.
 check <- ind %>% 
-  group_by(run_num, surv_fish) %>%
+  group_by(run_num, survival, n_dead) %>%
   summarise(no_meta = sum(meta, na.rm = T))
-ggplot(check, aes(x = surv_fish, y = no_meta)) +
-  geom_point() + theme_bw() +
-  geom_abline(slope = 1, intercept = 0) #+ xlim(10, 60) + ylim(10, 60)
+ggplot(check, aes(x = 80 - n_dead, y = no_meta)) +
+  geom_point(alpha = 0.25) + theme_bw() +
+  geom_abline(slope = 1, intercept = 0)# + xlim(20, 80) + ylim(20, 80)
 
 ```
 
@@ -346,7 +346,7 @@ df$starvation <- df$size ^ 0.75
 df$maxmeal <- df$size*0.8
 df$growthperpatch <- rep("0.1", length(df$size))
 
-ggplot(df, aes(x = size, y = size)) + theme_bw() +
+ggplot(df, aes(x = size, y = starvation)) + theme_bw() +
   geom_point() +
   geom_line() +
   xlim(0, 10) + ylim(0, 10)

@@ -58,7 +58,9 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 to go
 
-if count patches with [pcolor = 52] + count patches with [pcolor = brown] < 100 [stop] set n-meta-fishes count fishes with [color = blue]   ; simulation ends when resource runs out
+if count patches with [pcolor = 52] + count patches with [pcolor = brown] < 100 [stop] ; simulation ends when resource runs out
+set n-meta-fishes count fishes with [color = blue] ; at this point, set the number of metamorphs to the number of blue fish
+set n-dead-fishes count fishes with [color = red]  ; at this point, set the number of dead fish to the number of red fish
 
     ;; GRASS GROWTH AND DEATH
     grass-production                ; background grass growth and senescence
@@ -74,7 +76,7 @@ ask fishes
       if ticks = hatch-tick [set size 1]                     ; first time where size = 1 is hatch tick in BS output data
       if ticks > hatch-tick and color != red                 ; once you're hatched but before you're dead, you start doing stuff
       [
-        ifelse (item 0 meals + item 1 meals + item 2 meals + item 3 meals + item 4 meals + item 5 meals + item 6 meals + item 7 meals + item 8 meals) > size ^ 0.75  ; should this be size-scaled?
+        ifelse (item 0 meals + item 1 meals + item 2 meals + item 3 meals + item 4 meals + item 5 meals + item 6 meals + item 7 meals + item 8 meals) > size ^ 0.85  ; should this be size-scaled?
         [
           set color blue
           eat-grass
@@ -391,7 +393,7 @@ true
 true
 "" ""
 PENS
-"fish metas" 1.0 0 -955883 true "" "plot n-meta-fishes"
+"live fish" 1.0 0 -955883 true "" "plot n-meta-fishes"
 
 MONITOR
 149
@@ -490,7 +492,7 @@ asymmetry-slope
 asymmetry-slope
 0
 1
-0.0
+1.0
 0.1
 1
 NIL

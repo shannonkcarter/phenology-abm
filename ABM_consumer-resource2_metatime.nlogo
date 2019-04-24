@@ -84,9 +84,9 @@ ask fishes
         ]
         [
           set color red
-          set size -1
+          ;set size -1
           stamp
-          set n-dead-fishes n-dead-fishes + 1
+          ;set n-dead-fishes n-dead-fishes + 1
         ]
       ]
      ]
@@ -492,7 +492,7 @@ asymmetry-slope
 asymmetry-slope
 0
 1
-1.0
+0.0
 0.1
 1
 NIL
@@ -505,14 +505,14 @@ HORIZONTAL
 
 Q: Under what ecological conditions is phenological synchrony important for consumer-resource interactions?
 
-Here, we look at consumer-resource dynamics under different manipulations of consumer phenological synchrony. We manipulate the hatching synchrony, density, and per capita size-consumption relationship.
+Here, we look at consumer-resource dynamics under different manipulations of consumer phenological synchrony. We manipulate the synchrony (i.e., individual variation) in hatching timing and the size-dependent per capita effects (i.e., the relationship between individual size and resource consumption).
 
-H: Synchrony should be most important when asymmetric competition is high and density is high. Synchorny should be less important when individuals of different sizes are more similar. The particulars of this relationship, particularly what happens when changing multiple attributes at once, are difficult to intuit.
+H: Synchrony should be most important when asymmetric competition is high and density is high. Synchrony should be less important when individuals of different sizes are more similar. The particulars of this relationship, particularly what happens when changing multiple attributes at once, are difficult to intuit.
 
 2. ENTITIES, STATE VARIABLES, AND SCALES
 
 - Turtles = consumers—have size & age
-- Patches = resource—gets depleted by turtles and background senescence. 
+- Patches = resource— 9801 patches that start brown (unsprouted) and grow over time. Each time step, 6% of brown patches turn green, indicating they're available for consumption. Green patches get consumed by turtles and turn black. Black/consumed patches cannot regenerate. 
 - Global variables
 - Synchrony of turtle arrival (scale with several levels)
 - Mean date of turtle arrival (find a appropriate level and keep it there)

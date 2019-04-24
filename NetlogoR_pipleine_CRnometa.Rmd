@@ -205,7 +205,7 @@ trt <- run %>%
 check <- ind %>% 
   group_by(run_num, survival, n_dead) %>%
   summarise(no_meta = sum(meta, na.rm = T))
-ggplot(check, aes(x = 80 - n_dead, y = no_meta)) +
+ggplot(check, aes(x = survival, y = no_meta)) +
   geom_point(alpha = 0.25) + theme_bw() +
   geom_abline(slope = 1, intercept = 0)# + xlim(20, 80) + ylim(20, 80)
 

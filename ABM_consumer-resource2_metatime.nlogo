@@ -142,7 +142,7 @@ to eat-grass      ; turtle procedure-- consider separating into breeds for 2-sp 
     (
       list                                                     ; have to make a list otherwise it will call for too many agents.
         (asymmetry-slope * size + (5 - 5 * asymmetry-slope))   ; max-meal = slope*size + intercept. put intercept in terms of slope so that they're controlled by the same variable. easier for BS
-        (count patches with [pcolor = 52])
+        ( .2 * count patches with [pcolor = 52])
       )
     )
 
@@ -311,7 +311,7 @@ n-fishes
 n-fishes
 0
 200
-80.0
+70.0
 1
 1
 NIL

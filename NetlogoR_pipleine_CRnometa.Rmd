@@ -349,8 +349,22 @@ df$growthperpatch <- rep("0.1", length(df$size))
 ggplot(df, aes(x = size, y = starvation)) + theme_bw() +
   geom_point() +
   geom_line() +
-  xlim(0, 10) + ylim(0, 10)
+  labs(y = "# patches needed to avoid starvation") +
+  xlim(0, 10) #+ ylim(0, 10)
 
+df <- data.frame(growth = seq(0, 0.9, 0.05))
+df$wt5 <- 5 / (1 - df$growth)
+df$wt2 <- 2 / (1 - df$growth)
+df$wt8 <- 8 / (1 - df$growth)
+ggplot(df, aes(x = growth, y = wt5)) + theme_bw() +
+  geom_point() + 
+  geom_line() +
+  geom_point(aes(x = growth, y = wt2), color = 'blue') +
+  geom_line(aes(x = growth, y = wt2), color = 'blue') +
+  geom_point(aes(x = growth, y = wt8), color = 'green') +
+  geom_line(aes(x = growth, y = wt8), color = 'green') +
+  labs(y = "optimal size at metamorphosis",
+       x = "growth rate")
 
 ```
 

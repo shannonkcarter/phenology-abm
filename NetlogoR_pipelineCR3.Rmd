@@ -46,7 +46,7 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 
 ## second test with 1 consumer and resource. size-independent consumption
 ## bs_CR6 won't load-- something is wrong with consumption-list and the file is too big, or doesn't match this loading criteria
-test <- read.table("bs_CRnometa_6.csv",
+test <- read.table("bs_CRnometa_7.csv",
   #read.table("growth-size_test.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
@@ -77,8 +77,8 @@ test <- test %>%
          survival = n.meta.fishes,                 # number that 'metamorphed', i.e., survived to the end
          n_dead   = n.dead.fishes,                 # number that starved before metamorphosis
          biomass = biomass,                        # sum mass of all survivors of a run
-         sizes_fish = X.fish.size.list..of.fishes) # list of size for each ind for each time
-         #instant_growth = X.instantaneous.growth..of.fishes)
+         sizes_fish = X.fish.size.list..of.fishes, # list of size for each ind for each time
+         instant_growth = X.instantaneous.growth..of.fishes)
 # Extract parameter values-- these are the 'treatments' and inputs of the model for each run
 # I'll rejoin the output data with params later, after some summarizing/processing
 # Add qualitative levels for the treatment params, bc useful for plotting. This will be different for each BS
@@ -88,6 +88,9 @@ params$asymmetry <- as.factor(params$asym)
 levels(params$synchrony) <- list("low" = 15, "med" = 10, "high" = 5)
 levels(params$asymmetry) <- list("symm" = 0, "low_asym" = 0.5, "high_asym" = 1)
 
+#df <- data.frame(x = c(NA, "a-A", "a-d", "b-c", "d-e"))
+#View(df)
+#df %>% extract(x, "A")
 ```
 
 # Parse Individuals
@@ -99,9 +102,13 @@ The 'sizes_fish' columns have a time series of size for each individual (so each
 # First, separate so that each individual has it's own column
 test <- test %>% 
   separate(sizes_fish,                                      # separate sizes_fish
-           into = paste("f_", c(1:max(test$n_fish)), sep = ""),
-           #into = as.character(c(1:max(test$n_fish))),  # levels for new var
-           sep = "]")                # every ] marks a new ind                                  
+           into = paste("s_", c(1:max(test$n_fish)), sep = ""),
+           sep = "]") %>%                # every ] marks a new ind
+  separate(instant_growth,
+           into = paste("g_", c(1:max(test$n_fish)), sep =  ""),
+           sep = "] ")
+
+
 #test <- test %>% 
 #  separate(instant_growth,                                      # separate sizes_fish
 #           into = paste("growth_f_", c(1:max(test$n_fish)), sep = ""),

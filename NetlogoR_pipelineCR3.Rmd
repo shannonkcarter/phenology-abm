@@ -108,12 +108,6 @@ test <- test %>%
            into = paste("g_", c(1:max(test$n_fish)), sep =  ""),
            sep = "] ")
 
-
-#test <- test %>% 
-#  separate(instant_growth,                                      # separate sizes_fish
-#           into = paste("growth_f_", c(1:max(test$n_fish)), sep = ""),
-           #into = as.character(c(1:max(test$n_fish))),  # levels for new var
-#           sep = "]")
 # some cells are left blank and not NA (because of "]]" ending), so fill those with NA
 test[test==""] <- NA
 
@@ -122,9 +116,10 @@ test[test==""] <- NA
 # Select only unique fish individuals and gather to long format
 # For now, need to hardcode max number of fish
 test <- test %>%
-  select(run_num, total_time, f_1:f_80) %>% 
+  select(run_num, total_time, s_1:s_80, g_1:g_80) %>% 
   unique(.) %>% 
-  gather(f_1:f_80, key = "fish_id", value = 'size_fish') %>% 
+  gather(s_1:s_80, key = "fish_id", value = 'size_fish') %>% 
+  #gather(g_1:g_80, key = "fish_id_g", value = "growth_fish") %>% 
   arrange(run_num)
 
 # Remove NA cases, i.e. for runs where n_fish < max(n_fish)

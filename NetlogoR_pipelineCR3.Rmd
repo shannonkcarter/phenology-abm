@@ -1,0 +1,377 @@
+---
+title: "Netlogo to R Pipeline: Consumer-Resource"
+author: "Shannon Carter"
+date: "March 11, 2019"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: united
+    highlight: tango 
+---
+
+# Goal
+
+The objective here is to make a clean reproducible pipeline to transform Netlogo output into a tidy rectangular dataframe. Here, I import behavior space data (i.e., experiment results) from Netlogo to R. The data I've imported here does several 'runs' (multiple treatments and replicates) of an simulation testing effects of phenology on consumer-resource interaction. There is summary data for each run and there's also time series info on size for each turtle/agent. Here, I process the data and make some diagnostic plots to finetune the model.
+
+```{r setup, include = F}
+knitr::opts_chunk$set(echo = T, warning = F, message = F)
+
+## Set working directory and clear memory
+setwd("C:\\Users\\Shannon\\Desktop\\GitHub Repos\\phenology-abm")
+rm(list = ls(all = T))
+
+## Load required packages
+library(tidyverse)
+library(reshape2)
+library(RColorBrewer)
+library(lme4)
+library(wesanderson)
+
+## Load universal plotting elements
+mytheme <- theme(panel.background = element_blank(),
+                 panel.grid.minor = element_blank(), 
+                 panel.grid.major = element_blank(),
+                 axis.text  = element_text(size = rel(1.3), colour = "black"),
+                 axis.title = element_text(size = rel(2.0)),
+                 axis.line  = element_line(colour = "black"))
+
+```
+
+# Import Data 
+
+First, be sure you export behavior space data from Netlogo in "table" format. When the raw data is exported as a spreadsheet, it comes in a really gnarly format. R can't read it because it's not even close to rectangular, big header, mix of space delimited and bracket delimited. It's a mess. The table is still a bit messy, but much easier to wrangle.
+
+```{r load table data}
+
+## second test with 1 consumer and resource. size-independent consumption
+## bs_CR6 won't load-- something is wrong with consumption-list and the file is too big, or doesn't match this loading criteria
+test <- read.table("bs_CRnometa_6.csv",
+  #read.table("growth-size_test.csv",
+                   header = T,  
+                   sep = ',',        # define the separator between columns
+                   skip = 6,         # 6 header rows we don't need
+                   quote = "\"",     # correct the column separator
+                   fill = T)         # add blank fields if rows have unequal length
+# [,1:12] are parameter values (some consistent across all, some representing trts)
+# [,13:ncol] are the output we designated
+#str(test)  
+
+```
+
+# Inspect Data
+
+First, let's rename columns and drop some that we don't need. I keep some columns that are the same across all model runs because it will be useful to call them later, especially since different runs of the experiment might have different values. Some columns will always be the same, or are irrelevant. These I drop. 
+
+For this model, I have one turtle type (fishes), and varied the timing of hatching and per capita growth rates individuals. The Netlogo output includes parameter values and a vector of sizes over time for each turtle
+
+```{r}
+# select and rename columns. new_name = old name. 
+# renaming everything I keep, so can rename with select
+test <- test %>% 
+  select(run_num = X.run.number.,                  # each run number is an experimental unit
+         total_time = X.step.,                     # length of time the experiment ran
+         n_fish = n.fishes,                        # two types of "turtles" here: fish & dfly
+         sync = var.hatch.fishes,                  # amount of variation in ind hatching timing
+         asym = asymmetry.slope,                   # controls size dependent per capita effects
+         survival = n.meta.fishes,                 # number that 'metamorphed', i.e., survived to the end
+         n_dead   = n.dead.fishes,                 # number that starved before metamorphosis
+         biomass = biomass,                        # sum mass of all survivors of a run
+         sizes_fish = X.fish.size.list..of.fishes) # list of size for each ind for each time
+         #instant_growth = X.instantaneous.growth..of.fishes)
+# Extract parameter values-- these are the 'treatments' and inputs of the model for each run
+# I'll rejoin the output data with params later, after some summarizing/processing
+# Add qualitative levels for the treatment params, bc useful for plotting. This will be different for each BS
+params <- test[,1:8]
+params$synchrony <- as.factor(params$sync)
+params$asymmetry <- as.factor(params$asym)
+levels(params$synchrony) <- list("low" = 15, "med" = 10, "high" = 5)
+levels(params$asymmetry) <- list("symm" = 0, "low_asym" = 0.5, "high_asym" = 1)
+
+```
+
+# Parse Individuals
+
+The 'sizes_fish' columns have a time series of size for each individual (so each 'sizes_fish' column has X individuals x Y time steps values). We ultimately want one row per individual per time step. Let's first separate by individual. 
+
+```{r}
+
+# First, separate so that each individual has it's own column
+test <- test %>% 
+  separate(sizes_fish,                                      # separate sizes_fish
+           into = paste("f_", c(1:max(test$n_fish)), sep = ""),
+           #into = as.character(c(1:max(test$n_fish))),  # levels for new var
+           sep = "]")                # every ] marks a new ind                                  
+#test <- test %>% 
+#  separate(instant_growth,                                      # separate sizes_fish
+#           into = paste("growth_f_", c(1:max(test$n_fish)), sep = ""),
+           #into = as.character(c(1:max(test$n_fish))),  # levels for new var
+#           sep = "]")
+# some cells are left blank and not NA (because of "]]" ending), so fill those with NA
+test[test==""] <- NA
+
+# Next, I'll gather individuals so that they appear in rows
+
+# Select only unique fish individuals and gather to long format
+# For now, need to hardcode max number of fish
+test <- test %>%
+  select(run_num, total_time, f_1:f_80) %>% 
+  unique(.) %>% 
+  gather(f_1:f_80, key = "fish_id", value = 'size_fish') %>% 
+  arrange(run_num)
+
+# Remove NA cases, i.e. for runs where n_fish < max(n_fish)
+test <- test[complete.cases(test), ]
+ 
+# Remove the brackets 
+test$size_fish <- gsub("[", "", test$size_fish, fixed = T)
+
+```
+
+# Parse Time Series
+
+Now, do the same separate and gather operations to parse the time vector and put in long format.
+
+```{r}
+
+# Separate the size time series- each space represents a new time point
+test <- test %>% 
+  separate(size_fish, into = as.character(c(0:max(test$total_time))), sep = " ") %>% 
+  select(-c(as.character(0))) # I drop this because there's only a value for ind 1
+
+# Gather to long format, so we now have one line per fish per time step
+test <- test %>% 
+  group_by(run_num) %>% 
+  gather(as.character(1:max(test$total_time)), key = "time", value = 'current_size_fish') %>%
+  arrange(run_num, fish_id)
+
+# Remove NA cases, i.e. time steps for run that were shorter than the longest run
+test <- test[complete.cases(test), ]
+```
+
+# Compile & Tidy
+
+Now, rejoin with the treatment information, and write a csv. This csv has one line per individual per time step. So nrow should be max(run_num) x (ndfly + nfish) x total_time
+```{r}
+
+# Rejoin with treatment identifiers for each run number
+test <- left_join(test, params, by = "run_num")
+ind_time <- test %>%
+  select(run_num,total_time.x, n_fish, sync, asym, synchrony, asymmetry,
+         time, survival, n_dead, biomass, fish_id, current_size_fish) %>% 
+  rename(size = current_size_fish, id = fish_id, 
+         total_time = total_time.x)
+ind_time$size <- as.numeric(ind_time$size)
+write.csv(ind_time, "individual_time_CR.csv")
+
+```
+
+
+## Summarize by Individual
+
+Now, I want to make some summarised datasets. First with one row per individual, then with one row per run number 
+
+```{r}
+ind_time <- read.csv("individual_time_CR.csv", header = T)
+ind_time$synchrony <- ordered(ind_time$synchrony, levels = c("low", "med", "high"))
+ind_time$asymmetry <- ordered(ind_time$asymmetry, levels = c("symm", "low_asym", "high_asym"))
+
+# Here, set a minimum threshold for metamorphosis. Future runs will have this modeled implicitly
+ind <- ind_time %>% 
+  group_by(run_num, id, sync, asym, synchrony, asymmetry, survival, n_dead, biomass) %>%
+  summarise(max_size = max(size),
+            min_size = min(size),
+            meta = if_else(min_size == -1, 0, 1),
+            hatch_date = min(time[size > 0]))
+            # use base R ifelse here, so we can have 2 data types for T/F
+            #end_date = ifelse(meta == 1, min(time[size == 12]), min(time[size == max_size])),
+            #growth_time = end_date - hatch_date)
+
+```
+
+## Summarize by Treatment 
+
+```{r}
+# first, by run number
+run <- ind %>% 
+  group_by(run_num, sync, synchrony, asym, asymmetry, survival, n_dead, biomass) %>%
+  filter(meta == 1) %>% 
+  summarise(surv_fish = sum(meta),
+            mean_size = mean(max_size),
+            se_size   = sd(max_size)/sqrt(length(max_size)))
+run$surv_check <- 80 - (run$survival + run$n_dead)
+# now by treatment
+trt <- run %>% 
+  group_by(sync, synchrony, asym, asymmetry) %>% 
+  summarise(mean_surv_fish = mean(survival),
+            se_surv_fish   = sd(survival)/sqrt(length(survival)),
+            mean_size      = mean(mean_size),
+            se_size        = sd(mean_size)/sqrt(length(mean_size)))
+
+# On some data runs, number of metamorphs doesn't match raw data. always double check.
+check <- ind %>% 
+  group_by(run_num, survival, n_dead) %>%
+  summarise(no_meta = sum(meta, na.rm = T))
+ggplot(check, aes(x = survival, y = no_meta)) +
+  geom_point(alpha = 0.25) + theme_bw() +
+  geom_abline(slope = 1, intercept = 0)# + xlim(20, 80) + ylim(20, 80)
+
+```
+
+# Plots
+
+Here are some diagnostic plots to get a quick look at the data. These will give an idea of what parameter space is reasonable and interesting to explore in future behavior space runs.
+
+First, a visual of the synchrony treatments.
+
+```{r, echo = F}
+ggplot(ind, aes(x = hatch_date)) + theme_bw() +
+  geom_density(alpha = 0.5, size = 1.2) +
+  facet_grid(. ~ synchrony) +
+  labs(title = "Hatching timing treatments",
+       x = "hatching date",
+       y = "density of individuals")
+```
+
+Now, distributions of sizes of individuals at the end of the experiment, grouped by treatment. The vertical lines represent different size thresholds I considered for metamorphosis. Since these distributions of sizes for each treatment are so different, it doesn't make sense to set a size threshold for survival. Results are pretty sensitive to it. Instead, model optimal timing of metamorphosis so that both size and age at metamorphosis are plastic and can be captured.
+
+```{r, echo = F}
+ggplot(ind, aes(x = max_size)) + theme_bw() +
+  geom_density(alpha = 0.5, size = 1.2) +
+  facet_grid(asymmetry ~ synchrony) +
+  geom_vline(xintercept = c(8, 10, 12), linetype = 'dashed') + 
+  labs(title = "Distribution of individual body sizes by treatment",
+       x = "size",
+       y = "density of individuals")
+```
+
+
+```{r, echo = F}
+growthrates <- ggplot(ind_time, aes(x = time, y = size, color = id)) + theme_bw() +
+  geom_point() +
+  #geom_line() +
+  geom_smooth(se = F) + 
+  facet_grid(synchrony ~ asymmetry) +
+  theme(legend.position = "none") 
+growthrates
+```
+
+
+```{r, echo = F}
+
+ggplot(ind, aes(x = hatch_date, y = max_size)) +
+  geom_point(size = 1, alpha = 0.2, position = 'jitter') +
+  stat_smooth() +
+  facet_grid(asymmetry ~ synchrony) + theme_bw() +
+  labs(title = "Final size by hatching date",
+       x = "hatching date",
+       y = "final size")
+
+```
+
+Probability of individuals surviving based on hatching date for each treatment
+
+```{r, echo = F}
+# Looks like in several cases, there are some individuals hatching on the last day, way later than the others. Check.
+ggplot(ind, aes(x = hatch_date, y = meta, color = asymmetry)) + theme_bw() +
+  geom_point(alpha = 0.05) + 
+  stat_smooth(size = 1.5, method = 'glm', method.args = 'binomial', se = F) +
+  facet_grid(synchrony ~ .) + 
+  xlab("hatch date") + ylab("probability of survival") +
+  theme(strip.text.x = element_text(size = 14),
+        strip.text.y = element_text(size = 14)) +
+  labs(title = "Survival probability by hatching date",
+       x = "hatching date",
+       y = "probability of survival") +
+  #scale_fill_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
+  scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1"))
+
+
+```
+
+Proportion survival/metamorphosis by treatment
+
+```{r, echo = F}
+# treatment means
+surv_means <- ggplot(trt, aes(x = synchrony, y = mean_surv_fish, group = asymmetry, 
+                              fill = asymmetry, color = asymmetry, shape = asymmetry)) +   
+  geom_line(size = 0.7, position = position_dodge(width = 0.2)) +
+  geom_errorbar(size = 1, width = 0, position = position_dodge(width = 0.2),                   
+                aes(ymin = mean_surv_fish - se_surv_fish, 
+                   ymax = mean_surv_fish + se_surv_fish)) +  
+  geom_point(size = 5, color = 'black', position = position_dodge(width = 0.2)) +   
+  labs(shape = "asymmetry", 
+       fill = 'asymmetry', 
+       color = "asymmetry",
+       x = "hatching synchrony",
+       y = "number of survivors") +
+  theme(legend.position = c(0.1, 0.22),
+        axis.title = element_text(size = 12),
+        axis.text  = element_text(size = 10)) +
+  scale_fill_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
+  scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
+  scale_shape_manual(values = c(21, 24, 23))  
+surv_means + theme_bw()
+```
+
+Mean per capita sizes of individuals by treatment
+
+```{r, echo = F}
+# treatment means
+# need to see how succeptible both of these are to "survive" criteria
+size_means <- ggplot(trt, aes(x = synchrony, y = mean_size, group = asymmetry, 
+                              fill = asymmetry, color = asymmetry, shape = asymmetry)) +   
+  geom_line(size = 0.7, position = position_dodge(width = 0.2)) +
+  #geom_errorbar(size = 1, width = 0, position = position_dodge(width = 0.2),                   
+  #              aes(ymin = mean_surv_fish - se_surv_fish, 
+  #                 ymax = mean_surv_fish + se_surv_fish)) +  
+  geom_point(size = 5, color = 'black', position = position_dodge(width = 0.2)) +   
+  labs(shape = "asymmetry", 
+       fill = 'asymmetry', 
+       color = "asymmetry",
+       x = "hatching synchrony",
+       y = "mean per capita size") +
+  theme(legend.position = c(0.1, 0.22),
+        axis.title = element_text(size = 12),
+        axis.text  = element_text(size = 10)) +
+  scale_fill_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
+  scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
+  scale_shape_manual(values = c(21, 24, 23))  
+size_means + theme_bw()
+```
+
+
+
+```{r, include = F}
+
+## Taking a look at scaling relationships in the model
+
+#These are things pulled from the model to take a look at to examine scaling relationships between an individuals size, consumption rate, and growth rate. Some of these parameters come directly from the model formulation, and some come from data of model runs.
+
+df <- data.frame(size = 1:10)
+df$starvation <- df$size ^ 0.75
+df$maxmeal <- df$size*0.8
+df$growthperpatch <- rep("0.1", length(df$size))
+
+ggplot(df, aes(x = size, y = starvation)) + theme_bw() +
+  geom_point() +
+  geom_line() +
+  labs(y = "# patches needed to avoid starvation") +
+  xlim(0, 10) #+ ylim(0, 10)
+
+df <- data.frame(growth = seq(0, 0.9, 0.05))
+df$wt5 <- 5 / (1 - df$growth)
+df$wt2 <- 2 / (1 - df$growth)
+df$wt8 <- 8 / (1 - df$growth)
+ggplot(df, aes(x = growth, y = wt5)) + theme_bw() +
+  geom_point() + 
+  geom_line() +
+  geom_point(aes(x = growth, y = wt2), color = 'blue') +
+  geom_line(aes(x = growth, y = wt2), color = 'blue') +
+  geom_point(aes(x = growth, y = wt8), color = 'green') +
+  geom_line(aes(x = growth, y = wt8), color = 'green') +
+  labs(y = "optimal size at metamorphosis",
+       x = "growth rate")
+
+```
+

@@ -40,9 +40,9 @@ to setup
     set shape "fish"
     set hatch-tick round (random-normal mean-hatch-fishes var-hatch-fishes)  ; can control mean and variance of fish hatch time- sliders on interface
     set meals [10 10 10 10 10 10 10 10 10]        ; initializes an empty list to store meal data in. start with values so that they don't starve out the gate
-    set fish-size-list [0 0 0]
+    set fish-size-list [-1 -1 -1]
     ;set consumption-list []                ; this isn't working properly atm. R can't load table output with this reporter in behavior space
-    set instantaneous-growth [0.5 0.5 0.5 0.5 0.5]
+    set instantaneous-growth [0.05 0.05 0.05 0.05 0.05]
     ;set recent-growth-rate[]
   ]
 
@@ -72,7 +72,7 @@ set n-dead-fishes count fishes with [color = red]  ; at this point, set the numb
     ;; TURTLES MOVE AND EAT
 ask fishes
 [
-  set fish-size-list fput round(size) fish-size-list   ; can put round() in here to show more summarized growth
+  set fish-size-list fput (size) fish-size-list   ; can put round() in here to show more summarized growth
 ]
 
     ask turtles
@@ -164,6 +164,7 @@ to eat-grass      ; turtle procedure-- consider separating into breeds for 2-sp 
   set size size + growth-this-tick                                 ; grow proportional to the number of patches they ate that tick- more for larger turtles
   set meals fput round (growth-this-tick / growth-per-patch) meals ; adding their n-patches eaten to a list containing info on feeding each tick.
   set instantaneous-growth fput ((item 0 fish-size-list - item 1 fish-size-list) / max(list(item 1 fish-size-list) 1)) instantaneous-growth
+
   set recent-growth-rate (item 0 instantaneous-growth + item 1 instantaneous-growth + item 2 instantaneous-growth + item 3 instantaneous-growth + item 4 instantaneous-growth) / 5
 
   ;; OPTION TO SHOW MEAL LIST
@@ -186,7 +187,7 @@ end
 to metamorph-fish                          ; fish procedure-- separate breeds here to keep separate tallies
 
   ;if size >= 10 and breed = fishes    ; final size is a fixed value. can also make it proportional to the growth parameter. have to eat 100 patches to metamorph
-  if size > (5 / (1 - recent-growth-rate))
+  if size > (2.5 / (0.5 - recent-growth-rate))
   [
     set n-meta-fishes n-meta-fishes + 1    ; tally as reaching metamorphosis
     set color yellow                           ; ones that metamorph turn green
@@ -318,7 +319,7 @@ n-fishes
 n-fishes
 0
 200
-1.0
+86.0
 1
 1
 NIL
@@ -333,7 +334,7 @@ var-hatch-fishes
 var-hatch-fishes
 0
 20
-10.0
+15.0
 1
 1
 NIL
@@ -484,7 +485,7 @@ mean-hatch-fishes
 mean-hatch-fishes
 0
 100
-22.0
+25.0
 1
 1
 NIL

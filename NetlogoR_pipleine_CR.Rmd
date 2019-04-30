@@ -174,7 +174,7 @@ ind <- ind_time %>%
             # use base R ifelse here, so we can have 2 data types for T/F
             end_date = ifelse(meta == 1, min(time[size == 12]), min(time[size == max_size])),
             growth_time = end_date - hatch_date)
-
+ 
 # On some data runs, number of metamorphs doesn't match raw data. always double check.
 check <- ind %>% 
   group_by(run_num, surv_fish) %>%

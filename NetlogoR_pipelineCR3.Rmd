@@ -46,7 +46,7 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 
 ## second test with 1 consumer and resource. size-independent consumption
 ## bs_CR6 won't load-- something is wrong with consumption-list and the file is too big, or doesn't match this loading criteria
-test <- read.table("bs_CRnometa_7.csv",
+data <- read.table("bs_CRnometa_7.csv",
   #read.table("growth-size_test.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
@@ -68,7 +68,7 @@ For this model, I have one turtle type (fishes), and varied the timing of hatchi
 ```{r}
 # select and rename columns. new_name = old name. 
 # renaming everything I keep, so can rename with select
-test <- test %>% 
+test <- data %>% 
   select(run_num = X.run.number.,                  # each run number is an experimental unit
          total_time = X.step.,                     # length of time the experiment ran
          n_fish = n.fishes,                        # two types of "turtles" here: fish & dfly
@@ -126,6 +126,7 @@ test <- test[complete.cases(test), ]
 # Remove the brackets 
 test$size <- gsub("[", "", test$size, fixed = T)
 test$growth <- gsub("[", "", test$growth, fixed = T)
+
 ```
 
 # Parse Time Series
@@ -136,15 +137,38 @@ Now, do the same separate and gather operations to parse the time vector and put
 
 # Separate the size time series- each space represents a new time point
 test <- test %>% 
-  separate(size_fish, into = as.character(c(0:max(test$total_time))), sep = " ") %>% 
-  select(-c(as.character(0))) # I drop this because there's only a value for ind 1
+  separate(size, 
+           #into = as.character(c(0:max(test$total_time))), 
+           into = paste("size_", c(0:max(test$total_time)), sep =  ""),
+           sep = " ") %>% 
+  separate(growth, 
+           into = paste("growth_", c(0:max(test$total_time)), sep =  ""),
+           sep = " ") %>%
+  select(-c(growth_0, size_0)) # I drop this because there's only a value for ind 1
+test[,-c(1:3)] <- round(as.numeric(unlist(test[,-c(1:3)])), 3)
 
 # Gather to long format, so we now have one line per fish per time step
-test <- test %>% 
+test1 <- test %>% 
   group_by(run_num) %>% 
   gather(as.character(1:max(test$total_time)), key = "time", value = 'current_size_fish') %>%
   arrange(run_num, fish_id)
 
+test1 <- test %>%
+  #select(run_num, total_time, size_1:size_80, growth_1:growth_80) %>% 
+  gather(key, value, -run_num, -total_time, -fish_id) %>%  
+  separate(key, into = c("sg", "time"), sep = "_") %>% 
+  spread(sg, value) %>% 
+  mutate(time = as.numeric(time),
+         fish_id = as.numeric(fish_id), 
+         growth = as.numeric(growth),
+         size = as.numeric(size)) %>% 
+  arrange(run_num, fish_id, time)
+
+test2 <- test1 %>% 
+  group_by(run_num, total_time, fish_id, time) %>% 
+  mutate(size_rev = rev(size))
+
+## got it! except now size is written backwards and growth is forward... can both be backwards so it's easier to flip? or obvi both forwards...
 # Remove NA cases, i.e. time steps for run that were shorter than the longest run
 test <- test[complete.cases(test), ]
 ```

@@ -64,8 +64,9 @@ to go
 
 if count patches with [pcolor = 52] + count patches with [pcolor = brown] < 100 [stop] ; simulation ends when resource runs out
 if not any? turtles with [color = blue] and not any? turtles with [color = gray] [stop]
-set n-meta-fishes count fishes with [color = blue] ; at this point, set the number of metamorphs to the number of blue fish
+set n-meta-fishes count fishes with [color = yellow] ; at this point, set the number of metamorphs to the number of blue fish
 set n-dead-fishes count fishes with [color = red]  ; at this point, set the number of dead fish to the number of red fish
+;set fish-size-list reverse fish-size-list
 
     ;; GRASS GROWTH AND DEATH
     grass-production                ; background grass growth and senescence
@@ -85,10 +86,11 @@ ask fishes
         [
           set color blue
           eat-grass
-          metamorph-fish
+          ;metamorph-fish
         ]
         [
           set color red
+          set fish-size-list reverse fish-size-list
           ;set size -1
           stamp
           ;set n-dead-fishes n-dead-fishes + 1
@@ -174,7 +176,7 @@ to eat-grass      ; turtle procedure-- consider separating into breeds for 2-sp 
 
   ;; OPTION TO SHOW MEAL LIST
   ifelse show-label?
-  [set label size]  ; can be useful to show size progression when troubleshooting. can also make the label age or hatch tick
+  [set label fish-size-list]  ; can be useful to show size progression when troubleshooting. can also make the label age or hatch tick
   [set label ""]
 
 ;ask fishes
@@ -196,6 +198,7 @@ to metamorph-fish                          ; fish procedure-- separate breeds he
   [
     set n-meta-fishes n-meta-fishes + 1    ; tally as reaching metamorphosis
     set color yellow                           ; ones that metamorph turn green
+    set fish-size-list reverse fish-size-list
     ;set size 12                             ; for visualizing in-program, turn this off. but necessary for BS output to see when they metamorphed
     stamp                                  ; I think I also have to turn this off for BS, but useful for visualizing/troubleshooting
   ]

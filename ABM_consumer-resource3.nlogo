@@ -63,6 +63,7 @@ end
 to go
 
 if count patches with [pcolor = 52] + count patches with [pcolor = brown] < 100 [stop] ; simulation ends when resource runs out
+if not any? turtles with [color = blue] and not any? turtles with [color = gray] [stop]
 set n-meta-fishes count fishes with [color = blue] ; at this point, set the number of metamorphs to the number of blue fish
 set n-dead-fishes count fishes with [color = red]  ; at this point, set the number of dead fish to the number of red fish
 
@@ -80,7 +81,7 @@ ask fishes
       if ticks = hatch-tick [set size 1]                     ; first time where size = 1 is hatch tick in BS output data
       if ticks > hatch-tick and color != red and color != yellow                ; once you're hatched but before you're dead, you start doing stuff
       [
-        ifelse (item 0 meals + item 1 meals + item 2 meals + item 3 meals + item 4 meals + item 5 meals + item 6 meals + item 7 meals + item 8 meals) > 2 * size ^ 0.85  ; should this be size-scaled?
+        ifelse (item 0 meals + item 1 meals + item 2 meals + item 3 meals + item 4 meals + item 5 meals + item 6 meals + item 7 meals + item 8 meals) >  0.5 * size ^ 0.75  ; this from BMR literature
         [
           set color blue
           eat-grass
@@ -154,10 +155,14 @@ to eat-grass      ; turtle procedure-- consider separating into breeds for 2-sp 
   let growth-this-tick 0                                           ; at the start of each tick, they haven't grown that tick
 
   ;; EAT PATCHES
-  ask n-of max-meal patches with [pcolor = 52]                     ; identify all patches I can eat-- what happens if there are 2 turtles that could eat the same patch? check
+  ask n-of max-meal patches ;with [pcolor = 52]                     ; identify all patches I can eat-- what happens if there are 2 turtles that could eat the same patch? check
   [
+    if pcolor = 52
+    [
     set pcolor black                                               ; eaten patches turn black and don't regenerate
     set growth-this-tick growth-this-tick + growth-per-patch       ; use this to calculate grass patches needed to metamorph, i.e., with size 1 -> 10 and 0.1, need to eat 100 patches
+    ]
+
   ]
 
   ;; ADD GROWTH AND ENERGY FROM THIS FEEDING                       ; these have to be outside previous block since patches can't access turtle variables
@@ -187,7 +192,7 @@ end
 to metamorph-fish                          ; fish procedure-- separate breeds here to keep separate tallies
 
   ;if size >= 10 and breed = fishes    ; final size is a fixed value. can also make it proportional to the growth parameter. have to eat 100 patches to metamorph
-  if size > (2.5 / (0.5 - recent-growth-rate))
+  if size > (8 / (1 - recent-growth-rate))
   [
     set n-meta-fishes n-meta-fishes + 1    ; tally as reaching metamorphosis
     set color yellow                           ; ones that metamorph turn green
@@ -319,7 +324,7 @@ n-fishes
 n-fishes
 0
 200
-86.0
+80.0
 1
 1
 NIL
@@ -461,7 +466,7 @@ SWITCH
 379
 show-label?
 show-label?
-0
+1
 1
 -1000
 
@@ -485,7 +490,7 @@ mean-hatch-fishes
 mean-hatch-fishes
 0
 100
-25.0
+30.0
 1
 1
 NIL
@@ -1558,6 +1563,7 @@ NetLogo 6.0
     <metric>n-dead-fishes</metric>
     <metric>biomass</metric>
     <metric>[fish-size-list] of fishes</metric>
+    <metric>[instantaneous-growth] of fishes</metric>
     <enumeratedValueSet variable="show-label?">
       <value value="false"/>
     </enumeratedValueSet>
@@ -1577,43 +1583,6 @@ NetLogo 6.0
     </enumeratedValueSet>
     <enumeratedValueSet variable="growth-per-patch">
       <value value="0.05"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="grass-grow-rate">
-      <value value="6"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="grass-death-rate">
-      <value value="0"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="asymmetry-slope">
-      <value value="0"/>
-      <value value="0.5"/>
-      <value value="1"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="CR-run2" repetitions="1" runMetricsEveryStep="false">
-    <setup>setup</setup>
-    <go>go</go>
-    <metric>n-meta-fishes</metric>
-    <metric>[fish-size-list] of fishes</metric>
-    <metric>[consumption-list] of fishes</metric>
-    <enumeratedValueSet variable="show-label?">
-      <value value="false"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="n-fishes">
-      <value value="150"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="sprout-tick">
-      <value value="5"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="var-hatch-fishes">
-      <value value="5"/>
-      <value value="15"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="mean-hatch-fishes">
-      <value value="30"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="growth-per-patch">
-      <value value="0.1"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="grass-grow-rate">
       <value value="6"/>

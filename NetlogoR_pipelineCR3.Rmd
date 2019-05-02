@@ -46,7 +46,7 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 
 ## second test with 1 consumer and resource. size-independent consumption
 ## bs_CR6 won't load-- something is wrong with consumption-list and the file is too big, or doesn't match this loading criteria
-data <- read.table("bs_CRnometa_8.csv",
+data <- read.table("bs_CRnometa_9.csv",
   #read.table("growth-size_test.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
@@ -148,7 +148,7 @@ test <- test %>%
 test[,-c(1:3)] <- round(as.numeric(unlist(test[,-c(1:3)])), 3)
 
 # Gather to long format, so we now have one line per fish per time step
-test1 <- test %>%
+test <- test %>%
   #select(run_num, total_time, size_1:size_80, growth_1:growth_80) %>% 
   gather(key, value, -run_num, -total_time, -fish_id) %>%  
   separate(key, into = c("sg", "time"), sep = "_") %>% 
@@ -177,9 +177,8 @@ Now, rejoin with the treatment information, and write a csv. This csv has one li
 test <- left_join(test, params, by = "run_num")
 ind_time <- test %>%
   select(run_num,total_time.x, n_fish, sync, asym, synchrony, asymmetry,
-         time, survival, n_dead, biomass, fish_id, current_size_fish) %>% 
-  rename(size = current_size_fish, id = fish_id, 
-         total_time = total_time.x)
+         time, survival, n_dead, biomass, fish_id, size, growth) %>% 
+  rename(id = fish_id, total_time = total_time.x)
 ind_time$size <- as.numeric(ind_time$size)
 write.csv(ind_time, "individual_time_CR.csv")
 
@@ -201,7 +200,8 @@ ind <- ind_time %>%
   summarise(max_size = max(size),
             min_size = min(size),
             meta = if_else(min_size == -1, 0, 1),
-            hatch_date = min(time[size > 0]))
+            hatch_date = min(time[size > 0]),
+            avg_growth = mean(growth))
             # use base R ifelse here, so we can have 2 data types for T/F
             #end_date = ifelse(meta == 1, min(time[size == 12]), min(time[size == max_size])),
             #growth_time = end_date - hatch_date)
@@ -273,6 +273,7 @@ growthrates <- ggplot(ind_time, aes(x = time, y = size, color = id)) + theme_bw(
   facet_grid(synchrony ~ asymmetry) +
   theme(legend.position = "none") 
 growthrates
+
 ```
 
 

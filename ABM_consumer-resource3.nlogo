@@ -90,7 +90,6 @@ ask fishes
         ]
         [
           set color red
-          set fish-size-list reverse fish-size-list
           ;set size -1
           stamp
           ;set n-dead-fishes n-dead-fishes + 1
@@ -198,7 +197,6 @@ to metamorph-fish                          ; fish procedure-- separate breeds he
   [
     set n-meta-fishes n-meta-fishes + 1    ; tally as reaching metamorphosis
     set color yellow                           ; ones that metamorph turn green
-    set fish-size-list reverse fish-size-list
     ;set size 12                             ; for visualizing in-program, turn this off. but necessary for BS output to see when they metamorphed
     stamp                                  ; I think I also have to turn this off for BS, but useful for visualizing/troubleshooting
   ]

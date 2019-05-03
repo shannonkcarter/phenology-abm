@@ -46,7 +46,7 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 
 ## second test with 1 consumer and resource. size-independent consumption
 ## bs_CR6 won't load-- something is wrong with consumption-list and the file is too big, or doesn't match this loading criteria
-data <- read.table("bs_CRnometa_9.csv",
+data <- read.table("bs_CRnometa_11.csv",
   #read.table("growth-size_test.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
@@ -159,11 +159,6 @@ test <- test %>%
          size = as.numeric(size)) %>% 
   arrange(run_num, fish_id, time)
 
-#test2 <- test1 %>% 
-#  group_by(run_num, total_time, fish_id, time) %>% 
-#  mutate(size_rev = rev(size))
-
-## got it! except now size is written backwards and growth is forward... can both be backwards so it's easier to flip? or obvi both forwards...
 # Remove NA cases, i.e. time steps for run that were shorter than the longest run
 test <- test[complete.cases(test), ]
 ```
@@ -199,7 +194,7 @@ ind <- ind_time %>%
   group_by(run_num, id, sync, asym, synchrony, asymmetry, survival, n_dead, biomass) %>%
   summarise(max_size = max(size),
             min_size = min(size),
-            meta = if_else(min_size == -1, 0, 1),
+            meta = if_else(color == "yellow", 0, 1),
             hatch_date = min(time[size > 0]),
             avg_growth = mean(growth))
             # use base R ifelse here, so we can have 2 data types for T/F
@@ -266,10 +261,10 @@ ggplot(ind, aes(x = max_size)) + theme_bw() +
 
 
 ```{r, echo = F}
-growthrates <- ggplot(ind_time, aes(x = time, y = size, color = id)) + theme_bw() +
+growthrates <- ggplot(ind_time, aes(x = time, y = size, color = as.factor(id))) + theme_bw() +
   geom_point() +
-  #geom_line() +
-  geom_smooth(se = F) + 
+  geom_line(alpha = 0.25) +
+  #geom_smooth(se = F) + 
   facet_grid(synchrony ~ asymmetry) +
   theme(legend.position = "none") 
 growthrates

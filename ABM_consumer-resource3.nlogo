@@ -22,6 +22,7 @@ fishes-own
   instantaneous-growth
   recent-growth-rate ; an average of growth over the last 10 time steps
   consumption-list
+  recent-growth-list
 ]
 
 
@@ -74,7 +75,7 @@ set n-dead-fishes count fishes with [color = red]  ; at this point, set the numb
     ;; TURTLES MOVE AND EAT
 ask fishes
 [
-  set fish-size-list fput (size) fish-size-list   ; can put round() in here to show more summarized growth
+  set fish-size-list lput (size) fish-size-list   ; can put round() in here to show more summarized growth
 ]
 
     ask turtles
@@ -86,7 +87,7 @@ ask fishes
         [
           set color blue
           eat-grass
-          ;metamorph-fish
+          metamorph-fish
         ]
         [
           set color red
@@ -169,9 +170,10 @@ to eat-grass      ; turtle procedure-- consider separating into breeds for 2-sp 
   ;; ADD GROWTH AND ENERGY FROM THIS FEEDING                       ; these have to be outside previous block since patches can't access turtle variables
   set size size + growth-this-tick                                 ; grow proportional to the number of patches they ate that tick- more for larger turtles
   set meals fput round (growth-this-tick / growth-per-patch) meals ; adding their n-patches eaten to a list containing info on feeding each tick.
-  set instantaneous-growth fput ((item 0 fish-size-list - item 1 fish-size-list) / max(list(item 1 fish-size-list) 1)) instantaneous-growth
-
-  set recent-growth-rate (item 0 instantaneous-growth + item 1 instantaneous-growth + item 2 instantaneous-growth + item 3 instantaneous-growth + item 4 instantaneous-growth) / 5
+  ;set instantaneous-growth fput ((item 0 fish-size-list - item 1 fish-size-list) / max(list(item 1 fish-size-list) 1)) instantaneous-growth
+  set instantaneous-growth lput((last fish-size-list - last(but-last fish-size-list)) / max(list(last(but-last fish-size-list)) 1)) instantaneous-growth
+  set recent-growth-list sublist instantaneous-growth ((length instantaneous-growth) - 5) ( (length instantaneous-growth) - 1)
+  set recent-growth-rate (item 0 recent-growth-list + item 1 recent-growth-list + item 2 recent-growth-list + item 3 recent-growth-list) / 4
 
   ;; OPTION TO SHOW MEAL LIST
   ifelse show-label?

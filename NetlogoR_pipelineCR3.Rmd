@@ -122,7 +122,8 @@ test <- test %>%
   gather(key, value, -run_num, -total_time) %>%  
   separate(key, into = c("msg", "fish_id"), sep = "_") %>% 
   spread(msg, value) %>% 
-  arrange(run_num)
+  arrange(run_num, fish_id) %>% 
+  select(1:3, meta, everything())
   
 # Remove NA cases, i.e. for runs where n_fish < max(n_fish)
 test <- test[complete.cases(test), ]
@@ -151,12 +152,12 @@ test <- test %>%
            into = paste("growth_", c(0:max(test$total_time)), sep =  ""),
            sep = " ") %>%
   select(-c(growth_0, size_0)) # I drop this because there's only a value for ind 1
-test[,-c(1:3)] <- round(as.numeric(unlist(test[,-c(1:3)])), 3)
+test[,-c(1:4)] <- round(as.numeric(unlist(test[,-c(1:4)])), 3)
 
 # Gather to long format, so we now have one line per fish per time step
 test <- test %>%
   #select(run_num, total_time, size_1:size_80, growth_1:growth_80) %>% 
-  gather(key, value, -run_num, -total_time, -fish_id) %>%  
+  gather(key, value, -run_num, -total_time, -fish_id, -meta) %>%  
   separate(key, into = c("sg", "time"), sep = "_") %>% 
   spread(sg, value) %>% 
   mutate(time = as.numeric(time),
@@ -178,7 +179,7 @@ Now, rejoin with the treatment information, and write a csv. This csv has one li
 test <- left_join(test, params, by = "run_num")
 ind_time <- test %>%
   select(run_num,total_time.x, n_fish, sync, asym, synchrony, asymmetry,
-         time, survival, n_dead, biomass, fish_id, size, growth) %>% 
+         time, survival, n_dead, biomass, fish_id, meta, size, growth) %>% 
   rename(id = fish_id, total_time = total_time.x)
 ind_time$size <- as.numeric(ind_time$size)
 write.csv(ind_time, "individual_time_CR.csv")
@@ -197,10 +198,10 @@ ind_time$asymmetry <- ordered(ind_time$asymmetry, levels = c("symm", "low_asym",
 
 # Here, set a minimum threshold for metamorphosis. Future runs will have this modeled implicitly
 ind <- ind_time %>% 
-  group_by(run_num, id, sync, asym, synchrony, asymmetry, survival, n_dead, biomass) %>%
+  group_by(run_num, id, sync, asym, synchrony, asymmetry, survival, n_dead, biomass, meta) %>%
   summarise(max_size = max(size),
-            min_size = min(size),
-            meta = if_else(color == "yellow", 0, 1),
+            #min_size = min(size),
+            #meta = if_else(color == "yellow", 0, 1),
             hatch_date = min(time[size > 0]),
             avg_growth = mean(growth))
             # use base R ifelse here, so we can have 2 data types for T/F
@@ -219,7 +220,7 @@ run <- ind %>%
   summarise(surv_fish = sum(meta),
             mean_size = mean(max_size),
             se_size   = sd(max_size)/sqrt(length(max_size)))
-run$surv_check <- 80 - (run$survival + run$n_dead)
+ind$surv_check <- 80 - (ind$survival + ind$n_dead)
 # now by treatment
 trt <- run %>% 
   group_by(sync, synchrony, asym, asymmetry) %>% 
@@ -231,7 +232,7 @@ trt <- run %>%
 # On some data runs, number of metamorphs doesn't match raw data. always double check.
 check <- ind %>% 
   group_by(run_num, survival, n_dead) %>%
-  summarise(no_meta = sum(meta, na.rm = T))
+  summarise(no_meta = sum(ind$meta == "yes"))
 ggplot(check, aes(x = survival, y = no_meta)) +
   geom_point(alpha = 0.25) + theme_bw() +
   geom_abline(slope = 1, intercept = 0)# + xlim(20, 80) + ylim(20, 80)

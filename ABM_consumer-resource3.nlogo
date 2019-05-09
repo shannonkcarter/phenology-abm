@@ -1569,7 +1569,7 @@ NetLogo 6.0
     <metric>biomass</metric>
     <metric>[fish-size-list] of fishes</metric>
     <metric>[instantaneous-growth] of fishes</metric>
-    <metric>fishes-own meta?</metric>
+    <metric>[meta?] of fishes</metric>
     <enumeratedValueSet variable="show-label?">
       <value value="false"/>
     </enumeratedValueSet>

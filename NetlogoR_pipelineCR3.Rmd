@@ -46,7 +46,7 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 
 ## second test with 1 consumer and resource. size-independent consumption
 ## bs_CR6 won't load-- something is wrong with consumption-list and the file is too big, or doesn't match this loading criteria
-data <- read.table("bs_CRnometa_11.csv",
+data <- read.table("bs_CRnometa_12.csv",
   #read.table("growth-size_test.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
@@ -77,6 +77,7 @@ test <- data %>%
          survival = n.meta.fishes,                 # number that 'metamorphed', i.e., survived to the end
          n_dead   = n.dead.fishes,                 # number that starved before metamorphosis
          biomass = biomass,                        # sum mass of all survivors of a run
+         meta = X.meta...of.fishes,
          sizes_fish = X.fish.size.list..of.fishes, # list of size for each ind for each time
          instant_growth = X.instantaneous.growth..of.fishes)
 # Extract parameter values-- these are the 'treatments' and inputs of the model for each run
@@ -103,7 +104,10 @@ test <- test %>%
            sep = "]") %>%                # every ] marks a new ind
   separate(instant_growth,
            into = paste("growth_", c(1:max(test$n_fish)), sep =  ""),
-           sep = "] ")
+           sep = "] ") %>% 
+  separate(meta,
+           into = paste("meta_", c(1:max(test$n_fish)), sep = ""),
+           sep = " ")
 
 # some cells are left blank and not NA (because of "]]" ending), so fill those with NA
 test[test==""] <- NA
@@ -114,10 +118,10 @@ test[test==""] <- NA
 # For now, need to hardcode max number of fish
 
 test <- test %>%
-  select(run_num, total_time, size_1:size_80, growth_1:growth_80) %>% 
+  select(run_num, total_time, meta_1: meta_80, size_1:size_80, growth_1:growth_80) %>% 
   gather(key, value, -run_num, -total_time) %>%  
-  separate(key, into = c("sg", "fish_id"), sep = "_") %>% 
-  spread(sg, value) %>% 
+  separate(key, into = c("msg", "fish_id"), sep = "_") %>% 
+  spread(msg, value) %>% 
   arrange(run_num)
   
 # Remove NA cases, i.e. for runs where n_fish < max(n_fish)
@@ -126,6 +130,8 @@ test <- test[complete.cases(test), ]
 # Remove the brackets 
 test$size <- gsub("[", "", test$size, fixed = T)
 test$growth <- gsub("[", "", test$growth, fixed = T)
+test$meta <- gsub("[", "", test$meta, fixed = T)
+test$meta <- gsub('"', "", test$meta, fixed = T)
 
 ```
 

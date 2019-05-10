@@ -42,7 +42,7 @@ to setup
     set shape "fish"
     set hatch-tick round (random-normal mean-hatch-fishes var-hatch-fishes)  ; can control mean and variance of fish hatch time- sliders on interface
     set meals [10 10 10 10 10 10 10 10 10]        ; initializes an empty list to store meal data in. start with values so that they don't starve out the gate
-    set fish-size-list []
+    set fish-size-list [0 0 0]
     ;set consumption-list []                ; this isn't working properly atm. R can't load table output with this reporter in behavior space
     set instantaneous-growth [0.05 0.05 0.05 0.05 0.05]
     ;set recent-growth-rate[]
@@ -64,10 +64,9 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 to go
 
-if count patches with [pcolor = 52] + count patches with [pcolor = brown] < 100 [stop] ; simulation ends when resource runs out
-if not any? turtles with [color = blue] and not any? turtles with [color = gray] [stop]
-set n-meta-fishes count fishes with [color = yellow] ; at this point, set the number of metamorphs to the number of blue fish
-set n-dead-fishes count fishes with [color = red]  ; at this point, set the number of dead fish to the number of red fish
+;if count patches with [pcolor = 52] + count patches with [pcolor = brown] < 100 [stop] ; simulation ends when resource runs out
+;if not any? turtles with [color = blue] and not any? turtles with [color = gray] [stop]
+
 ;set fish-size-list reverse fish-size-list
 
     ;; GRASS GROWTH AND DEATH
@@ -92,7 +91,7 @@ ask fishes
         ]
         [
           set color red
-          set meta? "no"
+          set meta? 0
           ;set size -1
           stamp
           ;set n-dead-fishes n-dead-fishes + 1
@@ -103,7 +102,9 @@ ask fishes
     set biomass sum [size] of turtles ; this may or may not be interesting
 
     tick
-    ;if ticks = 85 [stop]
+    if ticks = 250 [stop]
+    set n-meta-fishes count fishes with [color = yellow] ; at this point, set the number of metamorphs to the number of blue fish
+set n-dead-fishes count fishes with [color = red]  ; at this point, set the number of dead fish to the number of red fish
 end
 
 
@@ -151,7 +152,7 @@ to eat-grass      ; turtle procedure-- consider separating into breeds for 2-sp 
     (
       list                                                     ; have to make a list otherwise it will call for too many agents.
         (asymmetry-slope * size + (5 - 5 * asymmetry-slope))   ; max-meal = slope*size + intercept. put intercept in terms of slope so that they're controlled by the same variable. easier for BS
-        ( .2 * count patches with [pcolor = 52])
+        (0.2 * count patches with [pcolor = 52])
       )
     )
 
@@ -201,7 +202,7 @@ to metamorph-fish                          ; fish procedure-- separate breeds he
   [
     set n-meta-fishes n-meta-fishes + 1    ; tally as reaching metamorphosis
     set color yellow                           ; ones that metamorph turn green
-    set meta? "yes"                             ; for visualizing in-program, turn this off. but necessary for BS output to see when they metamorphed
+    set meta? 1                             ; for visualizing in-program, turn this off. but necessary for BS output to see when they metamorphed
     stamp                                  ; I think I also have to turn this off for BS, but useful for visualizing/troubleshooting
   ]
 

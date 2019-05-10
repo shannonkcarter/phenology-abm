@@ -46,7 +46,7 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 
 ## second test with 1 consumer and resource. size-independent consumption
 ## bs_CR6 won't load-- something is wrong with consumption-list and the file is too big, or doesn't match this loading criteria
-data <- read.table("bs_CRnometa_12.csv",
+data <- read.table("bs_CRnometa_9.csv",
   #read.table("growth-size_test.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
@@ -70,15 +70,15 @@ For this model, I have one turtle type (fishes), and varied the timing of hatchi
 # renaming everything I keep, so can rename with select
 test <- data %>% 
   select(run_num = X.run.number.,                  # each run number is an experimental unit
-         total_time = X.step.,                     # length of time the experiment ran
-         n_fish = n.fishes,                        # two types of "turtles" here: fish & dfly
+         #total_time = X.step.,                     # length of time the experiment ran
+         density = n.fishes,                        # two types of "turtles" here: fish & dfly
          sync = var.hatch.fishes,                  # amount of variation in ind hatching timing
          asym = asymmetry.slope,                   # controls size dependent per capita effects
-         survival = n.meta.fishes,                 # number that 'metamorphed', i.e., survived to the end
+         n_surv = n.meta.fishes,                 # number that 'metamorphed', i.e., survived to the end
          n_dead   = n.dead.fishes,                 # number that starved before metamorphosis
          biomass = biomass,                        # sum mass of all survivors of a run
-         meta = X.meta...of.fishes,
-         sizes_fish = X.fish.size.list..of.fishes, # list of size for each ind for each time
+         meta_list = X.meta...of.fishes,
+         sizes = X.fish.size.list..of.fishes, # list of size for each ind for each time
          instant_growth = X.instantaneous.growth..of.fishes)
 # Extract parameter values-- these are the 'treatments' and inputs of the model for each run
 # I'll rejoin the output data with params later, after some summarizing/processing
@@ -93,20 +93,20 @@ levels(params$asymmetry) <- list("symm" = 0, "low_asym" = 0.5, "high_asym" = 1)
 
 # Parse Individuals
 
-The 'sizes_fish' columns have a time series of size for each individual (so each 'sizes_fish' column has X individuals x Y time steps values). We ultimately want one row per individual per time step. Let's first separate by individual. 
+The 'sizes' columns have a time series of size for each individual (so each 'sizes_fish' column has X individuals x Y time steps values). We ultimately want one row per individual per time step. Let's first separate by individual. 
 
 ```{r}
 
 # First, separate so that each individual has it's own column
 test <- test %>% 
-  separate(sizes_fish,                                      # separate sizes_fish
-           into = paste("size_", c(1:max(test$n_fish)), sep = ""),
+  separate(sizes,                                      # separate sizes_fish
+           into = paste("size_", c(1:max(test$density)), sep = ""),
            sep = "]") %>%                # every ] marks a new ind
   separate(instant_growth,
-           into = paste("growth_", c(1:max(test$n_fish)), sep =  ""),
+           into = paste("growth_", c(1:max(test$density)), sep =  ""),
            sep = "] ") %>% 
-  separate(meta,
-           into = paste("meta_", c(1:max(test$n_fish)), sep = ""),
+  separate(meta_list,
+           into = paste("meta_", c(1:max(test$density)), sep = ""),
            sep = " ")
 
 # some cells are left blank and not NA (because of "]]" ending), so fill those with NA
@@ -118,21 +118,21 @@ test[test==""] <- NA
 # For now, need to hardcode max number of fish
 
 test <- test %>%
-  select(run_num, total_time, meta_1: meta_80, size_1:size_80, growth_1:growth_80) %>% 
-  gather(key, value, -run_num, -total_time) %>%  
+  select(run_num, meta_1: meta_80, size_1:size_80, growth_1:growth_80) %>% 
+  gather(key, value, -run_num) %>%  
   separate(key, into = c("msg", "fish_id"), sep = "_") %>% 
   spread(msg, value) %>% 
   arrange(run_num, fish_id) %>% 
-  select(1:3, meta, everything())
+  select(1:2, meta, everything())
   
 # Remove NA cases, i.e. for runs where n_fish < max(n_fish)
-test <- test[complete.cases(test), ]
+#test <- test[complete.cases(test), ]
  
 # Remove the brackets 
 test$size <- gsub("[", "", test$size, fixed = T)
 test$growth <- gsub("[", "", test$growth, fixed = T)
 test$meta <- gsub("[", "", test$meta, fixed = T)
-test$meta <- gsub('"', "", test$meta, fixed = T)
+test$meta <- gsub("]", "", test$meta, fixed = T)
 
 ```
 
@@ -146,10 +146,10 @@ Now, do the same separate and gather operations to parse the time vector and put
 test <- test %>% 
   separate(size, 
            #into = as.character(c(0:max(test$total_time))), 
-           into = paste("size_", c(0:max(test$total_time)), sep =  ""),
+           into = paste("size_", c(0:250), sep =  ""),
            sep = " ") %>% 
   separate(growth, 
-           into = paste("growth_", c(0:max(test$total_time)), sep =  ""),
+           into = paste("growth_", c(0:250), sep =  ""),
            sep = " ") %>%
   select(-c(growth_0, size_0)) # I drop this because there's only a value for ind 1
 test[,-c(1:4)] <- round(as.numeric(unlist(test[,-c(1:4)])), 3)
@@ -157,7 +157,7 @@ test[,-c(1:4)] <- round(as.numeric(unlist(test[,-c(1:4)])), 3)
 # Gather to long format, so we now have one line per fish per time step
 test <- test %>%
   #select(run_num, total_time, size_1:size_80, growth_1:growth_80) %>% 
-  gather(key, value, -run_num, -total_time, -fish_id, -meta) %>%  
+  gather(key, value, -run_num, -fish_id, -meta) %>%  
   separate(key, into = c("sg", "time"), sep = "_") %>% 
   spread(sg, value) %>% 
   mutate(time = as.numeric(time),
@@ -167,7 +167,8 @@ test <- test %>%
   arrange(run_num, fish_id, time)
 
 # Remove NA cases, i.e. time steps for run that were shorter than the longest run
-test <- test[complete.cases(test), ]
+#test <- test[complete.cases(test), ]
+test$meta <- as.numeric(test$meta)
 ```
 
 # Compile & Tidy
@@ -178,9 +179,9 @@ Now, rejoin with the treatment information, and write a csv. This csv has one li
 # Rejoin with treatment identifiers for each run number
 test <- left_join(test, params, by = "run_num")
 ind_time <- test %>%
-  select(run_num,total_time.x, n_fish, sync, asym, synchrony, asymmetry,
-         time, survival, n_dead, biomass, fish_id, meta, size, growth) %>% 
-  rename(id = fish_id, total_time = total_time.x)
+  select(run_num, density, sync, asym, synchrony, asymmetry,
+         time, n_surv, n_dead, biomass, fish_id, meta, size, growth) %>% 
+  rename(id = fish_id)
 ind_time$size <- as.numeric(ind_time$size)
 write.csv(ind_time, "individual_time_CR.csv")
 
@@ -195,15 +196,17 @@ Now, I want to make some summarised datasets. First with one row per individual,
 ind_time <- read.csv("individual_time_CR.csv", header = T)
 ind_time$synchrony <- ordered(ind_time$synchrony, levels = c("low", "med", "high"))
 ind_time$asymmetry <- ordered(ind_time$asymmetry, levels = c("symm", "low_asym", "high_asym"))
+ind_time$size <- as.numeric(ind_time$size)
+ind_time$growth <- as.numeric(ind_time$growth)
 
 # Here, set a minimum threshold for metamorphosis. Future runs will have this modeled implicitly
 ind <- ind_time %>% 
-  group_by(run_num, id, sync, asym, synchrony, asymmetry, survival, n_dead, biomass, meta) %>%
+  group_by(run_num, id, sync, asym, synchrony, asymmetry, n_surv, n_dead, biomass, meta) %>%
   summarise(max_size = max(size),
             #min_size = min(size),
             #meta = if_else(color == "yellow", 0, 1),
-            hatch_date = min(time[size > 0]),
-            avg_growth = mean(growth))
+            hatch_date = min(time[size > 0]))
+            #avg_growth = mean(growth))
             # use base R ifelse here, so we can have 2 data types for T/F
             #end_date = ifelse(meta == 1, min(time[size == 12]), min(time[size == max_size])),
             #growth_time = end_date - hatch_date)
@@ -215,27 +218,28 @@ ind <- ind_time %>%
 ```{r}
 # first, by run number
 run <- ind %>% 
-  group_by(run_num, sync, synchrony, asym, asymmetry, survival, n_dead, biomass) %>%
-  filter(meta == 1) %>% 
-  summarise(surv_fish = sum(meta),
+  group_by(run_num, sync, synchrony, asym, asymmetry, n_surv, n_dead, biomass) %>%
+  #filter(meta == 1) %>% 
+  summarise(n_meta = sum(meta),
             mean_size = mean(max_size),
             se_size   = sd(max_size)/sqrt(length(max_size)))
-ind$surv_check <- 80 - (ind$survival + ind$n_dead)
+ind$surv_check <- 80 - (ind$n_surv + ind$n_dead)
+
 # now by treatment
 trt <- run %>% 
   group_by(sync, synchrony, asym, asymmetry) %>% 
-  summarise(mean_surv_fish = mean(survival),
-            se_surv_fish   = sd(survival)/sqrt(length(survival)),
+  summarise(mean_surv_fish = mean(n_surv),
+            se_surv_fish   = sd(n_surv)/sqrt(length(n_surv)),
             mean_size      = mean(mean_size),
             se_size        = sd(mean_size)/sqrt(length(mean_size)))
 
 # On some data runs, number of metamorphs doesn't match raw data. always double check.
 check <- ind %>% 
-  group_by(run_num, survival, n_dead) %>%
-  summarise(no_meta = sum(ind$meta == "yes"))
-ggplot(check, aes(x = survival, y = no_meta)) +
+  group_by(run_num, n_surv) %>%
+  summarise(no_meta = sum(meta))
+ggplot(check, aes(x = n_surv, y = no_meta)) +
   geom_point(alpha = 0.25) + theme_bw() +
-  geom_abline(slope = 1, intercept = 0)# + xlim(20, 80) + ylim(20, 80)
+  geom_abline(slope = 1, intercept = 0) #+ xlim(0, 180) + ylim(0, 180)
 
 ```
 
@@ -260,7 +264,7 @@ Now, distributions of sizes of individuals at the end of the experiment, grouped
 ggplot(ind, aes(x = max_size)) + theme_bw() +
   geom_density(alpha = 0.5, size = 1.2) +
   facet_grid(asymmetry ~ synchrony) +
-  geom_vline(xintercept = c(8, 10, 12), linetype = 'dashed') + 
+  #geom_vline(xintercept = c(8, 10, 12), linetype = 'dashed') + 
   labs(title = "Distribution of individual body sizes by treatment",
        x = "size",
        y = "density of individuals")
@@ -280,7 +284,10 @@ growthrates
 
 
 ```{r, echo = F}
-
+ggplot(ind_time, aes(x = size, y = growth, color = meta)) +
+  geom_jitter(alpha = 0.25)+
+  stat_smooth() +
+  ylim(0, 0.25) + xlim(1, 10)
 ggplot(ind, aes(x = hatch_date, y = max_size)) +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
   stat_smooth() +

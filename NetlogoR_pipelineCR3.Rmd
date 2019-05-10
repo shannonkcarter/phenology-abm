@@ -205,11 +205,12 @@ ind <- ind_time %>%
   summarise(max_size = max(size),
             #min_size = min(size),
             #meta = if_else(color == "yellow", 0, 1),
-            hatch_date = min(time[size > 0]))
-            #avg_growth = mean(growth))
+            hatch_date = min(time[size > 0]),
             # use base R ifelse here, so we can have 2 data types for T/F
             #end_date = ifelse(meta == 1, min(time[size == 12]), min(time[size == max_size])),
-            #growth_time = end_date - hatch_date)
+            end_date = min(time[size ==max(size)]),
+            growth_time = end_date - hatch_date,
+            growth_rate = max(size)/growth_time)
 
 ```
 
@@ -222,7 +223,9 @@ run <- ind %>%
   #filter(meta == 1) %>% 
   summarise(n_meta = sum(meta),
             mean_size = mean(max_size),
-            se_size   = sd(max_size)/sqrt(length(max_size)))
+            se_size   = sd(max_size)/sqrt(length(max_size)),
+            mean_growthrate = mean(growth_rate),
+            se_growthrate = sd(growth_rate)/sqrt(length(growth_rate)))
 ind$surv_check <- 80 - (ind$n_surv + ind$n_dead)
 
 # now by treatment
@@ -272,10 +275,11 @@ ggplot(ind, aes(x = max_size)) + theme_bw() +
 
 
 ```{r, echo = F}
-growthrates <- ggplot(ind_time, aes(x = time, y = size, color = as.factor(id))) + theme_bw() +
+growthrates <- ggplot(subset(ind_time, subset = ind == 50), 
+                      aes(x = time, y = size, color = as.factor(id))) + theme_bw() +
   geom_point() +
-  geom_line(alpha = 0.25) +
-  #geom_smooth(se = F) + 
+  #geom_line(alpha = 0.25) +
+  geom_smooth(se = F) + 
   facet_grid(synchrony ~ asymmetry) +
   theme(legend.position = "none") 
 growthrates
@@ -288,7 +292,8 @@ ggplot(ind_time, aes(x = size, y = growth, color = meta)) +
   geom_jitter(alpha = 0.25)+
   stat_smooth() +
   ylim(0, 0.25) + xlim(1, 10)
-ggplot(ind, aes(x = hatch_date, y = max_size)) +
+
+ggplot(ind, aes(x = hatch_date, y = growth_rate)) +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
   stat_smooth() +
   facet_grid(asymmetry ~ synchrony) + theme_bw() +

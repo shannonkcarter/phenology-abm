@@ -290,16 +290,25 @@ growthrates
 ```{r, echo = F}
 ggplot(ind_time, aes(x = size, y = growth, color = meta)) +
   geom_jitter(alpha = 0.25)+
-  stat_smooth() +
+  #stat_smooth() +
   ylim(0, 0.25) + xlim(1, 10)
 
-ggplot(ind, aes(x = hatch_date, y = growth_rate)) +
+ggplot(ind, aes(x = hatch_date, y = max_size, color = as.factor(meta))) +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
   stat_smooth() +
   facet_grid(asymmetry ~ synchrony) + theme_bw() +
   labs(title = "Final size by hatching date",
        x = "hatching date",
        y = "final size")
+
+ggplot(ind, aes(x = hatch_date, y = growth_rate, color = as.factor(meta))) +
+  geom_point(size = 1, alpha = 0.2, position = 'jitter') +
+  stat_smooth() +
+  geom_hline(yintercept = c(0.05, 0.15), linetype = 'dashed', alpha = 0.5) +
+  facet_grid(asymmetry ~ synchrony) + theme_bw() +
+  labs(title = "Growth rate by hatching date",
+       x = "hatching date",
+       y = "growth rate (final size - initial size) / time")
 
 ```
 

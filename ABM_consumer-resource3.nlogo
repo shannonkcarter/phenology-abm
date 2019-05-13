@@ -44,7 +44,7 @@ to setup
     set meals [10 10 10 10 10 10 10 10 10]        ; initializes an empty list to store meal data in. start with values so that they don't starve out the gate
     set fish-size-list [0 0 0]
     ;set consumption-list []                ; this isn't working properly atm. R can't load table output with this reporter in behavior space
-    set instantaneous-growth [0.05 0.05 0.05 0.05 0.05]
+    set instantaneous-growth [0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05]
     ;set recent-growth-rate[]
   ]
 
@@ -175,7 +175,7 @@ to eat-grass      ; turtle procedure-- consider separating into breeds for 2-sp 
   set meals fput round (growth-this-tick / growth-per-patch) meals ; adding their n-patches eaten to a list containing info on feeding each tick.
   ;set instantaneous-growth fput ((item 0 fish-size-list - item 1 fish-size-list) / max(list(item 1 fish-size-list) 1)) instantaneous-growth
   set instantaneous-growth lput((last fish-size-list - last(but-last fish-size-list)) / max(list(last(but-last fish-size-list)) 1)) instantaneous-growth
-  set recent-growth-list sublist instantaneous-growth ((length instantaneous-growth) - 5) (length instantaneous-growth)
+  set recent-growth-list sublist instantaneous-growth ((length instantaneous-growth) - 8) (length instantaneous-growth)
   set recent-growth-rate mean recent-growth-list
 
   ;; OPTION TO SHOW MEAL LIST
@@ -198,7 +198,7 @@ end
 to metamorph-fish                          ; fish procedure-- separate breeds here to keep separate tallies
 
   ;if size >= 10 and breed = fishes    ; final size is a fixed value. can also make it proportional to the growth parameter. have to eat 100 patches to metamorph
-  if size > (8 / (1 - recent-growth-rate))
+  if size > (1.02 / (0.17 - recent-growth-rate)) and size > 6
   [
     set n-meta-fishes n-meta-fishes + 1    ; tally as reaching metamorphosis
     set color yellow                           ; ones that metamorph turn green

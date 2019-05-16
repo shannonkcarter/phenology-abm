@@ -19,11 +19,12 @@ fishes-own
   hatch-tick         ; each turtle has a time they become hatch/enter environment
   meals              ; a list of how many patches it eats each time step. used for growth rate and starvation
   fish-size-list
-  instantaneous-growth
+  ;instantaneous-growth
   recent-growth-rate ; an average of growth over the last 10 time steps
   consumption-list
-  recent-growth-list
+  ;recent-growth-list
   meta?
+  recent-sizes
 ]
 
 
@@ -42,10 +43,10 @@ to setup
     set shape "fish"
     set hatch-tick round (random-normal mean-hatch-fishes var-hatch-fishes)  ; can control mean and variance of fish hatch time- sliders on interface
     set meals [10 10 10 10 10 10 10 10 10]        ; initializes an empty list to store meal data in. start with values so that they don't starve out the gate
-    set fish-size-list [0 0 0]
+    set fish-size-list [0 0 0 0 0]
     ;set consumption-list []                ; this isn't working properly atm. R can't load table output with this reporter in behavior space
-    set instantaneous-growth [0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05]
-    ;set recent-growth-rate[]
+    ;set instantaneous-growth [0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05]
+    set recent-growth-rate[]
   ]
 
 
@@ -174,13 +175,15 @@ to eat-grass      ; turtle procedure-- consider separating into breeds for 2-sp 
   set size size + growth-this-tick                                 ; grow proportional to the number of patches they ate that tick- more for larger turtles
   set meals fput round (growth-this-tick / growth-per-patch) meals ; adding their n-patches eaten to a list containing info on feeding each tick.
   ;set instantaneous-growth fput ((item 0 fish-size-list - item 1 fish-size-list) / max(list(item 1 fish-size-list) 1)) instantaneous-growth
-  set instantaneous-growth lput((last fish-size-list - last(but-last fish-size-list)) / max(list(last(but-last fish-size-list)) 1)) instantaneous-growth
-  set recent-growth-list sublist instantaneous-growth ((length instantaneous-growth) - 8) (length instantaneous-growth)
-  set recent-growth-rate mean recent-growth-list
+  ;set instantaneous-growth lput((last fish-size-list - last(but-last fish-size-list)) / max(list(last(but-last fish-size-list)) 1)) instantaneous-growth
+  ;set recent-growth-list sublist instantaneous-growth ((length instantaneous-growth) - 8) (length instantaneous-growth)
+  ;set recent-growth-rate mean recent-growth-list
+  set recent-sizes sublist fish-size-list ((length fish-size-list) - 5) (length fish-size-list)
+  set recent-growth-rate(last recent-sizes - item 0 recent-sizes) / 5
 
   ;; OPTION TO SHOW MEAL LIST
   ifelse show-label?
-  [set label color]  ; can be useful to show size progression when troubleshooting. can also make the label age or hatch tick
+  [set label round(size)]  ; can be useful to show size progression when troubleshooting. can also make the label age or hatch tick
   [set label ""]
 
 ;ask fishes
@@ -198,7 +201,7 @@ end
 to metamorph-fish                          ; fish procedure-- separate breeds here to keep separate tallies
 
   ;if size >= 10 and breed = fishes    ; final size is a fixed value. can also make it proportional to the growth parameter. have to eat 100 patches to metamorph
-  if size > (1.02 / (0.17 - recent-growth-rate)) and size > 6
+  if size > (1.02 / (0.170000001 - recent-growth-rate)) and size > 6
   [
     set n-meta-fishes n-meta-fishes + 1    ; tally as reaching metamorphosis
     set color yellow                           ; ones that metamorph turn green
@@ -1569,7 +1572,7 @@ NetLogo 6.0
     <metric>n-dead-fishes</metric>
     <metric>biomass</metric>
     <metric>[fish-size-list] of fishes</metric>
-    <metric>[instantaneous-growth] of fishes</metric>
+    <metric>[recent-growth-rate] of fishes</metric>
     <metric>[meta?] of fishes</metric>
     <enumeratedValueSet variable="show-label?">
       <value value="false"/>

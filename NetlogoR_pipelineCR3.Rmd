@@ -46,7 +46,7 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 
 ## second test with 1 consumer and resource. size-independent consumption
 ## bs_CR6 won't load-- something is wrong with consumption-list and the file is too big, or doesn't match this loading criteria
-data <- read.table("bs_CRnometa_9.csv",
+data <- read.table("bs_CRnometa_11.csv",
   #read.table("growth-size_test.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
@@ -79,7 +79,7 @@ test <- data %>%
          biomass = biomass,                        # sum mass of all survivors of a run
          meta_list = X.meta...of.fishes,
          sizes = X.fish.size.list..of.fishes, # list of size for each ind for each time
-         instant_growth = X.instantaneous.growth..of.fishes)
+         recent_growth = X.recent.growth.rate..of.fishes)
 # Extract parameter values-- these are the 'treatments' and inputs of the model for each run
 # I'll rejoin the output data with params later, after some summarizing/processing
 # Add qualitative levels for the treatment params, bc useful for plotting. This will be different for each BS
@@ -102,9 +102,9 @@ test <- test %>%
   separate(sizes,                                      # separate sizes_fish
            into = paste("size_", c(1:max(test$density)), sep = ""),
            sep = "]") %>%                # every ] marks a new ind
-  separate(instant_growth,
-           into = paste("growth_", c(1:max(test$density)), sep =  ""),
-           sep = "] ") %>% 
+  #separate(instant_growth,
+  #         into = paste("growth_", c(1:max(test$density)), sep =  ""),
+  #         sep = "] ") %>% 
   separate(meta_list,
            into = paste("meta_", c(1:max(test$density)), sep = ""),
            sep = " ")
@@ -118,19 +118,19 @@ test[test==""] <- NA
 # For now, need to hardcode max number of fish
 
 test <- test %>%
-  select(run_num, meta_1: meta_80, size_1:size_80, growth_1:growth_80) %>% 
+  select(run_num, meta_1: meta_80, size_1:size_80) %>% #, growth_1:growth_80) %>% 
   gather(key, value, -run_num) %>%  
-  separate(key, into = c("msg", "fish_id"), sep = "_") %>% 
-  spread(msg, value) %>% 
-  arrange(run_num, fish_id) %>% 
-  select(1:2, meta, everything())
+  separate(key, into = c("ms", "fish_id"), sep = "_") %>% 
+  spread(ms, value) %>% 
+  arrange(run_num, fish_id) #%>% 
+  #select(1:2, meta, everything())
   
 # Remove NA cases, i.e. for runs where n_fish < max(n_fish)
 #test <- test[complete.cases(test), ]
  
 # Remove the brackets 
 test$size <- gsub("[", "", test$size, fixed = T)
-test$growth <- gsub("[", "", test$growth, fixed = T)
+#test$growth <- gsub("[", "", test$growth, fixed = T)
 test$meta <- gsub("[", "", test$meta, fixed = T)
 test$meta <- gsub("]", "", test$meta, fixed = T)
 
@@ -148,21 +148,21 @@ test <- test %>%
            #into = as.character(c(0:max(test$total_time))), 
            into = paste("size_", c(0:250), sep =  ""),
            sep = " ") %>% 
-  separate(growth, 
-           into = paste("growth_", c(0:250), sep =  ""),
-           sep = " ") %>%
-  select(-c(growth_0, size_0)) # I drop this because there's only a value for ind 1
-test[,-c(1:4)] <- round(as.numeric(unlist(test[,-c(1:4)])), 3)
+  #separate(growth, 
+  #         into = paste("growth_", c(0:250), sep =  ""),
+  #         sep = " ") %>%
+  select(-c(size_0)) # I drop this because there's only a value for ind 1
+test[,-c(1:3)] <- round(as.numeric(unlist(test[,-c(1:3)])), 3)
 
 # Gather to long format, so we now have one line per fish per time step
 test <- test %>%
   #select(run_num, total_time, size_1:size_80, growth_1:growth_80) %>% 
   gather(key, value, -run_num, -fish_id, -meta) %>%  
-  separate(key, into = c("sg", "time"), sep = "_") %>% 
-  spread(sg, value) %>% 
+  separate(key, into = c("size", "time"), sep = "_") %>% 
+  spread(size, value) %>% 
   mutate(time = as.numeric(time),
          fish_id = as.numeric(fish_id), 
-         growth = as.numeric(growth),
+         #growth = as.numeric(growth),
          size = as.numeric(size)) %>% 
   arrange(run_num, fish_id, time)
 
@@ -180,7 +180,7 @@ Now, rejoin with the treatment information, and write a csv. This csv has one li
 test <- left_join(test, params, by = "run_num")
 ind_time <- test %>%
   select(run_num, density, sync, asym, synchrony, asymmetry,
-         time, n_surv, n_dead, biomass, fish_id, meta, size, growth) %>% 
+         time, n_surv, n_dead, biomass, fish_id, meta, size) %>% 
   rename(id = fish_id)
 ind_time$size <- as.numeric(ind_time$size)
 write.csv(ind_time, "individual_time_CR.csv")
@@ -197,7 +197,7 @@ ind_time <- read.csv("individual_time_CR.csv", header = T)
 ind_time$synchrony <- ordered(ind_time$synchrony, levels = c("low", "med", "high"))
 ind_time$asymmetry <- ordered(ind_time$asymmetry, levels = c("symm", "low_asym", "high_asym"))
 ind_time$size <- as.numeric(ind_time$size)
-ind_time$growth <- as.numeric(ind_time$growth)
+#ind_time$growth <- as.numeric(ind_time$growth)
 
 # Here, set a minimum threshold for metamorphosis. Future runs will have this modeled implicitly
 ind <- ind_time %>% 
@@ -208,7 +208,7 @@ ind <- ind_time %>%
             hatch_date = min(time[size > 0]),
             # use base R ifelse here, so we can have 2 data types for T/F
             #end_date = ifelse(meta == 1, min(time[size == 12]), min(time[size == max_size])),
-            end_date = min(time[size ==max(size)]),
+            end_date = min(time[size == max(size)]),
             growth_time = end_date - hatch_date,
             growth_rate = max(size)/growth_time)
 

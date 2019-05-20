@@ -100,12 +100,12 @@ ask fishes
       ]
      ]
 
-    set biomass sum [size] of turtles ; this may or may not be interesting
-
     tick
-    if ticks = 250 [stop]
-    set n-meta-fishes count fishes with [color = yellow] ; at this point, set the number of metamorphs to the number of blue fish
-set n-dead-fishes count fishes with [color = red]  ; at this point, set the number of dead fish to the number of red fish
+    if ticks = 250 [stop]                                   ; this end point comes after all action-- just makes it easier to work with data in R
+    set n-meta-fishes count fishes with [color = yellow]    ; at this point, set the number of metamorphs to the number of yellow fish
+    set n-dead-fishes count fishes with [color = red]       ; at this point, set the number of dead fish to the number of red fish
+    set biomass sum [size] of turtles with [color = yellow] ; biomass = biomass export-- only counting those that survive and advance to next stage
+
 end
 
 
@@ -179,7 +179,9 @@ to eat-grass      ; turtle procedure-- consider separating into breeds for 2-sp 
   ;set recent-growth-list sublist instantaneous-growth ((length instantaneous-growth) - 8) (length instantaneous-growth)
   ;set recent-growth-rate mean recent-growth-list
   set recent-sizes sublist fish-size-list ((length fish-size-list) - 5) (length fish-size-list)
-  set recent-growth-rate(last recent-sizes - item 0 recent-sizes) / 5
+  ;set recent-growth-rate(last recent-sizes - item 0 recent-sizes) / 5
+  let size-ratio max list last recent-sizes 0.001 / max list item 0 recent-sizes 0.001
+  set recent-growth-rate(log size-ratio 10 / 5)   ; 10 is the base of the log. divide by 5 for 5 time steps
 
   ;; OPTION TO SHOW MEAL LIST
   ifelse show-label?
@@ -201,11 +203,11 @@ end
 to metamorph-fish                          ; fish procedure-- separate breeds here to keep separate tallies
 
   ;if size >= 10 and breed = fishes    ; final size is a fixed value. can also make it proportional to the growth parameter. have to eat 100 patches to metamorph
-  if size > (1.02 / (0.170000001 - recent-growth-rate)) and size > 6
+  if size > (1.02 / (0.170000001 - recent-growth-rate)) and size > 6  ; have the .000001 there so that the denominator won't ever be 0
   [
     set n-meta-fishes n-meta-fishes + 1    ; tally as reaching metamorphosis
-    set color yellow                           ; ones that metamorph turn green
-    set meta? 1                             ; for visualizing in-program, turn this off. but necessary for BS output to see when they metamorphed
+    set color yellow                       ; ones that metamorph turn yellow
+    set meta? 1                            ; for visualizing in-program, turn this off. but necessary for BS output to see when they metamorphed
     stamp                                  ; I think I also have to turn this off for BS, but useful for visualizing/troubleshooting
   ]
 
@@ -333,7 +335,7 @@ n-fishes
 n-fishes
 0
 200
-80.0
+1.0
 1
 1
 NIL

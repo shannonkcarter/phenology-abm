@@ -27,6 +27,10 @@ library(reshape2)
 library(RColorBrewer)
 library(lme4)
 library(wesanderson)
+library(ggsci)
+library(extrafont)
+extrafont::loadfonts(device = "win")
+
 
 ## Load universal plotting elements
 mytheme <- theme(panel.background = element_blank(),
@@ -221,11 +225,12 @@ ind <- ind_time %>%
 run <- ind %>% 
   group_by(run_num, sync, synchrony, asym, asymmetry, n_surv, n_dead, biomass) %>%
   #filter(meta == 1) %>% 
-  summarise(n_meta = sum(meta),
+  summarise(surv = sum(meta),
             mean_size = mean(max_size),
             se_size   = sd(max_size)/sqrt(length(max_size)),
             mean_growthrate = mean(growth_rate),
-            se_growthrate = sd(growth_rate)/sqrt(length(growth_rate)))
+            se_growthrate = sd(growth_rate)/sqrt(length(growth_rate)))  
+
 ind$surv_check <- 80 - (ind$n_surv + ind$n_dead)
 
 # now by treatment
@@ -293,13 +298,21 @@ ggplot(ind_time, aes(x = size, y = growth, color = meta)) +
   #stat_smooth() +
   ylim(0, 0.25) + xlim(1, 10)
 
+
 ggplot(ind, aes(x = hatch_date, y = max_size, color = as.factor(meta))) +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
   stat_smooth() +
   facet_grid(asymmetry ~ synchrony) + theme_bw() +
   labs(title = "Final size by hatching date",
        x = "hatching date",
-       y = "final size")
+       y = "final size") +
+   #scale_color_uchicago() +
+    theme_light(base_size = 15, base_family = "Poppins") +
+    theme(legend.position = "none",
+          axis.title = element_text(size = 12),
+          axis.text.x = element_text(family = "Roboto Mono", size = 10),
+          plot.caption = element_text(size = 9, color = "grey50"),
+          panel.grid = element_blank())
 
 ggplot(ind, aes(x = hatch_date, y = growth_rate, color = as.factor(meta))) +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
@@ -355,6 +368,33 @@ surv_means <- ggplot(trt, aes(x = synchrony, y = mean_surv_fish, group = asymmet
   scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
   scale_shape_manual(values = c(21, 24, 23))  
 surv_means + theme_bw()
+
+## LOLIPOP PLOT
+
+## load fonts
+extrafont::loadfonts(device = "win")
+
+## final plot
+## set seed to fix position of jittered points
+#set.seed(123)
+ggplot(trt, aes(x = var, y = baseline_adj, color = synchrony, shape = asymmetry)) +
+    geom_segment(aes(x = var, xend = var,
+                     y = 0, yend = baseline_adj),
+                 size = 0.8) +
+    geom_hline(aes(yintercept = 0), color = "grey70", size = 0.6) +
+    geom_point(aes(var, baseline_adj), size = 5) +
+    geom_jitter(size = 2, alpha = 0.25, width = 0.2) +
+    coord_flip() +
+    scale_y_continuous(limits = c(0, 90), expand = c(0.005, 0.005), 
+                       breaks = c(1, seq(20, 80, by = 20))) +
+    scale_color_uchicago() +
+    labs(x = NULL, y = "Deviation from symmetrical medium synchrony") +
+    theme_light(base_size = 15, base_family = "Poppins") +
+    theme(legend.position = "none",
+          axis.title = element_text(size = 12),
+          axis.text.x = element_text(family = "Roboto Mono", size = 10),
+          plot.caption = element_text(size = 9, color = "grey50"),
+          panel.grid = element_blank())
 ```
 
 Mean per capita sizes of individuals by treatment

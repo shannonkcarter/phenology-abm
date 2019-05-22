@@ -225,9 +225,9 @@ ind <- ind_time %>%
 run <- ind %>% 
   group_by(run_num, sync, synchrony, asym, asymmetry, n_surv, n_dead, biomass) %>%
   #filter(meta == 1) %>% 
-  summarise(surv = sum(meta),
-            mean_size = mean(meta * max_size),
-            mean_emer = mean(meta * end_date))
+  summarise(survival = sum(meta),
+            size = mean(meta * max_size),
+            emergence_time = mean(meta * end_date))
             #se_size   = sd(max_size)/sqrt(length(max_size)),
             #mean_growthrate = mean(growth_rate),
             #se_growthrate = sd(growth_rate)/sqrt(length(growth_rate)))  
@@ -237,7 +237,7 @@ ind$surv_check <- 80 - (ind$n_surv + ind$n_dead)
 # gather different response variables
 run <- run %>% 
   group_by(run_num, synchrony, asymmetry) %>% 
-  gather(surv, biomass, mean_size, mean_emer, key = "variable", value = "abs_value") %>% 
+  gather(survival, biomass, size, emergence_time, key = "variable", value = "abs_value") %>% 
   arrange(run_num)
 
 # now by treatment
@@ -307,10 +307,13 @@ ggplot(trt_nobaseline,
              size = 4,
              position = position_dodge(width = 0.5)) +
   coord_flip() +
-  scale_y_continuous(limits = c(-0.25, 0.5), expand = c(0.005, 0.005)) +
+  scale_y_continuous(limits = c(-0.5, 0.5), expand = c(0.005, 0.005)) +
   #scale_color_uchicago() +
   scale_color_manual(values = wes_palette(n = 2, name = "Cavalcanti1")) +
-  labs(x = NULL, y = "Deviation from symmetrical medium synchrony") +
+  #scale_shape_manual(name = "Synchrony & Symmetry",
+  #                   labels = c("low_asym, low", "low_asym, high", "high_asym, low", "high_asym, high"),
+  #                   values = c(19, 19, 17, 17)) +
+  labs(x = NULL, y = "Deviation from baseline case\n(medium synchrony, symmetric competition)") +
   theme_light(base_size = 15, base_family = "Poppins") +
   theme(#legend.position = "none",
         axis.title = element_text(size = 12),

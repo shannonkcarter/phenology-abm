@@ -50,7 +50,7 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 
 ## second test with 1 consumer and resource. size-independent consumption
 ## bs_CR6 won't load-- something is wrong with consumption-list and the file is too big, or doesn't match this loading criteria
-data <- read.table("bs_CRnometa_11.csv",
+data <- read.table("bs_CRnometa_12.csv",
   #read.table("growth-size_test.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
@@ -82,8 +82,8 @@ test <- data %>%
          n_dead   = n.dead.fishes,                 # number that starved before metamorphosis
          biomass = biomass,                        # sum mass of all survivors of a run
          meta_list = X.meta...of.fishes,
-         sizes = X.fish.size.list..of.fishes, # list of size for each ind for each time
-         recent_growth = X.recent.growth.rate..of.fishes)
+         sizes = X.fish.size.list..of.fishes) # list of size for each ind for each time
+         #recent_growth = X.recent.growth.rate..of.fishes)
 # Extract parameter values-- these are the 'treatments' and inputs of the model for each run
 # I'll rejoin the output data with params later, after some summarizing/processing
 # Add qualitative levels for the treatment params, bc useful for plotting. This will be different for each BS
@@ -226,20 +226,43 @@ run <- ind %>%
   group_by(run_num, sync, synchrony, asym, asymmetry, n_surv, n_dead, biomass) %>%
   #filter(meta == 1) %>% 
   summarise(surv = sum(meta),
-            mean_size = mean(max_size),
-            se_size   = sd(max_size)/sqrt(length(max_size)),
-            mean_growthrate = mean(growth_rate),
-            se_growthrate = sd(growth_rate)/sqrt(length(growth_rate)))  
+            mean_size = mean(meta * max_size),
+            mean_emer = mean(meta * end_date))
+            #se_size   = sd(max_size)/sqrt(length(max_size)),
+            #mean_growthrate = mean(growth_rate),
+            #se_growthrate = sd(growth_rate)/sqrt(length(growth_rate)))  
 
 ind$surv_check <- 80 - (ind$n_surv + ind$n_dead)
 
+# gather different response variables
+run <- run %>% 
+  group_by(run_num, synchrony, asymmetry) %>% 
+  gather(surv, biomass, mean_size, mean_emer, key = "variable", value = "abs_value") %>% 
+  arrange(run_num)
+
 # now by treatment
 trt <- run %>% 
-  group_by(sync, synchrony, asym, asymmetry) %>% 
-  summarise(mean_surv_fish = mean(n_surv),
-            se_surv_fish   = sd(n_surv)/sqrt(length(n_surv)),
-            mean_size      = mean(mean_size),
-            se_size        = sd(mean_size)/sqrt(length(mean_size)))
+  group_by(sync, synchrony, asym, asymmetry, variable) %>% 
+  summarise(mean = mean(abs_value))
+            #se_surv_fish   = sd(n_surv)/sqrt(length(n_surv)),
+            #mean_size      = mean(mean_size),
+            #mean_emer      = mean(mean_emer))
+            #se_size        = sd(mean_size)/sqrt(length(mean_size)))
+
+baseline_means <- trt %>% 
+  subset(synchrony == 'med' & asymmetry == 'symm') %>% 
+  dplyr::select(variable = variable, baseline_value = mean) #%>% 
+  #dplyr::select(variable, baseline_value)
+
+# now, add in baseline averages (conditions at med sync and symmetic comp) to run data
+run <- left_join(run, baseline_means, by = "variable")  
+trt <- left_join(trt, baseline_means, by = "variable")
+   
+run <- run %>% 
+  mutate(baseline_adj = (abs_value - baseline_value)/baseline_value)
+
+trt <- trt %>% 
+  mutate(baseline_adj = (mean - baseline_value)/baseline_value)
 
 # On some data runs, number of metamorphs doesn't match raw data. always double check.
 check <- ind %>% 
@@ -377,20 +400,25 @@ extrafont::loadfonts(device = "win")
 ## final plot
 ## set seed to fix position of jittered points
 #set.seed(123)
-ggplot(trt, aes(x = var, y = baseline_adj, color = synchrony, shape = asymmetry)) +
-    geom_segment(aes(x = var, xend = var,
-                     y = 0, yend = baseline_adj),
+trt_nobaseline <- subset(trt, subset = asymmetry.x != "symm" & synchrony.x != "med")
+run_nobaseline <- subset(run, subset = asymmetry.x != "symm" & synchrony.x != "med")
+ggplot(trt_nobaseline, 
+       aes(x = variable, y = baseline_adj, color = synchrony.x, shape = asymmetry.x)) +
+    geom_segment(data = trt_nobaseline, aes(x = variable, xend = variable,
+                 y = 0, yend = baseline_adj),
                  size = 0.8) +
     geom_hline(aes(yintercept = 0), color = "grey70", size = 0.6) +
-    geom_point(aes(var, baseline_adj), size = 5) +
-    geom_jitter(size = 2, alpha = 0.25, width = 0.2) +
+    geom_point(aes(variable, baseline_adj), position = position_dodge(), 
+               size = 5) +
+    geom_jitter(data = run_nobaseline, 
+                aes(x = variable, y = baseline_adj, color = synchrony.x, shape = asymmetry.x),
+      size = 2, alpha = 0.25, width = 0.2) +
     coord_flip() +
-    scale_y_continuous(limits = c(0, 90), expand = c(0.005, 0.005), 
-                       breaks = c(1, seq(20, 80, by = 20))) +
+    scale_y_continuous(limits = c(-0.5, 0.5), expand = c(0.005, 0.005)) +
     scale_color_uchicago() +
     labs(x = NULL, y = "Deviation from symmetrical medium synchrony") +
     theme_light(base_size = 15, base_family = "Poppins") +
-    theme(legend.position = "none",
+    theme(#legend.position = "none",
           axis.title = element_text(size = 12),
           axis.text.x = element_text(family = "Roboto Mono", size = 10),
           plot.caption = element_text(size = 9, color = "grey50"),

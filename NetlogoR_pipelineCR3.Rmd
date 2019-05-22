@@ -289,27 +289,34 @@ extrafont::loadfonts(device = "win")
 #set.seed(123)
 trt_nobaseline <- subset(trt, subset = asymmetry.x != "symm" & synchrony.x != "med")
 run_nobaseline <- subset(run, subset = asymmetry.x != "symm" & synchrony.x != "med")
+
 ggplot(trt_nobaseline, 
-       aes(x = variable, y = baseline_adj, color = synchrony.x, shape = asymmetry.x)) +
-    geom_segment(data = trt_nobaseline, 
-                 aes(x = variable, xend = variable, y = 0, yend = baseline_adj),
-                 size = 0.8) +
-    geom_hline(aes(yintercept = 0), color = "grey70", size = 0.6) +
-    geom_point(aes(variable, baseline_adj), position = position_dodge(), 
-               size = 4) +
-    geom_jitter(data = run_nobaseline, 
-                aes(x = variable, y = baseline_adj, color = synchrony.x, shape = asymmetry.x),
-      size = 2, alpha = 0.25, width = 0.2) +
-    coord_flip() +
-    scale_y_continuous(limits = c(-0.5, 0.5), expand = c(0.005, 0.005)) +
-    scale_color_uchicago() +
-    labs(x = NULL, y = "Deviation from symmetrical medium synchrony") +
-    theme_light(base_size = 15, base_family = "Poppins") +
-    theme(#legend.position = "none",
-          axis.title = element_text(size = 12),
-          axis.text.x = element_text(family = "Roboto Mono", size = 10),
-          plot.caption = element_text(size = 9, color = "grey50"),
-          panel.grid = element_blank())
+       aes(x = variable, y = baseline_adj, color = synchrony.x, shape = asymmetry.x,
+           group = interaction(asymmetry.x, synchrony.x))) +
+  geom_jitter(data = run_nobaseline,
+              aes(x = variable, y = baseline_adj, color = synchrony.x, shape = asymmetry.x),
+              size = 2, alpha = 0.25, width = 0.2) +
+  #geom_segment(aes(x = variable, xend = variable, y = 0, yend = baseline_adj),
+  #            size = 0.8, 
+  #            position = position_dodge(width = 0.5)) +
+  geom_linerange(aes(ymin = 0, ymax = baseline_adj),
+              size = 0.8, 
+              position = position_dodge(width = 0.5)) +
+  geom_hline(aes(yintercept = 0), color = "grey70", size = 0.6) +
+  geom_point(aes(variable, baseline_adj), 
+             size = 4,
+             position = position_dodge(width = 0.5)) +
+  coord_flip() +
+  scale_y_continuous(limits = c(-0.25, 0.5), expand = c(0.005, 0.005)) +
+  #scale_color_uchicago() +
+  scale_color_manual(values = wes_palette(n = 2, name = "Cavalcanti1")) +
+  labs(x = NULL, y = "Deviation from symmetrical medium synchrony") +
+  theme_light(base_size = 15, base_family = "Poppins") +
+  theme(#legend.position = "none",
+        axis.title = element_text(size = 12),
+        axis.text.x = element_text(family = "Roboto Mono", size = 10),
+        plot.caption = element_text(size = 9, color = "grey50"),
+        panel.grid = element_blank())
 ```
 
 First, a visual of the synchrony treatments.

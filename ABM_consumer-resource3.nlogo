@@ -179,9 +179,9 @@ to eat-grass      ; turtle procedure-- consider separating into breeds for 2-sp 
   ;set recent-growth-list sublist instantaneous-growth ((length instantaneous-growth) - 8) (length instantaneous-growth)
   ;set recent-growth-rate mean recent-growth-list
   set recent-sizes sublist fish-size-list ((length fish-size-list) - 5) (length fish-size-list)
-  ;set recent-growth-rate(last recent-sizes - item 0 recent-sizes) / 5
-  let size-ratio max list last recent-sizes 0.001 / max list item 0 recent-sizes 0.001
-  set recent-growth-rate(log size-ratio 10 / 5)   ; 10 is the base of the log. divide by 5 for 5 time steps
+  set recent-growth-rate(last recent-sizes - item 0 recent-sizes) / 5
+  ;let size-ratio max list last recent-sizes 0.001 / max list item 0 recent-sizes 0.001
+  ;set recent-growth-rate(log size-ratio 10 / 5)   ; 10 is the base of the log. divide by 5 for 5 time steps
 
   ;; OPTION TO SHOW MEAL LIST
   ifelse show-label?
@@ -335,7 +335,7 @@ n-fishes
 n-fishes
 0
 200
-1.0
+80.0
 1
 1
 NIL
@@ -1574,7 +1574,6 @@ NetLogo 6.0
     <metric>n-dead-fishes</metric>
     <metric>biomass</metric>
     <metric>[fish-size-list] of fishes</metric>
-    <metric>[recent-growth-rate] of fishes</metric>
     <metric>[meta?] of fishes</metric>
     <enumeratedValueSet variable="show-label?">
       <value value="false"/>

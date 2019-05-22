@@ -278,6 +278,40 @@ ggplot(check, aes(x = n_surv, y = no_meta)) +
 
 Here are some diagnostic plots to get a quick look at the data. These will give an idea of what parameter space is reasonable and interesting to explore in future behavior space runs.
 
+```{r}
+## LOLIPOP PLOT
+
+## load fonts
+extrafont::loadfonts(device = "win")
+
+## final plot
+## set seed to fix position of jittered points
+#set.seed(123)
+trt_nobaseline <- subset(trt, subset = asymmetry.x != "symm" & synchrony.x != "med")
+run_nobaseline <- subset(run, subset = asymmetry.x != "symm" & synchrony.x != "med")
+ggplot(trt_nobaseline, 
+       aes(x = variable, y = baseline_adj, color = synchrony.x, shape = asymmetry.x)) +
+    geom_segment(data = trt_nobaseline, 
+                 aes(x = variable, xend = variable, y = 0, yend = baseline_adj),
+                 size = 0.8) +
+    geom_hline(aes(yintercept = 0), color = "grey70", size = 0.6) +
+    geom_point(aes(variable, baseline_adj), position = position_dodge(), 
+               size = 4) +
+    geom_jitter(data = run_nobaseline, 
+                aes(x = variable, y = baseline_adj, color = synchrony.x, shape = asymmetry.x),
+      size = 2, alpha = 0.25, width = 0.2) +
+    coord_flip() +
+    scale_y_continuous(limits = c(-0.5, 0.5), expand = c(0.005, 0.005)) +
+    scale_color_uchicago() +
+    labs(x = NULL, y = "Deviation from symmetrical medium synchrony") +
+    theme_light(base_size = 15, base_family = "Poppins") +
+    theme(#legend.position = "none",
+          axis.title = element_text(size = 12),
+          axis.text.x = element_text(family = "Roboto Mono", size = 10),
+          plot.caption = element_text(size = 9, color = "grey50"),
+          panel.grid = element_blank())
+```
+
 First, a visual of the synchrony treatments.
 
 ```{r, echo = F}
@@ -392,37 +426,6 @@ surv_means <- ggplot(trt, aes(x = synchrony, y = mean_surv_fish, group = asymmet
   scale_shape_manual(values = c(21, 24, 23))  
 surv_means + theme_bw()
 
-## LOLIPOP PLOT
-
-## load fonts
-extrafont::loadfonts(device = "win")
-
-## final plot
-## set seed to fix position of jittered points
-#set.seed(123)
-trt_nobaseline <- subset(trt, subset = asymmetry.x != "symm" & synchrony.x != "med")
-run_nobaseline <- subset(run, subset = asymmetry.x != "symm" & synchrony.x != "med")
-ggplot(trt_nobaseline, 
-       aes(x = variable, y = baseline_adj, color = synchrony.x, shape = asymmetry.x)) +
-    geom_segment(data = trt_nobaseline, aes(x = variable, xend = variable,
-                 y = 0, yend = baseline_adj),
-                 size = 0.8) +
-    geom_hline(aes(yintercept = 0), color = "grey70", size = 0.6) +
-    geom_point(aes(variable, baseline_adj), position = position_dodge(), 
-               size = 5) +
-    geom_jitter(data = run_nobaseline, 
-                aes(x = variable, y = baseline_adj, color = synchrony.x, shape = asymmetry.x),
-      size = 2, alpha = 0.25, width = 0.2) +
-    coord_flip() +
-    scale_y_continuous(limits = c(-0.5, 0.5), expand = c(0.005, 0.005)) +
-    scale_color_uchicago() +
-    labs(x = NULL, y = "Deviation from symmetrical medium synchrony") +
-    theme_light(base_size = 15, base_family = "Poppins") +
-    theme(#legend.position = "none",
-          axis.title = element_text(size = 12),
-          axis.text.x = element_text(family = "Roboto Mono", size = 10),
-          plot.caption = element_text(size = 9, color = "grey50"),
-          panel.grid = element_blank())
 ```
 
 Mean per capita sizes of individuals by treatment

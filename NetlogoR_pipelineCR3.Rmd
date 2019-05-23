@@ -243,16 +243,16 @@ run <- run %>%
 # now by treatment
 trt <- run %>% 
   group_by(sync, synchrony, asym, asymmetry, variable) %>% 
-  summarise(mean = mean(abs_value))
+  summarise(abs_value = mean(abs_value))
             #se_surv_fish   = sd(n_surv)/sqrt(length(n_surv)),
             #mean_size      = mean(mean_size),
             #mean_emer      = mean(mean_emer))
             #se_size        = sd(mean_size)/sqrt(length(mean_size)))
 
 baseline_means <- trt %>% 
-  subset(synchrony == 'med' & asymmetry == 'symm') %>% 
-  dplyr::select(variable = variable, baseline_value = mean) #%>% 
-  #dplyr::select(variable, baseline_value)
+  subset(synchrony == 'med' & asymmetry == 'symm') 
+baseline_means <- baseline_means[,5:6] 
+colnames(baseline_means)[2] <- "baseline_value"
 
 # now, add in baseline averages (conditions at med sync and symmetic comp) to run data
 run <- left_join(run, baseline_means, by = "variable")  
@@ -287,38 +287,43 @@ extrafont::loadfonts(device = "win")
 ## final plot
 ## set seed to fix position of jittered points
 #set.seed(123)
-trt_nobaseline <- subset(trt, subset = asymmetry.x != "symm" & synchrony.x != "med")
-run_nobaseline <- subset(run, subset = asymmetry.x != "symm" & synchrony.x != "med")
+trt_nobaseline <- subset(trt, subset = asymmetry != "symm" & synchrony != "med")
+run_nobaseline <- subset(run, subset = asymmetry != "symm" & synchrony != "med")
 
 ggplot(trt_nobaseline, 
-       aes(x = variable, y = baseline_adj, color = synchrony.x, shape = asymmetry.x,
-           group = interaction(asymmetry.x, synchrony.x))) +
-  geom_jitter(data = run_nobaseline,
-              aes(x = variable, y = baseline_adj, color = synchrony.x, shape = asymmetry.x),
-              size = 2, alpha = 0.25, width = 0.2) +
-  #geom_segment(aes(x = variable, xend = variable, y = 0, yend = baseline_adj),
-  #            size = 0.8, 
-  #            position = position_dodge(width = 0.5)) +
+       aes(x = variable, y = baseline_adj, 
+           colour = interaction(asymmetry, synchrony), shape = interaction(asymmetry, synchrony)))+
+  geom_point(data = run_nobaseline,
+              aes(x = variable, y = baseline_adj, 
+                  group = interaction(asymmetry, synchrony)),
+              size = 2, alpha = 0.25,
+              position = position_jitterdodge(dodge.width = 0.5, jitter.width = 0.2)) +
   geom_linerange(aes(ymin = 0, ymax = baseline_adj),
-              size = 0.8, 
-              position = position_dodge(width = 0.5)) +
+              size = 1, 
+              position = position_dodge(width = 0.5),
+              show.legend = F) +
   geom_hline(aes(yintercept = 0), color = "grey70", size = 0.6) +
   geom_point(aes(variable, baseline_adj), 
              size = 4,
              position = position_dodge(width = 0.5)) +
   coord_flip() +
   scale_y_continuous(limits = c(-0.5, 0.5), expand = c(0.005, 0.005)) +
-  #scale_color_uchicago() +
-  scale_color_manual(values = wes_palette(n = 2, name = "Cavalcanti1")) +
-  #scale_shape_manual(name = "Synchrony & Symmetry",
-  #                   labels = c("low_asym, low", "low_asym, high", "high_asym, low", "high_asym, high"),
-  #                   values = c(19, 19, 17, 17)) +
-  labs(x = NULL, y = "Deviation from baseline case\n(medium synchrony, symmetric competition)") +
+  scale_shape_manual(name = "Synchrony & Symmetry",
+                     labels = c("low synchrony, mild asymmetry", "low synchrony, strong asymmetry", 
+                                "high synchrony, mild asymmetry", "high synchrony, strong asymmetry"),
+                     values = c(19, 17, 19, 17)) +
+  scale_color_manual(name = "Synchrony & Symmetry",
+                     labels = c("low synchrony, mild asymmetry", "low synchrony, strong asymmetry", 
+                                "high synchrony, mild asymmetry", "high synchrony, strong asymmetry"),
+                     values = c("#D8B709", "#D8B709", "#02401B", "#02401B")) +
+  labs(x = NULL, y = "Proportional deviation from baseline case\n(medium synchrony, symmetric competition)") +
+  scale_x_discrete(breaks = c("survival", "size", "emergence_time", "biomass"),
+                   labels = c("survival", "mean per capita size", "time to emergence", "biomass export")) +
   theme_light(base_size = 15, base_family = "Poppins") +
-  theme(#legend.position = "none",
+  theme(legend.text = element_text(size = 10),
+        legend.title = element_text(size = 11),
+        text = element_text(size = 14, family = "Rockwell"),    
         axis.title = element_text(size = 12),
-        axis.text.x = element_text(family = "Roboto Mono", size = 10),
-        plot.caption = element_text(size = 9, color = "grey50"),
         panel.grid = element_blank())
 ```
 
@@ -347,11 +352,12 @@ ggplot(ind, aes(x = max_size)) + theme_bw() +
 
 
 ```{r, echo = F}
-growthrates <- ggplot(subset(ind_time, subset = ind == 50), 
+growthrates <- ggplot(ind_time, 
                       aes(x = time, y = size, color = as.factor(id))) + theme_bw() +
   geom_point() +
   #geom_line(alpha = 0.25) +
   geom_smooth(se = F) + 
+  scale_color_uchicago() +
   facet_grid(synchrony ~ asymmetry) +
   theme(legend.position = "none") 
 growthrates
@@ -373,13 +379,13 @@ ggplot(ind, aes(x = hatch_date, y = max_size, color = as.factor(meta))) +
   labs(title = "Final size by hatching date",
        x = "hatching date",
        y = "final size") +
-   #scale_color_uchicago() +
-    theme_light(base_size = 15, base_family = "Poppins") +
-    theme(legend.position = "none",
-          axis.title = element_text(size = 12),
-          axis.text.x = element_text(family = "Roboto Mono", size = 10),
-          plot.caption = element_text(size = 9, color = "grey50"),
-          panel.grid = element_blank())
+  scale_color_manual(values = wes_palette(n = 2, name = "Cavalcanti1")) +
+  theme_light(base_size = 15, base_family = "Poppins") +
+  theme(legend.position = "none",
+        axis.title = element_text(size = 12),
+        text = element_text(family = "Rockwell", size = 12),
+        plot.caption = element_text(size = 9, color = "grey50"),
+        panel.grid = element_blank())
 
 ggplot(ind, aes(x = hatch_date, y = growth_rate, color = as.factor(meta))) +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
@@ -406,8 +412,7 @@ ggplot(ind, aes(x = hatch_date, y = meta, color = asymmetry)) + theme_bw() +
   labs(title = "Survival probability by hatching date",
        x = "hatching date",
        y = "probability of survival") +
-  #scale_fill_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
-  scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1"))
+  scale_color_manual(values = wes_palette(n = 3, name = "Cavalcanti1"))
 
 
 ```

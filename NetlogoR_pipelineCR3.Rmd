@@ -210,7 +210,6 @@ run <- ind %>%
   group_by(run_num, sync, synchrony, asym, asymmetry, n_surv, n_dead, mean_size, biomass) %>%
   #filter(meta == 1) %>% 
   summarise(survival = sum(meta),
-            size = mean(meta * final_size),
             emergence_time = mean(meta * end_date))
             #se_size   = sd(max_size)/sqrt(length(max_size)),
             #mean_growthrate = mean(growth_rate),
@@ -221,7 +220,7 @@ ind$surv_check <- 80 - (ind$n_surv + ind$n_dead)
 # gather different response variables
 run <- run %>% 
   group_by(run_num, synchrony, asymmetry) %>% 
-  gather(survival, biomass, size, emergence_time, key = "variable", value = "abs_value") %>% 
+  gather(survival, biomass, mean_size, emergence_time, key = "variable", value = "abs_value") %>% 
   arrange(run_num)
 
 # now by treatment
@@ -234,7 +233,7 @@ trt <- run %>%
             #se_size        = sd(mean_size)/sqrt(length(mean_size)))
 
 baseline_means <- trt %>% 
-  subset(synchrony == 'med' & asymmetry == 'symm') 
+  subset(synchrony == 'med' & asymmetry == 'none') 
 baseline_means <- baseline_means[,5:6] 
 colnames(baseline_means)[2] <- "baseline_value"
 
@@ -271,8 +270,8 @@ Here are some diagnostic plots to get a quick look at the data. These will give 
 ## final plot
 ## set seed to fix position of jittered points
 #set.seed(123)
-trt_nobaseline <- subset(trt, subset = asymmetry != "symm" & synchrony != "med")
-run_nobaseline <- subset(run, subset = asymmetry != "symm" & synchrony != "med")
+trt_nobaseline <- subset(trt, subset = asymmetry != "none" & synchrony != "med")
+run_nobaseline <- subset(run, subset = asymmetry != "none" & synchrony != "med")
 
 ggplot(trt_nobaseline, 
        aes(x = variable, y = baseline_adj, 
@@ -301,8 +300,8 @@ ggplot(trt_nobaseline,
                                 "high synchrony, mild asymmetry", "high synchrony, strong asymmetry"),
                      values = c("#D8B709", "#D8B709", "#02401B", "#02401B")) +
   labs(x = NULL, y = "Proportional deviation from baseline case\n(medium synchrony, symmetric competition)") +
-  scale_x_discrete(breaks = c("survival", "size", "emergence_time", "biomass"),
-                   labels = c("survival", "mean per capita size", "time to\nemergence", "biomass export")) +
+  scale_x_discrete(breaks = c("survival", "mean_size", "emergence_time", "biomass"),
+                   labels = c("survival", "mean per\ncapita size", "time to\nemergence", "biomass export")) +
   theme_light(base_size = 15, base_family = "Poppins") +
   theme(legend.text = element_text(size = 10),
         legend.title = element_text(size = 11),

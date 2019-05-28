@@ -179,9 +179,9 @@ to eat-grass      ; turtle procedure-- consider separating into breeds for 2-sp 
   ;set recent-growth-list sublist instantaneous-growth ((length instantaneous-growth) - 8) (length instantaneous-growth)
   ;set recent-growth-rate mean recent-growth-list
   set recent-sizes sublist fish-size-list ((length fish-size-list) - 5) (length fish-size-list)
-  set recent-growth-rate(last recent-sizes - item 0 recent-sizes) / 5
-  ;let size-ratio max list last recent-sizes 0.001 / max list item 0 recent-sizes 0.001
-  ;set recent-growth-rate(log size-ratio 10 / 5)   ; 10 is the base of the log. divide by 5 for 5 time steps
+  ;set recent-growth-rate(last recent-sizes - item 0 recent-sizes) / 5
+  let size-ratio max list last recent-sizes 0.001 / max list item 0 recent-sizes 0.001
+  set recent-growth-rate(log size-ratio 10 / 5)   ; 10 is the base of the log. divide by 5 for 5 time steps
 
   ;; OPTION TO SHOW MEAL LIST
   ifelse show-label?
@@ -203,7 +203,7 @@ end
 to metamorph-fish                          ; fish procedure-- separate breeds here to keep separate tallies
 
   ;if size >= 10 and breed = fishes    ; final size is a fixed value. can also make it proportional to the growth parameter. have to eat 100 patches to metamorph
-  if size > (1.02 / (0.170000001 - recent-growth-rate)) and size > 6  ; have the .000001 there so that the denominator won't ever be 0
+  if size > (1.02 / (0.170000001 - 10 * recent-growth-rate)) and size > 6  ; have the .000001 there so that the denominator won't ever be 0
   [
     set n-meta-fishes n-meta-fishes + 1    ; tally as reaching metamorphosis
     set color yellow                       ; ones that metamorph turn yellow
@@ -335,7 +335,7 @@ n-fishes
 n-fishes
 0
 200
-80.0
+200.0
 1
 1
 NIL
@@ -350,7 +350,7 @@ var-hatch-fishes
 var-hatch-fishes
 0
 20
-15.0
+0.0
 1
 1
 NIL
@@ -477,7 +477,7 @@ SWITCH
 379
 show-label?
 show-label?
-1
+0
 1
 -1000
 
@@ -501,7 +501,7 @@ mean-hatch-fishes
 mean-hatch-fishes
 0
 100
-30.0
+5.0
 1
 1
 NIL
@@ -516,7 +516,7 @@ asymmetry-slope
 asymmetry-slope
 0
 1
-1.0
+0.0
 0.1
 1
 NIL

@@ -29,7 +29,7 @@ library(lme4)
 library(wesanderson)
 library(ggsci)
 library(extrafont)
-extrafont::loadfonts(device = "win")
+#extrafont::loadfonts(device = "win")
 
 
 ## Load universal plotting elements
@@ -50,7 +50,7 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 
 ## second test with 1 consumer and resource. size-independent consumption
 ## bs_CR6 won't load-- something is wrong with consumption-list and the file is too big, or doesn't match this loading criteria
-data <- read.table("bs_CRnometa_12.csv",
+data <- read.table("bs_CRnometa_13.csv",
   #read.table("growth-size_test.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
@@ -187,7 +187,7 @@ ind_time <- test %>%
          time, n_surv, n_dead, biomass, fish_id, meta, size) %>% 
   rename(id = fish_id)
 ind_time$size <- as.numeric(ind_time$size)
-write.csv(ind_time, "individual_time_CR.csv")
+#write.csv(ind_time, "individual_time_CR.csv")
 
 ```
 
@@ -197,7 +197,7 @@ write.csv(ind_time, "individual_time_CR.csv")
 Now, I want to make some summarised datasets. First with one row per individual, then with one row per run number 
 
 ```{r}
-ind_time <- read.csv("individual_time_CR.csv", header = T)
+#ind_time <- read.csv("individual_time_CR.csv", header = T)
 ind_time$synchrony <- ordered(ind_time$synchrony, levels = c("low", "med", "high"))
 ind_time$asymmetry <- ordered(ind_time$asymmetry, levels = c("symm", "low_asym", "high_asym"))
 ind_time$size <- as.numeric(ind_time$size)
@@ -262,7 +262,7 @@ run <- run %>%
   mutate(baseline_adj = (abs_value - baseline_value)/baseline_value)
 
 trt <- trt %>% 
-  mutate(baseline_adj = (mean - baseline_value)/baseline_value)
+  mutate(baseline_adj = (abs_value - baseline_value)/baseline_value)
 
 # On some data runs, number of metamorphs doesn't match raw data. always double check.
 check <- ind %>% 
@@ -282,7 +282,7 @@ Here are some diagnostic plots to get a quick look at the data. These will give 
 ## LOLIPOP PLOT
 
 ## load fonts
-extrafont::loadfonts(device = "win")
+#extrafont::loadfonts(device = "win")
 
 ## final plot
 ## set seed to fix position of jittered points
@@ -318,7 +318,7 @@ ggplot(trt_nobaseline,
                      values = c("#D8B709", "#D8B709", "#02401B", "#02401B")) +
   labs(x = NULL, y = "Proportional deviation from baseline case\n(medium synchrony, symmetric competition)") +
   scale_x_discrete(breaks = c("survival", "size", "emergence_time", "biomass"),
-                   labels = c("survival", "mean per capita size", "time to emergence", "biomass export")) +
+                   labels = c("survival", "mean per capita size", "time to\nemergence", "biomass export")) +
   theme_light(base_size = 15, base_family = "Poppins") +
   theme(legend.text = element_text(size = 10),
         legend.title = element_text(size = 11),

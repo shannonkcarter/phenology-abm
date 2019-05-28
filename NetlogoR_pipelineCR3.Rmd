@@ -12,7 +12,7 @@ output:
 
 # Goal
 
-The objective here is to make a clean reproducible pipeline to transform Netlogo output into a tidy rectangular dataframe. Here, I import behavior space data (i.e., experiment results) from Netlogo to R. The data I've imported here does several 'runs' (multiple treatments and replicates) of an simulation testing effects of phenology on consumer-resource interaction. There is summary data for each run and there's also time series info on size for each turtle/agent. Here, I process the data and make some diagnostic plots to finetune the model.
+The objective here is to make a clean reproducible pipeline to transform Netlogo output into a tidy rectangular dataframe. Here, I import behavior space data (i.e., experiment results) from Netlogo to R. The data I've imported here does several 'runs' (multiple treatments and replicates) of an simulation testing effects of phenology on consumer-resource interactions. There is summary data for each run (i.e., number of survivors, amount of time) and there's also time series info on size for each turtle/agent. Here, I process the data and make some diagnostic plots to finetune the model.
 
 ```{r setup, include = F}
 knitr::opts_chunk$set(echo = T, warning = F, message = F)
@@ -44,97 +44,91 @@ mytheme <- theme(panel.background = element_blank(),
 
 # Import Data 
 
-First, be sure you export behavior space data from Netlogo in "table" format. When the raw data is exported as a spreadsheet, it comes in a really gnarly format. R can't read it because it's not even close to rectangular, big header, mix of space delimited and bracket delimited. It's a mess. The table is still a bit messy, but much easier to wrangle.
+First, be sure you export behavior space data from Netlogo in "table" format. When the raw data is exported as a spreadsheet, it comes in a really gnarly format. I haven't figured out a way for R to read it because it's not even close to rectangular, big header, mix of space delimited and bracket delimited, etc.. It's a mess. The table is still a bit messy, but much easier to wrangle.
+
+First, load the data. I've done a ton of different experiments in NetLogo, and not always certain each new one will be an improvement over the old or even work at all. So I keep most of the runs and number the files sequentially.
 
 ```{r load table data}
 
-## second test with 1 consumer and resource. size-independent consumption
-## bs_CR6 won't load-- something is wrong with consumption-list and the file is too big, or doesn't match this loading criteria
+## First, import the data
 data <- read.table("bs_CRnometa_13.csv",
-  #read.table("growth-size_test.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
                    quote = "\"",     # correct the column separator
                    fill = T)         # add blank fields if rows have unequal length
-# [,1:12] are parameter values (some consistent across all, some representing trts)
-# [,13:ncol] are the output we designated
-#str(test)  
-
+View(data)
 ```
 
-# Inspect Data
+# Rename and Select Relevant Variables
 
-First, let's rename columns and drop some that we don't need. I keep some columns that are the same across all model runs because it will be useful to call them later, especially since different runs of the experiment might have different values. Some columns will always be the same, or are irrelevant. These I drop. 
+Next, let's rename columns and drop some that we don't need. I keep some columns that are the same across all model runs because it will be useful to call them later, especially since different future experiments might have different values. Some columns will always be the same, or are irrelevant. These I drop. 
 
 For this model, I have one turtle type (fishes), and varied the timing of hatching and per capita growth rates individuals. The Netlogo output includes parameter values and a vector of sizes over time for each turtle
 
-```{r}
-# select and rename columns. new_name = old name. 
-# renaming everything I keep, so can rename with select
-test <- data %>% 
-  select(run_num = X.run.number.,                  # each run number is an experimental unit
-         #total_time = X.step.,                     # length of time the experiment ran
-         density = n.fishes,                        # two types of "turtles" here: fish & dfly
-         sync = var.hatch.fishes,                  # amount of variation in ind hatching timing
-         asym = asymmetry.slope,                   # controls size dependent per capita effects
-         n_surv = n.meta.fishes,                 # number that 'metamorphed', i.e., survived to the end
-         n_dead   = n.dead.fishes,                 # number that starved before metamorphosis
-         biomass = biomass,                        # sum mass of all survivors of a run
-         meta_list = X.meta...of.fishes,
+```{r remane and select}
+
+# renaming everything I keep, so can rename with select. new_name = old name. 
+test <- data %>%                              # rename the df here bc the raw data takes a long time to load
+  select(run_num = X.run.number.,             # each run number is an experimental unit (i.e, a mesocom)
+         #total_time = X.step.,               # length of time the experiment ran
+         density = n.fishes,                  # initial number of turtles
+         sync = var.hatch.fishes,             # trt var: amount of variation in individual hatching timing
+         asym = asymmetry.slope,              # trt var: size dependent per capita growth rates
+         n_surv = n.meta.fishes,              # number of individuals that 'metamorphed' that run
+         n_dead   = n.dead.fishes,            # number of individuals that did not metamorphose
+         biomass = biomass,                   # sum mass of all survivors of a run
+         mean_size = mean.size,               # mean size of individuals that metamorphosed
+         meta_list = X.meta...of.fishes,      # list holding the survival outcome (0/1) for each individual
          sizes = X.fish.size.list..of.fishes) # list of size for each ind for each time
-         #recent_growth = X.recent.growth.rate..of.fishes)
-# Extract parameter values-- these are the 'treatments' and inputs of the model for each run
+         
+```
+
+# Extract run level data
+
+The data currently has 1 row per experiment run. Ultimately, we need to extract data in some columns so that we have one row per time step per individual. Even though this dataset isn't super wide, I have an easier time doing these manipulations without extraneous columns distracting me. So, I pull out the data that has one value per run (i.e., treatment variables and population level response variables like survival) and save it to rejoin with the data later.
+
+```{r extract parameters}
+
 # I'll rejoin the output data with params later, after some summarizing/processing
 # Add qualitative levels for the treatment params, bc useful for plotting. This will be different for each BS
 params <- test[,1:8]
 params$synchrony <- as.factor(params$sync)
 params$asymmetry <- as.factor(params$asym)
 levels(params$synchrony) <- list("low" = 15, "med" = 10, "high" = 5)
-levels(params$asymmetry) <- list("symm" = 0, "low_asym" = 0.5, "high_asym" = 1)
-
+levels(params$asymmetry) <- list("none" = 0, "mild" = 0.5, "strong" = 1)
 ```
+
 
 # Parse Individuals
 
 The 'sizes' columns have a time series of size for each individual (so each 'sizes_fish' column has X individuals x Y time steps values). We ultimately want one row per individual per time step. Let's first separate by individual. 
 
-```{r}
+```{r parse individuals}
 
 # First, separate so that each individual has it's own column
 test <- test %>% 
-  separate(sizes,                                      # separate sizes_fish
-           into = paste("size_", c(1:max(test$density)), sep = ""),
-           sep = "]") %>%                # every ] marks a new ind
-  #separate(instant_growth,
-  #         into = paste("growth_", c(1:max(test$density)), sep =  ""),
-  #         sep = "] ") %>% 
+  separate(sizes,                                      
+           into = paste("size_", c(1:max(test$density)), sep = ""), # new name is size_1, size_2, etc.
+           sep = "]") %>%                                           # every ] marks a new ind
   separate(meta_list,
-           into = paste("meta_", c(1:max(test$density)), sep = ""),
+           into = paste("meta_", c(1:max(test$density)), sep = ""), # new name is meta_1, meta_2, etc.
            sep = " ")
 
 # some cells are left blank and not NA (because of "]]" ending), so fill those with NA
 test[test==""] <- NA
 
 # Next, I'll gather individuals so that they appear in rows
-
-# Select only unique fish individuals and gather to long format
 # For now, need to hardcode max number of fish
-
 test <- test %>%
   select(run_num, meta_1: meta_80, size_1:size_80) %>% #, growth_1:growth_80) %>% 
   gather(key, value, -run_num) %>%  
-  separate(key, into = c("ms", "fish_id"), sep = "_") %>% 
+  separate(key, into = c("ms", "fish_id"), sep = "_") %>%  # 'ms' indicates 'meta' or 'size', just a placeholder
   spread(ms, value) %>% 
-  arrange(run_num, fish_id) #%>% 
-  #select(1:2, meta, everything())
-  
-# Remove NA cases, i.e. for runs where n_fish < max(n_fish)
-#test <- test[complete.cases(test), ]
+  arrange(run_num, fish_id)
  
 # Remove the brackets 
 test$size <- gsub("[", "", test$size, fixed = T)
-#test$growth <- gsub("[", "", test$growth, fixed = T)
 test$meta <- gsub("[", "", test$meta, fixed = T)
 test$meta <- gsub("]", "", test$meta, fixed = T)
 
@@ -144,18 +138,16 @@ test$meta <- gsub("]", "", test$meta, fixed = T)
 
 Now, do the same separate and gather operations to parse the time vector and put in long format.
 
-```{r}
+```{r parse time series}
 
 # Separate the size time series- each space represents a new time point
 test <- test %>% 
   separate(size, 
-           #into = as.character(c(0:max(test$total_time))), 
            into = paste("size_", c(0:250), sep =  ""),
            sep = " ") %>% 
-  #separate(growth, 
-  #         into = paste("growth_", c(0:250), sep =  ""),
-  #         sep = " ") %>%
-  select(-c(size_0)) # I drop this because there's only a value for ind 1
+  select(-c(size_0))       # I drop this because there's only a value for ind 1
+
+# round all size values since NetLogo is insane
 test[,-c(1:3)] <- round(as.numeric(unlist(test[,-c(1:3)])), 3)
 
 # Gather to long format, so we now have one line per fish per time step
@@ -166,25 +158,22 @@ test <- test %>%
   spread(size, value) %>% 
   mutate(time = as.numeric(time),
          fish_id = as.numeric(fish_id), 
-         #growth = as.numeric(growth),
-         size = as.numeric(size)) %>% 
+         size = as.numeric(size),
+         meta = as.numeric(meta)) %>% 
   arrange(run_num, fish_id, time)
 
-# Remove NA cases, i.e. time steps for run that were shorter than the longest run
-#test <- test[complete.cases(test), ]
-test$meta <- as.numeric(test$meta)
 ```
 
 # Compile & Tidy
 
 Now, rejoin with the treatment information, and write a csv. This csv has one line per individual per time step. So nrow should be max(run_num) x (ndfly + nfish) x total_time
-```{r}
+```{r complie & tidy}
 
 # Rejoin with treatment identifiers for each run number
 test <- left_join(test, params, by = "run_num")
 ind_time <- test %>%
   select(run_num, density, sync, asym, synchrony, asymmetry,
-         time, n_surv, n_dead, biomass, fish_id, meta, size) %>% 
+         time, n_surv, n_dead, biomass, mean_size, fish_id, meta, size) %>% 
   rename(id = fish_id)
 ind_time$size <- as.numeric(ind_time$size)
 #write.csv(ind_time, "individual_time_CR.csv")
@@ -192,26 +181,21 @@ ind_time$size <- as.numeric(ind_time$size)
 ```
 
 
-## Summarize by Individual
+# Summarize by Individual
 
 Now, I want to make some summarised datasets. First with one row per individual, then with one row per run number 
 
-```{r}
+```{r individual summary}
 #ind_time <- read.csv("individual_time_CR.csv", header = T)
 ind_time$synchrony <- ordered(ind_time$synchrony, levels = c("low", "med", "high"))
-ind_time$asymmetry <- ordered(ind_time$asymmetry, levels = c("symm", "low_asym", "high_asym"))
+ind_time$asymmetry <- ordered(ind_time$asymmetry, levels = c("none", "mild", "strong"))
 ind_time$size <- as.numeric(ind_time$size)
-#ind_time$growth <- as.numeric(ind_time$growth)
 
 # Here, set a minimum threshold for metamorphosis. Future runs will have this modeled implicitly
 ind <- ind_time %>% 
-  group_by(run_num, id, sync, asym, synchrony, asymmetry, n_surv, n_dead, biomass, meta) %>%
-  summarise(max_size = max(size),
-            #min_size = min(size),
-            #meta = if_else(color == "yellow", 0, 1),
+  group_by(run_num, id, sync, asym, synchrony, asymmetry, n_surv, n_dead, biomass, mean_size, meta) %>%
+  summarise(final_size = max(size),
             hatch_date = min(time[size > 0]),
-            # use base R ifelse here, so we can have 2 data types for T/F
-            #end_date = ifelse(meta == 1, min(time[size == 12]), min(time[size == max_size])),
             end_date = min(time[size == max(size)]),
             growth_time = end_date - hatch_date,
             growth_rate = max(size)/growth_time)
@@ -223,10 +207,10 @@ ind <- ind_time %>%
 ```{r}
 # first, by run number
 run <- ind %>% 
-  group_by(run_num, sync, synchrony, asym, asymmetry, n_surv, n_dead, biomass) %>%
+  group_by(run_num, sync, synchrony, asym, asymmetry, n_surv, n_dead, mean_size, biomass) %>%
   #filter(meta == 1) %>% 
   summarise(survival = sum(meta),
-            size = mean(meta * max_size),
+            size = mean(meta * final_size),
             emergence_time = mean(meta * end_date))
             #se_size   = sd(max_size)/sqrt(length(max_size)),
             #mean_growthrate = mean(growth_rate),

@@ -8,6 +8,7 @@ globals
   n-meta-fishes      ; number of fish that reach size threshold to no longer compete
   n-dead-fishes
   biomass            ; sum size of all turtles
+  mean-size
 ]
 
 ;; CREATE 2 BREEDS WITH DIFFERENT PHENOLOGIES THAT ACT AS COMPETITORS
@@ -105,6 +106,7 @@ ask fishes
     set n-meta-fishes count fishes with [color = yellow]    ; at this point, set the number of metamorphs to the number of yellow fish
     set n-dead-fishes count fishes with [color = red]       ; at this point, set the number of dead fish to the number of red fish
     set biomass sum [size] of turtles with [color = yellow] ; biomass = biomass export-- only counting those that survive and advance to next stage
+    set mean-size mean [size] of turtles with [color = yellow]
 
 end
 
@@ -335,7 +337,7 @@ n-fishes
 n-fishes
 0
 200
-200.0
+80.0
 1
 1
 NIL
@@ -350,7 +352,7 @@ var-hatch-fishes
 var-hatch-fishes
 0
 20
-0.0
+15.0
 1
 1
 NIL
@@ -477,7 +479,7 @@ SWITCH
 379
 show-label?
 show-label?
-0
+1
 1
 -1000
 
@@ -501,7 +503,7 @@ mean-hatch-fishes
 mean-hatch-fishes
 0
 100
-5.0
+30.0
 1
 1
 NIL
@@ -516,7 +518,7 @@ asymmetry-slope
 asymmetry-slope
 0
 1
-0.0
+1.0
 0.1
 1
 NIL
@@ -1573,8 +1575,9 @@ NetLogo 6.0
     <metric>n-meta-fishes</metric>
     <metric>n-dead-fishes</metric>
     <metric>biomass</metric>
-    <metric>[fish-size-list] of fishes</metric>
+    <metric>mean-size</metric>
     <metric>[meta?] of fishes</metric>
+    <metric>[fish-size-list] of fishes</metric>
     <enumeratedValueSet variable="show-label?">
       <value value="false"/>
     </enumeratedValueSet>

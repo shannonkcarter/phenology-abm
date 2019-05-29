@@ -5,25 +5,48 @@
 ;; GLOBAL VARIABLES
 globals
 [
+  ;; fish related
   n-meta-fishes      ; number of fish that achieve metamorphosis (calculated at the end of the simulation)
   n-dead-fishes      ; number of fish that starve before achieving metamorphosis
-  biomass            ; sum size of all turtles
-  mean-size          ; mean size of all individuals that reach metamorphosis (i.e., biomass/n-meta)
+  biom-fishes        ; sum size of all metamorphed fishes
+  mean-size-fishes   ; mean size of all individual fish that reach metamorphosis (i.e., biomass/n-meta)
+
+  ;; dfly related
+  n-meta-dflies      ; number of dflies that achieve metamorphosis (calculated at the end of the simulation)
+  n-dead-dflies      ; number of dflies that starve before achieving metamorphosis
+  biom-dflies        ; sum size of all metamorphed dflies
+  mean-size-dflies   ; mean size of all individual dflies that reach metamorphosis (i.e., biomass/n-meta)
+
+  ;; community related
+  n-meta-total       ; number of turtles that achieve metamorphosis (calculated at the end of the simulation)
+  biom-total         ; sum size of all metamorphed turtles
 ]
 
-;; FOR NOW, ONLY HAVE ONE BREED, BUT EASIER TO ADD A SECOND LATER IF i DESIGNATE BREEDS HERE
+;; TWO BREEDS ACT AS RESOURCE COMPETITIORS AND CAN BE CONTROLLED SEPARATLEY
 breed [fishes fish]
+breed [dflies dfly]
 
 ;; FISHES AND DFLIES HAVE MOST THINGS IN COMMON, BUT NEED TO BE CONTROLLED SEPARATELY
-fishes-own           ;  a second breed would have all of these qualities too- but would potentially have different procedures governing them
+fishes-own
 [
-  hatch-tick         ; each turtle has a time they become hatch/enter environment
-  meals              ; a list of how many patches it eats each time step. used for growth rate and starvation
-  fish-size-list     ; a running list of the size of the turtle at each time step
-  recent-growth-rate ; an average of growth over the last 10 time steps
-  consumption-list   ; a list of how many patches the turtle has eaten recently-- used to determine starvation
-  meta?              ; 0/1 reporter of whether the turtle survived
-  recent-sizes       ; sublist of size-list used to calculate recent growth rate
+  hatch-tick-fish    ; each turtle has a time they become hatch/enter environment
+  meals-fish         ; a list of how many patches it eats each time step. used for growth rate and starvation
+  size-list-fish     ; a running list of the size of the turtle at each time step
+  recent-growth-fish ; an average of growth over the last 10 time steps
+  consump-list-fish  ; a list of how many patches the turtle has eaten recently-- used to determine starvation
+  meta-fish?         ; 0/1 reporter of whether the turtle survived
+  recent-sizes-fish  ; sublist of size-list used to calculate recent growth rate
+]
+
+dflies-own           ; unclear if each of these has to have a -dfly -fish tag. will find out
+[
+  hatch-tick-dfly    ; each turtle has a time they become hatch/enter environment
+  meals-dfly         ; a list of how many patches it eats each time step. used for growth rate and starvation
+  size-list-dfly     ; a running list of the size of the turtle at each time step
+  recent-growth-dfly ; an average of growth over the last 10 time steps
+  consump-list-dfly  ; a list of how many patches the turtle has eaten recently-- used to determine starvation
+  meta-dfly?         ; 0/1 reporter of whether the turtle survived
+  recent-sizes-dfly  ; sublist of size-list used to calculate recent growth rate
 ]
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -39,10 +62,23 @@ to setup
     set color gray                    ; gray indicates not yet hatched-- can't move or be cannibalized
     setxy random-xcor random-ycor     ; position actually doesn't matter at all, but it's easier to see things if they're scattered
     set shape "fish"                  ; this is where the biology comes in
-    set hatch-tick round (random-normal mean-hatch-fishes var-hatch-fishes)  ; can control mean and variance of fish hatch time- sliders on interface
-    set meals [10 10 10 10 10 10 10 10 10]  ; initializes an empty list to store meal data in. start with values so that they don't starve out the gate
-    set fish-size-list [0 0 0 0 0]          ; have to start with size info so the growth calculations have values to work with
-    set recent-growth-rate 0                ; a dynamic value that determines whether metamorphosis happens
+    set hatch-tick-fish round (random-normal mean-hatch-fishes var-hatch-fishes)  ; can control mean and variance of fish hatch time- sliders on interface
+    set meals-fish [10 10 10 10 10 10 10 10 10]  ; initializes an empty list to store meal data in. start with values so that they don't starve out the gate
+    set size-list-fish [0 0 0 0 0]          ; have to start with size info so the growth calculations have values to work with
+    set recent-growth-fish 0                ; a dynamic value that determines whether metamorphosis happens
+  ]
+
+    ;; CREATE DFLIES
+  create-dflies n-dflies              ; slider on interface
+  [
+    set size 0                        ; start with size 0 so i can tell the hatch tick from [size-list]. i.e., tick where size goes from 0 to 1.
+    set color gray                    ; gray indicates not yet hatched-- can't move or be cannibalized
+    setxy random-xcor random-ycor     ; position actually doesn't matter at all, but it's easier to see things if they're scattered
+    set shape "dfly"                  ; this is where the biology comes in
+    set hatch-tick-dfly round (random-normal mean-hatch-dflies var-hatch-dflies)  ; can control mean and variance of fish hatch time- sliders on interface
+    set meals-dfly [10 10 10 10 10 10 10 10 10]  ; initializes an empty list to store meal data in. start with values so that they don't starve out the gate
+    set size-list-dfly [0 0 0 0 0]          ; have to start with size info so the growth calculations have values to work with
+    set recent-growth-dfly 0                ; a dynamic value that determines whether metamorphosis happens
   ]
 
   ;; MAKE LANDSCAPE
@@ -58,35 +94,55 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 to go
 
-  ;; ALTERNATIVE STOP CONDITIONS
-  ; can make it so it ends when there's no resource or turtles left, but data processing is easier if it ends after a set time
-  ;if count patches with [pcolor = 52] + count patches with [pcolor = brown] < 100 [stop]
-  ;if not any? turtles with [color = blue] and not any? turtles with [color = gray] [stop]
-
-
     ;; GRASS GROWTH AND DEATH
     grass-production                ; background grass growth, controlled by procedure below
 
     ;; TURTLES MOVE AND EAT
 ask fishes
 [
-  set fish-size-list lput (size) fish-size-list   ; each tick, they add their size to the list. can put round() in here, but then it's not really precise enough
+  set size-list-fish lput (size) size-list-fish   ; each tick, they add their size to the list. can put round() in here, but then it's not really precise enough
 ]
 
-    ask turtles
+ask dflies
+[
+  set size-list-dfly lput round (size) size-list-dfly
+]
+
+    ask fishes
      [
-      if ticks = hatch-tick [set size 1]                           ; first time where size = 1 is hatch tick in BS output data
-      if ticks > hatch-tick and color != red and color != yellow   ; once you're hatched but before you're dead (red) or metamorphed (yellow), you start doing stuff
+      if ticks = hatch-tick-fish [set size 1]                           ; first time where size = 1 is hatch tick in BS output data
+      if ticks > hatch-tick-fish and color != red and color != yellow n  ; once you're hatched but before you're dead (red) or metamorphed (yellow), you start doing stuff
       [                                                            ; if you've eaten enough to not starve, keep going. else, die.
-        ifelse (item 0 meals + item 1 meals + item 2 meals + item 3 meals + item 4 meals + item 5 meals + item 6 meals + item 7 meals + item 8 meals) >  0.5 * size ^ 0.75  ; 0.75 scaling from BMR literature
+        ifelse (item 0 meals-fish + item 1 meals-fish + item 2 meals-fish + item 3 meals-fish + item 4 meals-fish +
+                item 5 meals-fish + item 6 meals-fish + item 7 meals-fish + item 8 meals-fish) >  0.5 * size ^ 0.75  ; 0.75 scaling from BMR literature
         [
           set color blue   ; blue = alive and kicking
           eat-grass        ; turtle specific procedure controlled below. may want to separate by breeds...
-          metamorph-fish   ; turtle specific procuedure below. each step, they think about metamorphing, but only do so if qualified
+          metamorph-fish   ; fish specific procuedure below. each step, they think about metamorphing, but only do so if qualified
         ]
         [
           set color red    ; red = dead
-          set meta? 0      ; report that they didn't metamorphose
+          set meta-fish? 0      ; report that they didn't metamorphose
+          stamp            ; useful to see survival/death in interface.
+        ]
+      ]
+     ]
+
+    ask dflies
+     [
+      if ticks = hatch-tick-dfly [set size 1]                           ; first time where size = 1 is hatch tick in BS output data
+      if ticks > hatch-tick-dfly and color != red and color != yellow   ; once you're hatched but before you're dead (red) or metamorphed (yellow), you start doing stuff
+      [                                                            ; if you've eaten enough to not starve, keep going. else, die.
+        ifelse (item 0 meals-dfly + item 1 meals-dfly + item 2 meals-dfly + item 3 meals-dfly + item 4 meals-dfly +
+                item 5 meals-dfly + item 6 meals-dfly + item 7 meals-dfly + item 8 meals-dfly) >  0.5 * size ^ 0.75  ; 0.75 scaling from BMR literature
+        [
+          set color blue   ; blue = alive and kicking
+          eat-grass        ; turtle specific procedure controlled below. may want to separate by breeds...
+          metamorph-dfly   ; dfly specific procuedure below. each step, they think about metamorphing, but only do so if qualified
+        ]
+        [
+          set color red    ; red = dead
+          set meta-dfly? 0      ; report that they didn't metamorphose
           stamp            ; useful to see survival/death in interface.
         ]
       ]
@@ -94,10 +150,24 @@ ask fishes
 
     tick                                                       ; all of the above happens each time step. 'tick' = new time step started
     if ticks = 250 [stop]                                      ; this end point comes after all action-- just makes it easier to work with data in R if each run is the same length
-    set n-meta-fishes count fishes with [color = yellow]       ; at this point, set the number of metamorphs to the number of yellow fish
-    set n-dead-fishes count fishes with [color = red]          ; at this point, set the number of dead fish to the number of red fish
-    set biomass sum [size] of turtles with [color = yellow]    ; biomass = biomass export-- only counting those that survive and advance to next stage
-    ;set mean-size mean [size] of turtles with [color = yellow] ; throws an error in interface, but works in behaviorspace. I thought these calculated only at the end...
+
+    ;; CALCULATE RESPONSE VARIABLES
+
+    ; fish related
+    set n-meta-fishes count fishes with [color = yellow]             ; at this point, set the number of metamorphs to the number of yellow fish
+    set n-dead-fishes count fishes with [color = red]                ; at this point, set the number of dead fish to the number of red fish
+    set biom-fishes sum [size] of fishes with [color = yellow]       ; biomass = biomass export-- only counting those that survive and advance to next stage
+    ;set mean-size-fishes mean [size] of fishes with [color = yellow] ; throws an error in interface, but works in behaviorspace. I thought these calculated only at the end...
+
+    ; dfly related
+    set n-meta-dflies count dflies with [color = yellow]             ; at this point, set the number of metamorphs to the number of yellow fish
+    set n-dead-dflies count dflies with [color = red]                ; at this point, set the number of dead fish to the number of red fish
+    set biom-dflies sum [size] of dflies with [color = yellow]       ; biomass = biomass export-- only counting those that survive and advance to next stage
+    ;set mean-size-dflies mean [size] of dflies with [color = yellow] ; throws an error in interface, but works in behaviorspace. I thought these calculated only at the end...
+
+    ; community related
+    set n-meta-total count turtles with [color = yellow]
+    set biom-total sum [size] of turtles with [color = yellow]
 end
 
 
@@ -164,11 +234,23 @@ to eat-grass
   ]
 
   ;; ADD GROWTH AND ENERGY FROM THIS FEEDING                       ; these have to be outside previous block since patches can't access turtle variables
+  ask fishes
+  [
   set size size + growth-this-tick                                 ; grow proportional to the number of patches they ate that tick
-  set meals fput round (growth-this-tick / growth-per-patch) meals ; meals list is used to calculate starvation. this adds n-patches eaten to that list
-  set recent-sizes sublist fish-size-list ((length fish-size-list) - 5) (length fish-size-list)  ; have to make a sublist here to isolate the last values added to the list, i.e., recent size
-  let size-ratio max list last recent-sizes 0.001 / max list item 0 recent-sizes 0.001           ; the max list 0.001 elements prevent us from dividing by 0. basically = size(t)/size(t-5)
-  set recent-growth-rate(log size-ratio 10 / 5)                                                  ; calculate logistic growth rate. 10 is the base of the log. divide by 5 for 5 time steps
+  set meals-fish fput round (growth-this-tick / growth-per-patch) meals-fish ; meals list is used to calculate starvation. this adds n-patches eaten to that list
+  set recent-sizes-fish sublist size-list-fish ((length size-list-fish) - 5) (length size-list-fish)  ; have to make a sublist here to isolate the last values added to the list, i.e., recent size
+  let size-ratio-fish max list last recent-sizes-fish 0.001 / max list item 0 recent-sizes-fish 0.001           ; the max list 0.001 elements prevent us from dividing by 0. basically = size(t)/size(t-5)
+  set recent-growth-fish(log size-ratio-fish 10 / 5)                                                  ; calculate logistic growth rate. 10 is the base of the log. divide by 5 for 5 time steps
+  ]
+
+  ask dflies
+  [
+  set size size + growth-this-tick                                 ; grow proportional to the number of patches they ate that tick
+  set meals-dfly fput round (growth-this-tick / growth-per-patch) meals-dfly ; meals list is used to calculate starvation. this adds n-patches eaten to that list
+  set recent-sizes-dfly sublist size-list-dfly ((length size-list-dfly) - 5) (length size-list-dfly)  ; have to make a sublist here to isolate the last values added to the list, i.e., recent size
+  let size-ratio-dfly max list last recent-sizes-dfly 0.001 / max list item 0 recent-sizes-dfly 0.001           ; the max list 0.001 elements prevent us from dividing by 0. basically = size(t)/size(t-5)
+  set recent-growth-dfly(log size-ratio-dfly 10 / 5)                                                  ; calculate logistic growth rate. 10 is the base of the log. divide by 5 for 5 time steps
+  ]
 
   ;; SET A LABEL FOR INTERFACE DIAGNOSTICS
   ifelse show-label?
@@ -185,13 +267,23 @@ end
 to metamorph-fish                      ; fish procedure, eventually need to separate into breeds to keep separate tallies
   ; each time step, they think about metamorphosing, but only do so if they meet this criteria:
   ; mortality*minimumsize / (mortality - rgr)
-  if size > (1.02 / (0.170000001 - 10 * recent-growth-rate)) and size > 6  ; have the .000001 there so that the denominator won't ever be 0
+  if size > (1.02 / (0.170000001 - 10 * recent-growth-fish)) and size > 6  ; have the .000001 there so that the denominator won't ever be 0
   [
     set color yellow                   ; ones that metamorph turn yellow
-    set meta? 1                        ; turtles-own variable to tell us whether they metamporphed
+    set meta-fish? 1                        ; turtles-own variable to tell us whether they metamporphed
     stamp                              ; useful for visualizing/troubleshooting
   ]
+end
 
+to metamorph-dfly                      ; fish procedure, eventually need to separate into breeds to keep separate tallies
+  ; each time step, they think about metamorphosing, but only do so if they meet this criteria:
+  ; mortality*minimumsize / (mortality - rgr)
+  if size > (1.02 / (0.170000001 - 10 * recent-growth-dfly)) and size > 6  ; have the .000001 there so that the denominator won't ever be 0
+  [
+    set color yellow                   ; ones that metamorph turn yellow
+    set meta-dfly? 1                        ; turtles-own variable to tell us whether they metamporphed
+    stamp                              ; useful for visualizing/troubleshooting
+  ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -288,6 +380,7 @@ true
 PENS
 "grass" 1.0 0 -10899396 true "" "plot count patches with [pcolor = 52] / 20"
 "fish" 1.0 0 -955883 true "" "plot count fishes with [color = blue]"
+"dflies" 1.0 0 -13345367 true "" "plot count dflies with [color = blue]"
 
 SLIDER
 146
@@ -298,22 +391,22 @@ n-fishes
 n-fishes
 0
 200
-80.0
+48.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-146
-120
-281
-153
+151
+123
+286
+156
 var-hatch-fishes
 var-hatch-fishes
 0
 20
-15.0
+5.0
 1
 1
 NIL
@@ -383,17 +476,6 @@ PENS
 "live fish" 1.0 0 -955883 true "" "plot n-meta-fishes"
 
 MONITOR
-149
-308
-285
-353
-live fish
-count fishes with [color = blue]
-0
-1
-11
-
-MONITOR
 905
 147
 1048
@@ -404,22 +486,11 @@ count patches with [pcolor = 52]
 1
 11
 
-MONITOR
-149
-402
-286
-447
-fish metamorphs
-n-meta-fishes
-0
-1
-11
-
 PLOT
-9
-156
-282
-306
+12
+297
+285
+447
 hatching synchrony
 hatch-tick
 frequency
@@ -431,7 +502,8 @@ true
 true
 "" ""
 PENS
-"fishes" 1.0 1 -955883 true "" "histogram [hatch-tick] of fishes"
+"fishes" 1.0 1 -955883 true "" "histogram [hatch-tick-fish] of fishes"
+"dflies" 1.0 1 -13345367 true "" "histogram [hatch-tick-dfly] of dflies"
 
 SWITCH
 906
@@ -444,17 +516,6 @@ show-label?
 1
 -1000
 
-MONITOR
-149
-355
-285
-400
-dead fish
-count fishes with [color = red]
-0
-1
-11
-
 SLIDER
 149
 86
@@ -464,22 +525,22 @@ mean-hatch-fishes
 mean-hatch-fishes
 0
 100
-30.0
+33.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-6
-83
-144
-116
+149
+159
+287
+192
 asymmetry-slope
 asymmetry-slope
 0
 1
-1.0
+0.0
 0.1
 1
 NIL
@@ -502,6 +563,51 @@ false
 "" ""
 PENS
 "default" 1.0 1 -16777216 true "" "histogram [ size ] of fishes"
+
+SLIDER
+4
+48
+143
+81
+n-dflies
+n-dflies
+0
+200
+37.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+6
+84
+143
+117
+mean-hatch-dflies
+mean-hatch-dflies
+0
+100
+27.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+6
+121
+145
+154
+var-hatch-dflies
+var-hatch-dflies
+0
+20
+3.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ;;; OVERVIEW ;;;

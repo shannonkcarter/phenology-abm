@@ -5,59 +5,51 @@
 ;; GLOBAL VARIABLES
 globals
 [
-  n-meta-fishes      ; number of fish that reach size threshold to no longer compete
-  n-dead-fishes
+  n-meta-fishes      ; number of fish that achieve metamorphosis (calculated at the end of the simulation)
+  n-dead-fishes      ; number of fish that starve before achieving metamorphosis
   biomass            ; sum size of all turtles
-  mean-size
+  mean-size          ; mean size of all individuals that reach metamorphosis (i.e., biomass/n-meta)
 ]
 
-;; CREATE 2 BREEDS WITH DIFFERENT PHENOLOGIES THAT ACT AS COMPETITORS
+;; FOR NOW, ONLY HAVE ONE BREED, BUT EASIER TO ADD A SECOND LATER IF i DESIGNATE BREEDS HERE
 breed [fishes fish]
 
 ;; FISHES AND DFLIES HAVE MOST THINGS IN COMMON, BUT NEED TO BE CONTROLLED SEPARATELY
-fishes-own
+fishes-own           ;  a second breed would have all of these qualities too- but would potentially have different procedures governing them
 [
   hatch-tick         ; each turtle has a time they become hatch/enter environment
   meals              ; a list of how many patches it eats each time step. used for growth rate and starvation
-  fish-size-list
-  ;instantaneous-growth
+  fish-size-list     ; a running list of the size of the turtle at each time step
   recent-growth-rate ; an average of growth over the last 10 time steps
-  consumption-list
-  ;recent-growth-list
-  meta?
-  recent-sizes
+  consumption-list   ; a list of how many patches the turtle has eaten recently-- used to determine starvation
+  meta?              ; 0/1 reporter of whether the turtle survived
+  recent-sizes       ; sublist of size-list used to calculate recent growth rate
 ]
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;; SETUP PROCEDURE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 to setup
-  ca                                  ; clear-- needed for every set-up procedure
+  ca                                  ; clear, needed for every set-up procedure
 
   ;; CREATE FISHES
   create-fishes n-fishes              ; slider on interface
   [
-    set size 0                        ; start with size 0 so i can tell the hatch tick from [size-list]. i.e., tick where size goes from 0 to 1. can start with size 1 if not doing a BS
+    set size 0                        ; start with size 0 so i can tell the hatch tick from [size-list]. i.e., tick where size goes from 0 to 1.
     set color gray                    ; gray indicates not yet hatched-- can't move or be cannibalized
-    setxy random-xcor random-ycor     ; random starting points and random motion
-    set shape "fish"
+    setxy random-xcor random-ycor     ; position actually doesn't matter at all, but it's easier to see things if they're scattered
+    set shape "fish"                  ; this is where the biology comes in
     set hatch-tick round (random-normal mean-hatch-fishes var-hatch-fishes)  ; can control mean and variance of fish hatch time- sliders on interface
-    set meals [10 10 10 10 10 10 10 10 10]        ; initializes an empty list to store meal data in. start with values so that they don't starve out the gate
-    set fish-size-list [0 0 0 0 0]
-    ;set consumption-list []                ; this isn't working properly atm. R can't load table output with this reporter in behavior space
-    ;set instantaneous-growth [0.05 0.05 0.05 0.05 0.05 0.05 0.05 0.05]
-    set recent-growth-rate[]
+    set meals [10 10 10 10 10 10 10 10 10]  ; initializes an empty list to store meal data in. start with values so that they don't starve out the gate
+    set fish-size-list [0 0 0 0 0]          ; have to start with size info so the growth calculations have values to work with
+    set recent-growth-rate 0                ; a dynamic value that determines whether metamorphosis happens
   ]
-
 
   ;; MAKE LANDSCAPE
-  ask patches                         ; can say n-of x patches if wanting less resource
-  [
-    set pcolor brown                  ; brown patches can grow grass, black cannot
-  ]
+  ask patches           ; can say n-of x patches if wanting less resource
+  [set pcolor brown]    ; brown patches = unsprouted, can grow grass. black = dead/eaten, cannot grow grass
 
-   reset-ticks                         ; needed for every set-up procedure
+  reset-ticks           ; resets the clock, needed for every set-up procedure
 
 end
 
@@ -66,48 +58,46 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 to go
 
-;if count patches with [pcolor = 52] + count patches with [pcolor = brown] < 100 [stop] ; simulation ends when resource runs out
-;if not any? turtles with [color = blue] and not any? turtles with [color = gray] [stop]
+  ;; ALTERNATIVE STOP CONDITIONS
+  ; can make it so it ends when there's no resource or turtles left, but data processing is easier if it ends after a set time
+  ;if count patches with [pcolor = 52] + count patches with [pcolor = brown] < 100 [stop]
+  ;if not any? turtles with [color = blue] and not any? turtles with [color = gray] [stop]
 
-;set fish-size-list reverse fish-size-list
 
     ;; GRASS GROWTH AND DEATH
-    grass-production                ; background grass growth and senescence
+    grass-production                ; background grass growth, controlled by procedure below
 
     ;; TURTLES MOVE AND EAT
 ask fishes
 [
-  set fish-size-list lput (size) fish-size-list   ; can put round() in here to show more summarized growth
+  set fish-size-list lput (size) fish-size-list   ; each tick, they add their size to the list. can put round() in here, but then it's not really precise enough
 ]
 
     ask turtles
      [
-      if ticks = hatch-tick [set size 1]                     ; first time where size = 1 is hatch tick in BS output data
-      if ticks > hatch-tick and color != red and color != yellow                ; once you're hatched but before you're dead, you start doing stuff
-      [
-        ifelse (item 0 meals + item 1 meals + item 2 meals + item 3 meals + item 4 meals + item 5 meals + item 6 meals + item 7 meals + item 8 meals) >  0.5 * size ^ 0.75  ; this from BMR literature
+      if ticks = hatch-tick [set size 1]                           ; first time where size = 1 is hatch tick in BS output data
+      if ticks > hatch-tick and color != red and color != yellow   ; once you're hatched but before you're dead (red) or metamorphed (yellow), you start doing stuff
+      [                                                            ; if you've eaten enough to not starve, keep going. else, die.
+        ifelse (item 0 meals + item 1 meals + item 2 meals + item 3 meals + item 4 meals + item 5 meals + item 6 meals + item 7 meals + item 8 meals) >  0.5 * size ^ 0.75  ; 0.75 scaling from BMR literature
         [
-          set color blue
-          eat-grass
-          metamorph-fish
+          set color blue   ; blue = alive and kicking
+          eat-grass        ; turtle specific procedure controlled below. may want to separate by breeds...
+          metamorph-fish   ; turtle specific procuedure below. each step, they think about metamorphing, but only do so if qualified
         ]
         [
-          set color red
-          set meta? 0
-          ;set size -1
-          stamp
-          ;set n-dead-fishes n-dead-fishes + 1
+          set color red    ; red = dead
+          set meta? 0      ; report that they didn't metamorphose
+          stamp            ; useful to see survival/death in interface.
         ]
       ]
      ]
 
-    tick
-    if ticks = 250 [stop]                                   ; this end point comes after all action-- just makes it easier to work with data in R
-    set n-meta-fishes count fishes with [color = yellow]    ; at this point, set the number of metamorphs to the number of yellow fish
-    set n-dead-fishes count fishes with [color = red]       ; at this point, set the number of dead fish to the number of red fish
-    set biomass sum [size] of turtles with [color = yellow] ; biomass = biomass export-- only counting those that survive and advance to next stage
-    set mean-size mean [size] of turtles with [color = yellow]
-
+    tick                                                       ; all of the above happens each time step. 'tick' = new time step started
+    if ticks = 250 [stop]                                      ; this end point comes after all action-- just makes it easier to work with data in R if each run is the same length
+    set n-meta-fishes count fishes with [color = yellow]       ; at this point, set the number of metamorphs to the number of yellow fish
+    set n-dead-fishes count fishes with [color = red]          ; at this point, set the number of dead fish to the number of red fish
+    set biomass sum [size] of turtles with [color = yellow]    ; biomass = biomass export-- only counting those that survive and advance to next stage
+    ;set mean-size mean [size] of turtles with [color = yellow] ; throws an error in interface, but works in behaviorspace. I thought these calculated only at the end...
 end
 
 
@@ -119,7 +109,7 @@ end
 to grass-production
 
   ;; GROWTH- X% GROSS GROWTH RATE PER TICK (controlled by slider)
-  if ticks > sprout-tick                 ; makes a delay on grass growth-- can adjust for now, make sure turtles don't beat resource
+  if ticks > sprout-tick                  ; makes a delay on grass growth-- can adjust for now, make sure turtles don't beat resource
   [
     ask patches
     [
@@ -146,54 +136,44 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;;; EAT-GRASS PROCEDURE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-to eat-grass      ; turtle procedure-- consider separating into breeds for 2-sp model
+;; TURTLE CONSUMPTION PROCEDURE - consider separating into breeds for 2-sp model
+to eat-grass
 
   ;; WHICH AND HOW MANY PATCHES CAN I EAT?
-  let max-meal
+  let max-meal                                                 ; max-meal is the maximum number of patches an individual *could* eat. not always realized.
   (
-    min
+    min                                                        ; minimum between max they could eat and number of patches available
     (
       list                                                     ; have to make a list otherwise it will call for too many agents.
         (asymmetry-slope * size + (5 - 5 * asymmetry-slope))   ; max-meal = slope*size + intercept. put intercept in terms of slope so that they're controlled by the same variable. easier for BS
-        (0.2 * count patches with [pcolor = 52])
+        (0.2 * count patches with [pcolor = 52])               ; when resources are running low, a single turtle (i.e., the one randomly assigned to eat first) can't eat all the remaining patches
       )
     )
 
   ;; LOCAL VARIABLES FOR FEEDING GAINS
-  let growth-this-tick 0                                           ; at the start of each tick, they haven't grown that tick
+  let growth-this-tick 0                        ; at the start of each tick, they haven't grown that tick
 
   ;; EAT PATCHES
-  ask n-of max-meal patches ;with [pcolor = 52]                     ; identify all patches I can eat-- what happens if there are 2 turtles that could eat the same patch? check
+  ask n-of max-meal patches                     ; they choose max-meal number of patches...
   [
-    if pcolor = 52
+    if pcolor = 52                              ; ... but only get gains from those that are green
     [
     set pcolor black                                               ; eaten patches turn black and don't regenerate
-    set growth-this-tick growth-this-tick + growth-per-patch       ; use this to calculate grass patches needed to metamorph, i.e., with size 1 -> 10 and 0.1, need to eat 100 patches
+    set growth-this-tick growth-this-tick + growth-per-patch       ; g-p-p can be used to calculate patches needed to metamorph, i.e., with size 1 -> 10 and 0.1, need to eat 100 patches
     ]
-
   ]
 
   ;; ADD GROWTH AND ENERGY FROM THIS FEEDING                       ; these have to be outside previous block since patches can't access turtle variables
-  set size size + growth-this-tick                                 ; grow proportional to the number of patches they ate that tick- more for larger turtles
-  set meals fput round (growth-this-tick / growth-per-patch) meals ; adding their n-patches eaten to a list containing info on feeding each tick.
-  ;set instantaneous-growth fput ((item 0 fish-size-list - item 1 fish-size-list) / max(list(item 1 fish-size-list) 1)) instantaneous-growth
-  ;set instantaneous-growth lput((last fish-size-list - last(but-last fish-size-list)) / max(list(last(but-last fish-size-list)) 1)) instantaneous-growth
-  ;set recent-growth-list sublist instantaneous-growth ((length instantaneous-growth) - 8) (length instantaneous-growth)
-  ;set recent-growth-rate mean recent-growth-list
-  set recent-sizes sublist fish-size-list ((length fish-size-list) - 5) (length fish-size-list)
-  ;set recent-growth-rate(last recent-sizes - item 0 recent-sizes) / 5
-  let size-ratio max list last recent-sizes 0.001 / max list item 0 recent-sizes 0.001
-  set recent-growth-rate(log size-ratio 10 / 5)   ; 10 is the base of the log. divide by 5 for 5 time steps
+  set size size + growth-this-tick                                 ; grow proportional to the number of patches they ate that tick
+  set meals fput round (growth-this-tick / growth-per-patch) meals ; meals list is used to calculate starvation. this adds n-patches eaten to that list
+  set recent-sizes sublist fish-size-list ((length fish-size-list) - 5) (length fish-size-list)  ; have to make a sublist here to isolate the last values added to the list, i.e., recent size
+  let size-ratio max list last recent-sizes 0.001 / max list item 0 recent-sizes 0.001           ; the max list 0.001 elements prevent us from dividing by 0. basically = size(t)/size(t-5)
+  set recent-growth-rate(log size-ratio 10 / 5)                                                  ; calculate logistic growth rate. 10 is the base of the log. divide by 5 for 5 time steps
 
-  ;; OPTION TO SHOW MEAL LIST
+  ;; SET A LABEL FOR INTERFACE DIAGNOSTICS
   ifelse show-label?
-  [set label round(size)]  ; can be useful to show size progression when troubleshooting. can also make the label age or hatch tick
+  [set label round(size)]  ; can be useful to show size, size-list, age, hatch tick, etc. when troubleshooting
   [set label ""]
-
-;ask fishes
-;[
-;  set consumption-list lput (round (growth-this-tick)) consumption-list  ; currently not working, storing a list of 0's
-;]
 
 end
 
@@ -207,9 +187,9 @@ to metamorph-fish                          ; fish procedure-- separate breeds he
   ;if size >= 10 and breed = fishes    ; final size is a fixed value. can also make it proportional to the growth parameter. have to eat 100 patches to metamorph
   if size > (1.02 / (0.170000001 - 10 * recent-growth-rate)) and size > 6  ; have the .000001 there so that the denominator won't ever be 0
   [
-    set n-meta-fishes n-meta-fishes + 1    ; tally as reaching metamorphosis
+    ;set n-meta-fishes n-meta-fishes + 1    ; tally as reaching metamorphosis
     set color yellow                       ; ones that metamorph turn yellow
-    set meta? 1                            ; for visualizing in-program, turn this off. but necessary for BS output to see when they metamorphed
+    set meta? 1                            ; turtles-own variable to tell us whether they metamporphed
     stamp                                  ; I think I also have to turn this off for BS, but useful for visualizing/troubleshooting
   ]
 

@@ -57,7 +57,6 @@ data <- read.table("bs_CRnometa_13.csv",
                    skip = 6,         # 6 header rows we don't need
                    quote = "\"",     # correct the column separator
                    fill = T)         # add blank fields if rows have unequal length
-View(data)
 ```
 
 # Rename and Select Relevant Variables
@@ -97,6 +96,7 @@ params$synchrony <- as.factor(params$sync)
 params$asymmetry <- as.factor(params$asym)
 levels(params$synchrony) <- list("low" = 15, "med" = 10, "high" = 5)
 levels(params$asymmetry) <- list("none" = 0, "mild" = 0.5, "strong" = 1)
+
 ```
 
 
@@ -208,19 +208,14 @@ ind <- ind_time %>%
 # first, by run number
 run <- ind %>% 
   group_by(run_num, sync, synchrony, asym, asymmetry, n_surv, n_dead, mean_size, biomass) %>%
-  #filter(meta == 1) %>% 
-  summarise(survival = sum(meta),
-            emergence_time = mean(meta * end_date))
-            #se_size   = sd(max_size)/sqrt(length(max_size)),
-            #mean_growthrate = mean(growth_rate),
-            #se_growthrate = sd(growth_rate)/sqrt(length(growth_rate)))  
-
-ind$surv_check <- 80 - (ind$n_surv + ind$n_dead)
+  summarise(mean_emer = sum(meta * end_date))
+           
+run$mean_emer <- run$mean_emer/run$n_surv
 
 # gather different response variables
 run <- run %>% 
   group_by(run_num, synchrony, asymmetry) %>% 
-  gather(survival, biomass, mean_size, emergence_time, key = "variable", value = "abs_value") %>% 
+  gather(n_surv, biomass, mean_size, mean_emer, key = "variable", value = "abs_value") %>% 
   arrange(run_num)
 
 # now by treatment
@@ -246,14 +241,6 @@ run <- run %>%
 
 trt <- trt %>% 
   mutate(baseline_adj = (abs_value - baseline_value)/baseline_value)
-
-# On some data runs, number of metamorphs doesn't match raw data. always double check.
-check <- ind %>% 
-  group_by(run_num, n_surv) %>%
-  summarise(no_meta = sum(meta))
-ggplot(check, aes(x = n_surv, y = no_meta)) +
-  geom_point(alpha = 0.25) + theme_bw() +
-  geom_abline(slope = 1, intercept = 0) #+ xlim(0, 180) + ylim(0, 180)
 
 ```
 
@@ -300,7 +287,7 @@ ggplot(trt_nobaseline,
                                 "high synchrony, mild asymmetry", "high synchrony, strong asymmetry"),
                      values = c("#D8B709", "#D8B709", "#02401B", "#02401B")) +
   labs(x = NULL, y = "Proportional deviation from baseline case\n(medium synchrony, symmetric competition)") +
-  scale_x_discrete(breaks = c("survival", "mean_size", "emergence_time", "biomass"),
+  scale_x_discrete(breaks = c("n_surv", "mean_size", "mean_emer", "biomass"),
                    labels = c("survival", "mean per\ncapita size", "time to\nemergence", "biomass export")) +
   theme_light(base_size = 15, base_family = "Poppins") +
   theme(legend.text = element_text(size = 10),
@@ -324,9 +311,10 @@ ggplot(ind, aes(x = hatch_date)) + theme_bw() +
 Now, distributions of sizes of individuals at the end of the experiment, grouped by treatment. The vertical lines represent different size thresholds I considered for metamorphosis. Since these distributions of sizes for each treatment are so different, it doesn't make sense to set a size threshold for survival. Results are pretty sensitive to it. Instead, model optimal timing of metamorphosis so that both size and age at metamorphosis are plastic and can be captured.
 
 ```{r, echo = F}
-ggplot(ind, aes(x = max_size)) + theme_bw() +
-  geom_density(alpha = 0.5, size = 1.2) +
+ggplot(ind, aes(x = final_size, fill = as.factor(meta))) + theme_bw() +
+  geom_density(alpha = 0.5, size = 0.8) +
   facet_grid(asymmetry ~ synchrony) +
+  scale_fill_uchicago() +
   #geom_vline(xintercept = c(8, 10, 12), linetype = 'dashed') + 
   labs(title = "Distribution of individual body sizes by treatment",
        x = "size",

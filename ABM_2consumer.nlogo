@@ -251,7 +251,7 @@ to metamorph-fish                      ; fish procedure, eventually need to sepa
   if breed = fishes and size > (1.02 / (0.170000001 - 10 * recent-growth-fish)) and size > 6  ; have the .000001 there so that the denominator won't ever be 0
   [
     set color yellow                   ; ones that metamorph turn yellow
-    set meta-fish? 1                        ; turtles-own variable to tell us whether they metamporphed
+    set meta-fish? 1                   ; turtles-own variable to tell us whether they metamporphed
     stamp                              ; useful for visualizing/troubleshooting
   ]
 end
@@ -259,10 +259,10 @@ end
 to metamorph-dfly                      ; fish procedure, eventually need to separate into breeds to keep separate tallies
   ; each time step, they think about metamorphosing, but only do so if they meet this criteria:
   ; mortality*minimumsize / (mortality - rgr)
-  if breed = dflies and size > (1.02 / (0.170000001 - 10 * recent-growth-dfly)) and size > 6 ; have the .000001 there so that the denominator won't ever be 0
+  if breed = dflies and size > (1.02 / (0.170000001 - 10 * recent-growth-dfly)) and size > 6  ; have the .000001 there so that the denominator won't ever be 0
   [
     set color yellow                   ; ones that metamorph turn yellow
-    set meta-dfly? 1                        ; turtles-own variable to tell us whether they metamporphed
+    set meta-dfly? 1                   ; turtles-own variable to tell us whether they metamporphed
     stamp                              ; useful for visualizing/troubleshooting
   ]
 end
@@ -372,7 +372,7 @@ n-fishes
 n-fishes
 0
 200
-0.0
+1.0
 1
 1
 NIL

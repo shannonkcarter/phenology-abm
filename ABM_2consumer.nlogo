@@ -29,13 +29,13 @@ breed [dflies dfly]
 ;; FISHES AND DFLIES HAVE MOST THINGS IN COMMON, BUT NEED TO BE CONTROLLED SEPARATELY
 fishes-own
 [
-  hatch-tick         ; each turtle has a time they become hatch/enter environment
-  meals              ; a list of how many patches it eats each time step. used for growth rate and starvation
-  size-list-fish     ; a running list of the size of the turtle at each time step
-  recent-growth-fish ; an average of growth over the last 10 time steps
-  consump-list-fish  ; a list of how many patches the turtle has eaten recently-- used to determine starvation
-  meta-fish?         ; 0/1 reporter of whether the turtle survived
-  recent-sizes-fish  ; sublist of size-list used to calculate recent growth rate
+  hatch-tick         ; each turtle has a time they become hatch/enter environment - this can have the same name across breeds, but breed timing is controlled by diff params
+  meals              ; a list of how many patches it eats each time step. used for growth rate and starvation. can have the same name, because meals is only used internally
+  size-list-fish     ; a running list of the size of the turtle at each time step. separated by breeds so we can separate in R later.
+  recent-growth-fish ; an average of growth over the last 10 time steps. Separated by breeds bc size-list is.
+  consump-list-fish  ; a list of how many patches the turtle has eaten recently-- used to determine starvation. Separated by breeds bc size-list is.
+  meta-fish?         ; 0/1 reporter of whether the turtle survived. saves as a list in BS, i.e., [0 0 0 1 1 1 0 0 1...]
+  recent-sizes-fish  ; sublist of size-list used to calculate recent growth rate. Separated by breeds bc size-list is.
 ]
 
 dflies-own           ; unclear if each of these has to have a -dfly -fish tag. will find out
@@ -100,12 +100,12 @@ to go
     ;; TURTLES MOVE AND EAT
 ask fishes
 [
-  set size-list-fish lput (size) size-list-fish   ; each tick, they add their size to the list. can put round() in here, but then it's not really precise enough
+  set size-list-fish lput (size) size-list-fish   ; each tick, they add their size to the list. fish and dflies need separate lists so we can id in R
 ]
 
 ask dflies
 [
-  set size-list-dfly lput round (size) size-list-dfly
+  set size-list-dfly lput (size) size-list-dfly
 ]
 
     ask turtles
@@ -113,18 +113,18 @@ ask dflies
       if ticks = hatch-tick [set size 1]                           ; first time where size = 1 is hatch tick in BS output data
       if ticks > hatch-tick and color != red and color != yellow   ; once you're hatched but before you're dead (red) or metamorphed (yellow), you start doing stuff
       [                                                            ; if you've eaten enough to not starve, keep going. else, die.
-        ifelse (item 0 meals + item 1 meals + item 2 meals + item 3 meals + item 4 meals +
-                item 5 meals + item 6 meals + item 7 meals + item 8 meals) >  0.5 * size ^ 0.75  ; 0.75 scaling from BMR literature
+        ifelse (item 0 meals + item 1 meals + item 2 meals + item 3 meals + item 4 meals + item 5 meals + item 6 meals + item 7 meals + item 8 meals) >  0.5 * size ^ 0.75  ; 0.75 scaling from BMR literature
         [
           set color blue   ; blue = alive and kicking
           eat-grass        ; turtle specific procedure controlled below. may want to separate by breeds...
-          metamorph-fish
+          metamorph-fish   ; separate procedures, but may or may not change the criteria.
           metamorph-dfly
         ]
+        ; death procedure if they don't eat enough
         [
-          set color red    ; red = dead
-          stamp            ; useful to see survival/death in interface.
-          if breed = fishes [set meta-fish? 0]      ; report that they didn't metamorphose
+          set color red                         ; red = dead
+          stamp                                 ; useful to see survival/death in interface.
+          if breed = fishes [set meta-fish? 0]  ; report that they didn't metamorphose
           if breed = dflies [set meta-dfly? 0]
         ]
       ]
@@ -188,7 +188,7 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;;; EAT-GRASS PROCEDURE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; TURTLE CONSUMPTION PROCEDURE - consider separating into breeds for 2-sp model
+;; TURTLE CONSUMPTION PROCEDURE
 to eat-grass
 
   ;; WHICH AND HOW MANY PATCHES CAN I EAT?
@@ -218,7 +218,9 @@ to eat-grass
   set size size + growth-this-tick                                 ; grow proportional to the number of patches they ate that tick
   set meals fput round (growth-this-tick / growth-per-patch) meals ; meals list is used to calculate starvation. this adds n-patches eaten to that list
 
-  ;; ADD GROWTH AND ENERGY FROM THIS FEEDING                       ; these have to be outside previous block since patches can't access turtle variables
+  ;; ADD GROWTH AND ENERGY FROM THIS FEEDING
+  ; these have to be outside previous block since patches can't access turtle variables
+  ; separate this part by breed because the size-lists need to be separated by breed to allow ID in R
   if breed = fishes
   [
   set recent-sizes-fish sublist size-list-fish ((length size-list-fish) - 5) (length size-list-fish)  ; have to make a sublist here to isolate the last values added to the list, i.e., recent size
@@ -245,7 +247,8 @@ end
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; METAMORPH PROCEDURE
-to metamorph-fish                      ; fish procedure, eventually need to separate into breeds to keep separate tallies
+; seaparte into different breeds to keep separate tallies and so that criteria can be different
+to metamorph-fish
   ; each time step, they think about metamorphosing, but only do so if they meet this criteria:
   ; mortality*minimumsize / (mortality - rgr)
   if breed = fishes and size > (1.02 / (0.170000001 - 10 * recent-growth-fish)) and size > 6  ; have the .000001 there so that the denominator won't ever be 0
@@ -256,7 +259,7 @@ to metamorph-fish                      ; fish procedure, eventually need to sepa
   ]
 end
 
-to metamorph-dfly                      ; fish procedure, eventually need to separate into breeds to keep separate tallies
+to metamorph-dfly
   ; each time step, they think about metamorphosing, but only do so if they meet this criteria:
   ; mortality*minimumsize / (mortality - rgr)
   if breed = dflies and size > (1.02 / (0.170000001 - 10 * recent-growth-dfly)) and size > 6  ; have the .000001 there so that the denominator won't ever be 0
@@ -372,7 +375,7 @@ n-fishes
 n-fishes
 0
 200
-1.0
+40.0
 1
 1
 NIL
@@ -454,7 +457,8 @@ true
 true
 "" ""
 PENS
-"live fish" 1.0 0 -955883 true "" "plot n-meta-fishes"
+"fish metas" 1.0 0 -955883 true "" "plot n-meta-fishes"
+"dfly metas" 1.0 0 -13345367 true "" "plot n-meta-dflies"
 
 MONITOR
 905
@@ -543,7 +547,8 @@ true
 false
 "" ""
 PENS
-"default" 1.0 1 -16777216 true "" "histogram [ size ] of fishes"
+"fish" 0.2 1 -955883 true "" "histogram [size] of fishes"
+"dfly" 0.2 1 -13345367 true "" "histogram [size] of dflies"
 
 SLIDER
 4
@@ -554,7 +559,7 @@ n-dflies
 n-dflies
 0
 200
-1.0
+40.0
 1
 1
 NIL

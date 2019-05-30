@@ -12,7 +12,7 @@ output:
 
 # Goal
 
-The objective here is to make a clean reproducible pipeline to transform Netlogo output into a tidy rectangular dataframe. Here, I import behavior space data (i.e., experiment results) from Netlogo to R. Netlogo's behavior space data comes in a wonky format, and the goal is to do all tidying in R (vs. on spreadsheet) so it's easy to feed through new data. The data I've imported here does several 'runs' (multiple treatments and replicates) of an simulation testing effects of phenology on species interactions. There is summary data for each run and there's also time series info on size for each turtle/agent.
+The objective here is to make a clean reproducible pipeline to transform Netlogo output into a tidy rectangular dataframe. Here, I import behavior space data (i.e., experiment results) from Netlogo to R. The data I've imported here does several 'runs' (multiple treatments and replicates) of an simulation testing effects of phenology on consumer-resource interactions. There is summary data for each run (i.e., number of survivors, amount of time) and there's also time series info on size for each turtle/agent. Here, I process the data and make some diagnostic plots to finetune the model.
 
 ```{r setup, include = F}
 knitr::opts_chunk$set(echo = T, warning = F, message = F)
@@ -27,7 +27,10 @@ library(reshape2)
 library(RColorBrewer)
 library(lme4)
 library(wesanderson)
-#library(RNetLogo)    # maybe worthwhile looking into this, so far can't figure it out
+library(ggsci)
+library(extrafont)
+#extrafont::loadfonts(device = "win")
+
 
 ## Load universal plotting elements
 mytheme <- theme(panel.background = element_blank(),
@@ -39,23 +42,20 @@ mytheme <- theme(panel.background = element_blank(),
 
 ```
 
-# Import Data
+# Import Data 
 
-First, be sure you export behavior space data from Netlogo in "table" format. When the raw data is exported as a spreadsheet, it comes in a really gnarly format. R can't read it because it's not even close to rectangular, big header, mix of space delimited and bracket delimited. It's a mess. The table is still a bit messy, but much easier to wrangle.
+First, be sure you export behavior space data from Netlogo in "table" format. When the raw data is exported as a spreadsheet, it comes in a really gnarly format. I haven't figured out a way for R to read it because it's not even close to rectangular, big header, mix of space delimited and bracket delimited, etc.. It's a mess. The table is still a bit messy, but much easier to wrangle.
+
+First, load the data. I've done a ton of different experiments in NetLogo, and not always certain each new one will be an improvement over the old or even work at all. So I keep most of the runs and number the files sequentially.
 
 ```{r load table data}
 
-test <- read.table("bs2.csv",
+data <- read.table("bs2.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
                    quote = "\"",     # correct the column separator
                    fill = T)         # add blank fields if rows have unequal length
-
-# [,1:12] are parameter values (some consistent across all, some representing trts)
-# [,13:ncol] are the output we designated
-str(test)  
-
 ```
 
 # Inspect Data

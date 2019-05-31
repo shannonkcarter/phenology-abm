@@ -50,7 +50,7 @@ First, load the data. I've done a ton of different experiments in NetLogo, and n
 
 ```{r load table data}
 
-data <- read.table("bs2.csv",
+data <- read.table("ABM_2Consumer_1.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
@@ -67,29 +67,31 @@ For this model, I had two turtle types (fishes and dflies), and varied the timin
 ```{r}
 # select and rename columns. new_name = old name. 
 # renaming everything I keep, so can rename with select
-test <- test %>% 
+test <- data %>% 
   select(run_num = X.run.number.,                  # each run number is an experimental unit
-         total_time = X.step.,                     # length of time the experiment ran
          n_fish = n.fishes,                        # two types of "turtles" here: fish & dfly
          n_dfly = n.dflies,                        # n_fish/dfly is the initial number
-         sync_dfly = var.hatch.dflies,             # amount of variation in ind hatching timing
-         mean_dfly = mean.hatch.dflies,            # mean hatching timing
-         surv_dfly = n.meta.dflies,                # number that 'metamorphed', i.e., size >10
+         mean_fish = mean.hatch.fishes,            # mean hatching timing of fish
+         mean_dfly = mean.hatch.dflies,            # mean hatching timing of dflies
          sync_fish = var.hatch.fishes,             # amount of variation in ind hatching timing
+         sync_dfly = var.hatch.dflies,             # amount of variation in ind hatching timing
+         asym_fish = asym.slope.fishes,
+         asym_dfly = asym.slope.dflies,
          surv_fish = n.meta.fishes,                # number that 'metamorphed', i.e., size >10
-         sizes_dfly = X.dfly.size.list..of.dflies, # list of size for each ind for each time step
-         sizes_fish = X.fish.size.list..of.fishes) # list of size for each ind for each time step
-
+         surv_dfly = n.meta.dflies,                # number that 'metamorphed', i.e., size >10
+         meta_fish = X.meta.fish...of.fishes,      # vector of survival outcome for each individual
+         meta_dfly = X.meta.dfly...of.dflies,      # vector of survival outcome for each individual
+         sizes_fish = X.size.list.fish..of.fishes, # list of size for each ind for each time step
+         sizes_dfly = X.size.list.dfly..of.dflies) # list of size for each ind for each time step
+          
 # Extract parameter values-- these are the 'treatments' and inputs of the model for each run
 # I'll rejoin the output data with params later, after some summarizing/processing
 # Here, add qualitative levels for the treatment parameters. This will be different for each BS
-params <- test[,1:9]
-params$mean_dfly_num <- params$mean_dfly
-params$sync_dfly_num <- params$sync_dfly
-params$sync_dfly <- as.factor(params$sync_dfly)
-params$mean_dfly <- as.factor(params$mean_dfly)
-levels(params$sync_dfly) <- c("high", "med", "low")
-levels(params$mean_dfly) <- c("dfly v early", "dfly early", "same", "fish early", "fish v early")
+params <- test[,1:11]
+params$sync_fish <- as.factor(params$sync_fish)
+params$asym_fish <- as.factor(params$asym_fish)
+levels(params$sync_fish) <- c("high", "med", "low")
+levels(params$asym_dfly) <- c("none", "mild", "strong")
 
 ```
 
@@ -100,13 +102,20 @@ The 'sizes_x' columns have a time series of size for each individual (so each 's
 ```{r}
 
 # First, separate so that each individual has it's own column
-test <- test %>% 
-  separate(sizes_dfly,                                      # separate sizes_dfly
-           into = paste("d_", c(1:test$n_dfly), sep = ""),  # levels for new var
-           sep = "]") %>%                                   # every ] marks a new ind
+test1 <- test %>% 
+  separate(meta_fish,
+          into = paste("mf_", c(1:40), sep = ""),
+          sep = " ") %>% 
+  separate(meta_dfly,
+          into = paste("md_", c(1:40), sep = ""),
+          sep = " ") %>% 
   separate(sizes_fish, 
-           into = paste("f_", c(1:test$n_fish), sep = ""), 
-           sep = "]")
+           into = paste("sf_", c(1:40), sep = ""), 
+           sep = "]") %>% 
+  separate(sizes_dfly,                              # separate sizes_dfly
+           into = paste("sd_", c(1:40), sep = ""),  # levels for new var.new labels: sd_1, sd_2...
+           sep = "]")                               # every ] marks a new ind
+
 
 # Next, I'll gather individuals so that they appear in rows
 # I separate this step by species because it's easier for me to catch errors

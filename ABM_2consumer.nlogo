@@ -192,12 +192,14 @@ end
 to eat-grass
 
   ;; WHICH AND HOW MANY PATCHES CAN I EAT?
+  if breed = fishes
+  [
   let max-meal                                                 ; max-meal is the maximum number of patches an individual *could* eat. not always realized.
   (
     min                                                        ; minimum between max they could eat and number of patches available
     (
       list                                                     ; have to make a list otherwise it will call for too many agents.
-        (asymmetry-slope * size + (5 - 5 * asymmetry-slope))   ; max-meal = slope*size + intercept. put intercept in terms of slope so that they're controlled by the same variable. easier for BS
+        (asym-slope-fishes * size + (5 - 5 * asym-slope-fishes))   ; max-meal = slope*size + intercept. put intercept in terms of slope so that they're controlled by the same variable. easier for BS
         (0.2 * count patches with [pcolor = 52])               ; when resources are running low, a single turtle (i.e., the one randomly assigned to eat first) can't eat all the remaining patches
       )
     )
@@ -217,23 +219,44 @@ to eat-grass
 
   set size size + growth-this-tick                                 ; grow proportional to the number of patches they ate that tick
   set meals fput round (growth-this-tick / growth-per-patch) meals ; meals list is used to calculate starvation. this adds n-patches eaten to that list
-
-  ;; ADD GROWTH AND ENERGY FROM THIS FEEDING
-  ; these have to be outside previous block since patches can't access turtle variables
-  ; separate this part by breed because the size-lists need to be separated by breed to allow ID in R
-  if breed = fishes
-  [
   set recent-sizes-fish sublist size-list-fish ((length size-list-fish) - 5) (length size-list-fish)  ; have to make a sublist here to isolate the last values added to the list, i.e., recent size
   let size-ratio-fish max list last recent-sizes-fish 0.001 / max list item 0 recent-sizes-fish 0.001 ; the max list 0.001 elements prevent us from dividing by 0. basically = size(t)/size(t-5)
-  set recent-growth-fish(log size-ratio-fish 10 / 5)                                                  ; calculate logistic growth rate. 10 is the base of the log. divide by 5 for 5 time steps
+  set recent-growth-fish(log size-ratio-fish 10 / 5)
   ]
+
 
   if breed = dflies
   [
+  let max-meal                                                 ; max-meal is the maximum number of patches an individual *could* eat. not always realized.
+  (
+    min                                                        ; minimum between max they could eat and number of patches available
+    (
+      list                                                     ; have to make a list otherwise it will call for too many agents.
+        (asym-slope-dflies * size + (5 - 5 * asym-slope-dflies))   ; max-meal = slope*size + intercept. put intercept in terms of slope so that they're controlled by the same variable. easier for BS
+        (0.2 * count patches with [pcolor = 52])               ; when resources are running low, a single turtle (i.e., the one randomly assigned to eat first) can't eat all the remaining patches
+      )
+    )
+
+  ;; LOCAL VARIABLES FOR FEEDING GAINS
+  let growth-this-tick 0                        ; at the start of each tick, they haven't grown that tick
+
+  ;; EAT PATCHES
+  ask n-of max-meal patches                     ; they choose max-meal number of patches...
+  [
+    if pcolor = 52                              ; ... but only get gains from those that are green
+    [
+    set pcolor black                                               ; eaten patches turn black and don't regenerate
+    set growth-this-tick growth-this-tick + growth-per-patch       ; g-p-p can be used to calculate patches needed to metamorph, i.e., with size 1 -> 10 and 0.1, need to eat 100 patches
+    ]
+  ]
+
+  set size size + growth-this-tick                                 ; grow proportional to the number of patches they ate that tick
+  set meals fput round (growth-this-tick / growth-per-patch) meals ; meals list is used to calculate starvation. this adds n-patches eaten to that list
   set recent-sizes-dfly sublist size-list-dfly ((length size-list-dfly) - 5) (length size-list-dfly)  ; have to make a sublist here to isolate the last values added to the list, i.e., recent size
   let size-ratio-dfly max list last recent-sizes-dfly 0.001 / max list item 0 recent-sizes-dfly 0.001 ; the max list 0.001 elements prevent us from dividing by 0. basically = size(t)/size(t-5)
-  set recent-growth-dfly(log size-ratio-dfly 10 / 5)                                                  ; calculate logistic growth rate. 10 is the base of the log. divide by 5 for 5 time steps
+  set recent-growth-dfly(log size-ratio-dfly 10 / 5)
   ]
+
 
   ;; SET A LABEL FOR INTERFACE DIAGNOSTICS
   ifelse show-label?
@@ -390,7 +413,7 @@ var-hatch-fishes
 var-hatch-fishes
 0
 20
-10.0
+15.0
 1
 1
 NIL
@@ -497,7 +520,7 @@ SWITCH
 379
 show-label?
 show-label?
-0
+1
 1
 -1000
 
@@ -510,7 +533,7 @@ mean-hatch-fishes
 mean-hatch-fishes
 0
 100
-30.0
+15.0
 1
 1
 NIL
@@ -519,10 +542,10 @@ HORIZONTAL
 SLIDER
 149
 159
-287
+284
 192
-asymmetry-slope
-asymmetry-slope
+asym-slope-fishes
+asym-slope-fishes
 0
 1
 1.0
@@ -574,7 +597,7 @@ mean-hatch-dflies
 mean-hatch-dflies
 0
 100
-25.0
+30.0
 1
 1
 NIL
@@ -590,6 +613,21 @@ var-hatch-dflies
 0
 20
 10.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+5
+157
+144
+190
+asym-slope-dflies
+asym-slope-dflies
+0
+1
+0.0
 1
 1
 NIL
@@ -1622,20 +1660,25 @@ NetLogo 6.0
       <value value="1"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="CR-run9" repetitions="6" runMetricsEveryStep="false">
+  <experiment name="2Consumer" repetitions="6" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
     <metric>n-meta-fishes</metric>
+    <metric>n-meta-dflies</metric>
     <metric>n-dead-fishes</metric>
-    <metric>biomass</metric>
-    <metric>mean-size</metric>
-    <metric>[meta?] of fishes</metric>
-    <metric>[fish-size-list] of fishes</metric>
+    <metric>n-dead-dflies</metric>
+    <metric>[meta-fish?] of fishes</metric>
+    <metric>[meta-dfly?] of dflies</metric>
+    <metric>[size-list-fish] of fishes</metric>
+    <metric>[size-list-dfly] of dflies</metric>
     <enumeratedValueSet variable="show-label?">
       <value value="false"/>
     </enumeratedValueSet>
+    <enumeratedValueSet variable="n-dflies">
+      <value value="40"/>
+    </enumeratedValueSet>
     <enumeratedValueSet variable="n-fishes">
-      <value value="80"/>
+      <value value="40"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="sprout-tick">
       <value value="0"/>
@@ -1645,7 +1688,13 @@ NetLogo 6.0
       <value value="10"/>
       <value value="15"/>
     </enumeratedValueSet>
+    <enumeratedValueSet variable="var-hatch-dflies">
+      <value value="10"/>
+    </enumeratedValueSet>
     <enumeratedValueSet variable="mean-hatch-fishes">
+      <value value="15"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mean-hatch-dflies">
       <value value="30"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="growth-per-patch">
@@ -1657,7 +1706,10 @@ NetLogo 6.0
     <enumeratedValueSet variable="grass-death-rate">
       <value value="0"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="asymmetry-slope">
+    <enumeratedValueSet variable="asym-slope-dflies">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="asym-slope-fishes">
       <value value="0"/>
       <value value="0.5"/>
       <value value="1"/>

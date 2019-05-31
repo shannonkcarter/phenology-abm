@@ -102,45 +102,39 @@ The 'sizes_x' columns have a time series of size for each individual (so each 's
 ```{r}
 
 # First, separate so that each individual has it's own column
-test1 <- test %>% 
-  separate(meta_fish,
-          into = paste("mf_", c(1:40), sep = ""),
-          sep = " ") %>% 
+test <- test %>% 
+  separate(meta_fish,                               # separate meta_fish 
+          into = paste("m.f_", c(1:40), sep = ""),   # labels for new vars: mf_1, mf_2...
+          sep = " ") %>%                            # every space marks a new ind
   separate(meta_dfly,
-          into = paste("md_", c(1:40), sep = ""),
+          into = paste("m.d_", c(1:40), sep = ""),
           sep = " ") %>% 
-  separate(sizes_fish, 
-           into = paste("sf_", c(1:40), sep = ""), 
-           sep = "]") %>% 
-  separate(sizes_dfly,                              # separate sizes_dfly
-           into = paste("sd_", c(1:40), sep = ""),  # levels for new var.new labels: sd_1, sd_2...
-           sep = "]")                               # every ] marks a new ind
+  separate(sizes_fish,                              # separate sizes_fish
+           into = paste("s.f_", c(1:40), sep = ""),  # labels for new vars: sf_1, sf_2...
+           sep = "]") %>%                           # every ] marks a new ind
+  separate(sizes_dfly,                              
+           into = paste("s.d_", c(1:40), sep = ""),  
+           sep = "]")                               
 
 
 # Next, I'll gather individuals so that they appear in rows
-# I separate this step by species because it's easier for me to catch errors
 
-## FIRST, DRAGONFLIES 
 # Select only unique dfly individuals and gather to long format
-test_dfly <- test %>%
-  select(run_num, d_1:d_50) %>% 
-  unique(.) %>% 
-  gather(d_1:d_50, key = "dfly_id", value = 'size_dfly') %>% 
-  arrange(run_num)
+test1 <- test %>%
+  select(run_num, m.f_1:m.f_40, m.d_1:m.d_40, s.f_1:s.f_40, s.d_1:s.d_40) %>% #, growth_1:growth_80) %>% 
+  gather(key, value, -run_num) %>%  
+  separate(key, into = c("var_sp", "id"), sep = "_") %>%  # 'ms' indicates 'meta' or 'size', just a placeholder
+  spread(var_sp, value) %>% 
+  gather(key, value, -run_num, -id) %>% 
+  separate(key, into = c("var", "sp")) %>% 
+  spread(var, value) %>% 
+  arrange(run_num, as.numeric(id), sp)
+
 
 # Remove the brackets
-test_dfly$size_dfly <- gsub("[", "", test_dfly$size_dfly, fixed = T)
+test1 <- gsub("[", "", test1, fixed = T)
 
-## NEXT, FISH
-# Select only unique fish individuals and gather to long format
-test_fish <- test %>%
-  select(run_num, f_1:f_50) %>% 
-  unique(.) %>% 
-  gather(f_1:f_50, key = "fish_id", value = 'size_fish') %>% 
-  arrange(run_num)
 
-# Remove the brackets
-test_fish$size_fish <- gsub("[", "", test_fish$size_fish, fixed = T)
 ```
 
 # Parse Time Series

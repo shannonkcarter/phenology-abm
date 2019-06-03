@@ -115,7 +115,8 @@ ask dflies
       [                                                            ; if you've eaten enough to not starve, keep going. else, die.
         ifelse (item 0 meals + item 1 meals + item 2 meals + item 3 meals + item 4 meals + item 5 meals + item 6 meals + item 7 meals + item 8 meals) >  0.5 * size ^ 0.75  ; 0.75 scaling from BMR literature
         [
-          set color blue   ; blue = alive and kicking
+          if breed = fishes [set color green]
+          if breed = dflies [set color blue]   ; blue = alive and kicking
           eat-grass        ; turtle specific procedure controlled below. may want to separate by breeds...
           metamorph-fish   ; separate procedures, but may or may not change the criteria.
           metamorph-dfly
@@ -413,7 +414,7 @@ var-hatch-fishes
 var-hatch-fishes
 0
 20
-15.0
+17.0
 1
 1
 NIL
@@ -520,7 +521,7 @@ SWITCH
 379
 show-label?
 show-label?
-1
+0
 1
 -1000
 
@@ -548,7 +549,7 @@ asym-slope-fishes
 asym-slope-fishes
 0
 1
-1.0
+0.5
 0.1
 1
 NIL
@@ -597,7 +598,7 @@ mean-hatch-dflies
 mean-hatch-dflies
 0
 100
-30.0
+40.0
 1
 1
 NIL
@@ -612,7 +613,7 @@ var-hatch-dflies
 var-hatch-dflies
 0
 20
-10.0
+3.0
 1
 1
 NIL
@@ -627,8 +628,8 @@ asym-slope-dflies
 asym-slope-dflies
 0
 1
-0.0
-1
+0.5
+0.1
 1
 NIL
 HORIZONTAL

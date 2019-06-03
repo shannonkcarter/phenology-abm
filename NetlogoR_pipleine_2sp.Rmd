@@ -120,7 +120,7 @@ test <- test %>%
 # Next, I'll gather individuals so that they appear in rows
 
 # Select only unique dfly individuals and gather to long format
-test1 <- test %>%
+test <- test %>%
   select(run_num, m.f_1:m.f_40, m.d_1:m.d_40, s.f_1:s.f_40, s.d_1:s.d_40) %>% #, growth_1:growth_80) %>% 
   gather(key, value, -run_num) %>%  
   separate(key, into = c("var_sp", "id"), sep = "_") %>%  # 'ms' indicates 'meta' or 'size', just a placeholder
@@ -130,10 +130,9 @@ test1 <- test %>%
   spread(var, value) %>% 
   arrange(run_num, as.numeric(id), sp)
 
-
 # Remove the brackets
-test1 <- gsub("[", "", test1, fixed = T)
-
+test$m <- gsub("[", "", test$m, fixed = T)
+test$s <- gsub("[", "", test$s, fixed = T)
 
 ```
 

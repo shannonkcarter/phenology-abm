@@ -319,6 +319,15 @@ ggplot(ind, aes(x = final_size, fill = as.factor(meta))) + theme_bw() +
   labs(title = "Distribution of individual body sizes by treatment",
        x = "size",
        y = "density of individuals")
+
+ggplot(subset(ind, subset = (meta == 1)), aes(x = end_date, fill = asymmetry)) + theme_bw() +
+  geom_density(alpha = 0.5, size = 0.8) +
+  facet_grid(. ~ synchrony) +
+  scale_fill_uchicago() +
+  #geom_vline(xintercept = c(8, 10, 12), linetype = 'dashed') + 
+  labs(title = "Phenology at emergence",
+       x = "day of emergence",
+       y = "density of individuals")
 ```
 
 
@@ -331,7 +340,7 @@ growthrates <- ggplot(ind_time,
   scale_color_uchicago() +
   facet_grid(synchrony ~ asymmetry) +
   theme(legend.position = "none") 
-growthrates
+#growthrates
 
 ```
 
@@ -343,7 +352,7 @@ ggplot(ind_time, aes(x = size, y = growth, color = meta)) +
   ylim(0, 0.25) + xlim(1, 10)
 
 
-ggplot(ind, aes(x = hatch_date, y = max_size, color = as.factor(meta))) +
+ggplot(ind, aes(x = hatch_date, y = final_size, color = as.factor(meta))) +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
   stat_smooth() +
   facet_grid(asymmetry ~ synchrony) + theme_bw() +
@@ -383,7 +392,8 @@ ggplot(ind, aes(x = hatch_date, y = meta, color = asymmetry)) + theme_bw() +
   labs(title = "Survival probability by hatching date",
        x = "hatching date",
        y = "probability of survival") +
-  scale_color_manual(values = wes_palette(n = 3, name = "Cavalcanti1"))
+  scale_color_uchicago()
+  #scale_color_manual(values = wes_palette(n = 3, name = "Cavalcanti1"))
 
 
 ```

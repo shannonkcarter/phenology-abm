@@ -104,13 +104,13 @@ The 'sizes_x' columns have a time series of size for each individual (so each 's
 # First, separate so that each individual has it's own column
 test <- test %>% 
   separate(meta_fish,                               # separate meta_fish 
-          into = paste("m.f_", c(1:40), sep = ""),   # labels for new vars: mf_1, mf_2...
+          into = paste("m.f_", c(1:40), sep = ""),  # labels for new vars: mf_1, mf_2...
           sep = " ") %>%                            # every space marks a new ind
   separate(meta_dfly,
           into = paste("m.d_", c(1:40), sep = ""),
           sep = " ") %>% 
   separate(sizes_fish,                              # separate sizes_fish
-           into = paste("s.f_", c(1:40), sep = ""),  # labels for new vars: sf_1, sf_2...
+           into = paste("s.f_", c(1:40), sep = ""), # labels for new vars: sf_1, sf_2...
            sep = "]") %>%                           # every ] marks a new ind
   separate(sizes_dfly,                              
            into = paste("s.d_", c(1:40), sep = ""),  
@@ -142,29 +142,15 @@ Now, do the same separate and gather operations to parse the time vector and put
 
 ```{r}
 
-## FIRST, DRAGONFLIES 
 # Separate the size time series- each space represents a new time point
-test_dfly <- test_dfly %>% 
-  separate(size_dfly, into = as.character(c(0:149)), sep = " ") %>% 
-  select(-c(as.character(0))) # I drop this because there's only a value for ind 1
-
-# Gather to long format, so we now have one line per dfly per time step
-test_dfly <- test_dfly %>% 
+test <- test %>% 
+  separate(s, into = as.character(c(0:250)), sep = " ") %>% 
+  select(-c(as.character(0))) %>%         # I drop this because there's only a value for ind 1
   group_by(run_num) %>% 
-  gather(as.character(1:149), key = "time", value = 'current_size_dfly') %>%
-  arrange(run_num, dfly_id)
+  gather(as.character(1:250), key = "time", value = 'current_size') %>%
+  arrange(run_num, sp, as.numeric(id))
 
-## NEXT, FISH
-# Separate the size time series- each space represents a new time point
-test_fish <- test_fish %>% 
-  separate(size_fish, into = as.character(c(0:149)), sep = " ") %>% 
-  select(-c(as.character(0))) # I drop this because there's only a value for ind 1
-
-# Gather to long format, so we now have one line per dfly per time step
-test_fish <- test_fish %>% 
-  group_by(run_num) %>% 
-  gather(as.character(1:149), key = "time", value = 'current_size_fish') %>%
-  arrange(run_num, fish_id)
+test$current_size <- round(as.numeric(test$current_size), 3)
 
 ```
 
@@ -173,35 +159,15 @@ test_fish <- test_fish %>%
 Now, join the two species' dataframes together, rejoin with the treatment information, and write a csv. This csv has one line per individual per time step. So nrow should be max(run_num) x (ndfly + nfish) x total_time
 ```{r}
 
-# Paste dfs together and remove redundant variables
-test <- cbind(test_dfly, test_fish)
-test <- test %>% 
-  select(-c(run_num1, time1)) 
-
-# This is clunkier than it needs to be, but allows some double checking
-test$dfly <- paste(test$dfly_id, test$current_size_dfly)
-test$fish <- paste(test$fish_id, test$current_size_fish)
-test1 <- test %>% 
-  select(run_num, time, dfly, fish)
-test2 <- test1 %>% 
-  gather(key = "species", "size", dfly, fish)
-test2$time <- as.numeric(test2$time)
-
-test2 <- test2 %>% 
-  separate(size, into = c("id", "size"), sep = " ") %>% 
-  separate(id, into = c("sp", "id"), sep = "_") %>% 
-  select(-sp) %>% 
-  arrange(run_num, id, time)
-test2$size <- as.numeric(test2$size)
-
 # Rejoin with treatment identifiers for each run number
-test <- left_join(test2, params, by = "run_num")
-ind_time <- test %>%
-  select(run_num, n_fish, n_dfly, sync_fish, sync_dfly, mean_dfly,
-         surv_fish, surv_dfly, time, species,
-         id, size)
+ind_time <- left_join(test, params, by = "run_num")
+ind_time <- ind_time %>%
+  select(run_num, sync_fish, sync_dfly, mean_fish, mean_dfly,
+         asym_fish, asym_dfly, surv_fish, surv_dfly, time, sp,
+         id, m, current_size) %>% 
+  rename(meta = m)
 
-write.csv(ind_time, "individual_time.csv")
+write.csv(ind_time, "individual_time2sp.csv")
 
 ```
 
@@ -211,23 +177,23 @@ write.csv(ind_time, "individual_time.csv")
 Now, I want to make some summarised datasets. First with one row per individual, then with one row per run number 
 
 ```{r}
-ind_time <- read.csv("individual_time.csv", header = T)
+ind_time <- read.csv("individual_time2sp.csv", header = T)
+ind_time$time <- as.numeric(ind_time$time)
 
 ind <- ind_time %>% 
-  group_by(run_num, species, id, sync_fish, sync_dfly, mean_dfly, surv_dfly, surv_fish) %>%
-  summarise(max_size = max(size),
-            meta = if_else(max_size >= 10, 1, 0),
-            hatch_date = min(time[size > 0]),
-            # use base R ifelse here, so we can have 2 data types for T/F
-            meta_date = ifelse(meta == 1, min(time[size >= 10]), NA), 
-            death_date = ifelse(meta == 0, min(time[size = max(max_size)]), NA),
-            growth_time = meta_date - hatch_date)
+  group_by(run_num, sp, id, meta, sync_fish, sync_dfly, mean_dfly, surv_dfly, surv_fish) %>%
+  summarise(max_size = max(current_size),
+            hatch_date = min(time[current_size > 0]),
+            end_date = min(time[current_size == max(current_size)]),
+            growth_time = end_date - hatch_date,
+            growth_rate = max(current_size)/growth_time)
 
 # Currently, number of metamorphs doesn't match raw data. think it might be a >= mismatch. check.
+ind$meta <- as.numeric(ind$meta)
 check <- ind %>% 
-  group_by(run_num, species, surv_dfly, surv_fish) %>%
-  summarise(no_meta = sum(meta))
-ggplot(subset(check, subset = (species == "fish")), aes(x = surv_fish, y = no_meta)) +
+  group_by(run_num, sp, surv_dfly, surv_fish) %>%
+  summarize(meta_check = sum(meta, na.rm = T))
+ggplot(check, aes(x = surv_fish + surv_dfly, y = meta_check)) +
   geom_point() + theme_bw() +
   geom_abline(slope = 1, intercept = 0)
 

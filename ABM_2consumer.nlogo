@@ -414,7 +414,7 @@ var-hatch-fishes
 var-hatch-fishes
 0
 20
-17.0
+3.0
 1
 1
 NIL
@@ -521,7 +521,7 @@ SWITCH
 379
 show-label?
 show-label?
-0
+1
 1
 -1000
 
@@ -549,7 +549,7 @@ asym-slope-fishes
 asym-slope-fishes
 0
 1
-0.5
+1.0
 0.1
 1
 NIL
@@ -598,7 +598,7 @@ mean-hatch-dflies
 mean-hatch-dflies
 0
 100
-40.0
+32.0
 1
 1
 NIL
@@ -613,7 +613,7 @@ var-hatch-dflies
 var-hatch-dflies
 0
 20
-3.0
+17.0
 1
 1
 NIL
@@ -628,7 +628,7 @@ asym-slope-dflies
 asym-slope-dflies
 0
 1
-0.5
+1.0
 0.1
 1
 NIL
@@ -1668,10 +1668,14 @@ NetLogo 6.0
     <metric>n-meta-dflies</metric>
     <metric>n-dead-fishes</metric>
     <metric>n-dead-dflies</metric>
+    <metric>n-meta-total</metric>
     <metric>[meta-fish?] of fishes</metric>
     <metric>[meta-dfly?] of dflies</metric>
     <metric>[size-list-fish] of fishes</metric>
     <metric>[size-list-dfly] of dflies</metric>
+    <metric>biom-fishes</metric>
+    <metric>biom-dflies</metric>
+    <metric>biom-total</metric>
     <enumeratedValueSet variable="show-label?">
       <value value="false"/>
     </enumeratedValueSet>

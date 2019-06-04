@@ -50,7 +50,7 @@ First, load the data. I've done a ton of different experiments in NetLogo, and n
 
 ```{r load table data}
 
-data <- read.table("ABM_2Consumer_1.csv",
+data <- read.table("ABM_2Consumer_2.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
@@ -74,23 +74,32 @@ test <- data %>%
          mean_fish = mean.hatch.fishes,            # mean hatching timing of fish
          mean_dfly = mean.hatch.dflies,            # mean hatching timing of dflies
          sync_fish = var.hatch.fishes,             # amount of variation in ind hatching timing
-         sync_dfly = var.hatch.dflies,             # amount of variation in ind hatching timing
-         asym_fish = asym.slope.fishes,
-         asym_dfly = asym.slope.dflies,
-         surv_fish = n.meta.fishes,                # number that 'metamorphed', i.e., size >10
-         surv_dfly = n.meta.dflies,                # number that 'metamorphed', i.e., size >10
+         sync_dfly = var.hatch.dflies,             # standard deviation of normal distribution
+         asym_fish = asym.slope.fishes,            # size-dependent per capita effects 
+         asym_dfly = asym.slope.dflies,            # 0-1; 0 = all ind same, 1 = eat prop to body size
+         surv_fish = n.meta.fishes,                # number that 'metamorphed,' i.e., survived to next stage
+         surv_dfly = n.meta.dflies,                # size and time of metam based on dynamic growth rate
+         surv_tot  = n.meta.total,                 # surv_fish + surv_dfly
+         biom_fish = biom.fishes,                  # sum size of all metamorphed individuals
+         biom_dfly = biom.dflies,                  # sum size of all metamorphed individuals
+         biom_tot  = biom.total,                   # biom_fish + biom_dfly
          meta_fish = X.meta.fish...of.fishes,      # vector of survival outcome for each individual
-         meta_dfly = X.meta.dfly...of.dflies,      # vector of survival outcome for each individual
+         meta_dfly = X.meta.dfly...of.dflies,      # i.e., [0 0 1 1 0 1 1 ...] each # = 1 individual
          sizes_fish = X.size.list.fish..of.fishes, # list of size for each ind for each time step
-         sizes_dfly = X.size.list.dfly..of.dflies) # list of size for each ind for each time step
+         sizes_dfly = X.size.list.dfly..of.dflies) # i.e., [0 0 1 ... 9 9 9] [0 0 1 ... 6 7 7] [1 ind]
           
 # Extract parameter values-- these are the 'treatments' and inputs of the model for each run
 # I'll rejoin the output data with params later, after some summarizing/processing
 # Here, add qualitative levels for the treatment parameters. This will be different for each BS
-params <- test[,1:11]
+params <- test[,1:15]
 params$sync_fish <- as.factor(params$sync_fish)
 params$asym_fish <- as.factor(params$asym_fish)
 levels(params$sync_fish) <- c("high", "med", "low")
+levels(params$asym_fish) <- c("none", "mild", "strong")
+
+params$sync_dfly <- as.factor(params$sync_dfly)
+params$asym_dfly <- as.factor(params$asym_dfly)
+levels(params$sync_dfly) <- c("high", "med", "low")
 levels(params$asym_dfly) <- c("none", "mild", "strong")
 
 ```
@@ -101,30 +110,27 @@ The 'sizes_x' columns have a time series of size for each individual (so each 's
 
 ```{r}
 
-# First, separate so that each individual has it's own column
+# First, separate so that each individual has it's 2 columns: 1 for meta, 1 for size list
 test <- test %>% 
   separate(meta_fish,                               # separate meta_fish 
-          into = paste("m.f_", c(1:40), sep = ""),  # labels for new vars: mf_1, mf_2...
+          into = paste("m.f_", c(1:40), sep = ""),  # labels for new vars: mf_1, mf_2...m = meta, f = fish
           sep = " ") %>%                            # every space marks a new ind
   separate(meta_dfly,
           into = paste("m.d_", c(1:40), sep = ""),
           sep = " ") %>% 
   separate(sizes_fish,                              # separate sizes_fish
-           into = paste("s.f_", c(1:40), sep = ""), # labels for new vars: sf_1, sf_2...
+           into = paste("s.f_", c(1:40), sep = ""), # labels for new vars: sf_1, sf_2... s = size, f = fish
            sep = "]") %>%                           # every ] marks a new ind
   separate(sizes_dfly,                              
            into = paste("s.d_", c(1:40), sep = ""),  
            sep = "]")                               
 
-
-# Next, I'll gather individuals so that they appear in rows
-
-# Select only unique dfly individuals and gather to long format
+# Next, I'll gather so individuals appear in rows and spread so column are diff variables
 test <- test %>%
-  select(run_num, m.f_1:m.f_40, m.d_1:m.d_40, s.f_1:s.f_40, s.d_1:s.d_40) %>% #, growth_1:growth_80) %>% 
-  gather(key, value, -run_num) %>%  
-  separate(key, into = c("var_sp", "id"), sep = "_") %>%  # 'ms' indicates 'meta' or 'size', just a placeholder
-  spread(var_sp, value) %>% 
+  select(run_num, m.f_1:m.f_40, m.d_1:m.d_40, s.f_1:s.f_40, s.d_1:s.d_40) %>% # keep run_num as unique id
+  gather(key, value, -run_num) %>%                                            # gather all but run_num
+  separate(key, into = c("var_sp", "id"), sep = "_") %>%  # 'var_sp' indicates 'variable' or 'species'
+  spread(var_sp, value) %>%                               # spread by 'var_sp' placeholder var
   gather(key, value, -run_num, -id) %>% 
   separate(key, into = c("var", "sp")) %>% 
   spread(var, value) %>% 
@@ -133,6 +139,8 @@ test <- test %>%
 # Remove the brackets
 test$m <- gsub("[", "", test$m, fixed = T)
 test$s <- gsub("[", "", test$s, fixed = T)
+test$m <- gsub("]", "", test$m, fixed = T)
+test$s <- gsub("]", "", test$s, fixed = T)
 
 ```
 
@@ -160,6 +168,7 @@ Now, join the two species' dataframes together, rejoin with the treatment inform
 ```{r}
 
 # Rejoin with treatment identifiers for each run number
+### ADD NEW PARAM VARIABLES TO SELECT
 ind_time <- left_join(test, params, by = "run_num")
 ind_time <- ind_time %>%
   select(run_num, sync_fish, sync_dfly, mean_fish, mean_dfly,
@@ -181,7 +190,8 @@ ind_time <- read.csv("individual_time2sp.csv", header = T)
 ind_time$time <- as.numeric(ind_time$time)
 
 ind <- ind_time %>% 
-  group_by(run_num, sp, id, meta, sync_fish, sync_dfly, mean_dfly, surv_dfly, surv_fish) %>%
+  group_by(run_num, sp, id, meta, sync_fish, sync_dfly, asym_fish, asym_dfly,
+           mean_dfly, surv_dfly, surv_fish) %>%
   summarise(max_size = max(current_size),
             hatch_date = min(time[current_size > 0]),
             end_date = min(time[current_size == max(current_size)]),
@@ -191,10 +201,10 @@ ind <- ind_time %>%
 # Currently, number of metamorphs doesn't match raw data. think it might be a >= mismatch. check.
 ind$meta <- as.numeric(ind$meta)
 check <- ind %>% 
-  group_by(run_num, sp, surv_dfly, surv_fish) %>%
-  summarize(meta_check = sum(meta, na.rm = T))
+  group_by(run_num, surv_dfly, surv_fish) %>%
+  summarize(meta_check = sum(meta))
 ggplot(check, aes(x = surv_fish + surv_dfly, y = meta_check)) +
-  geom_point() + theme_bw() +
+  geom_jitter(alpha = 0.5) + theme_bw() +
   geom_abline(slope = 1, intercept = 0)
 
 ```
@@ -214,6 +224,44 @@ ind$sync_dfly <- factor(ind$sync_dfly, levels = c("low", "med", "high"))
 ind$mean_dfly <- factor(ind$mean_dfly, levels = c("dfly v early", "dfly early", "same", "fish early", "fish v early"))
 trt$sync_dfly <- factor(trt$sync_dfly, levels = c("low", "med", "high"))
 trt$mean_dfly <- factor(trt$mean_dfly, levels = c("dfly v early", "dfly early", "same", "fish early", "fish v early"))
+
+################# PASTED FROM OTHER PIPELINE #################
+# first, by run number
+run <- ind %>% 
+  group_by(run_num, sync_fish, sync_dfly, asym_fish, asym_dfly, surv_fish, surv_dfly) %>%
+  unique(.)
+
+run$mean_emer <- run$mean_emer/run$n_surv
+
+# gather different response variables
+run <- run %>% 
+  group_by(run_num, synchrony, asymmetry) %>% 
+  gather(n_surv, biomass, mean_size, mean_emer, key = "variable", value = "abs_value") %>% 
+  arrange(run_num)
+
+# now by treatment
+trt <- run %>% 
+  group_by(sync, synchrony, asym, asymmetry, variable) %>% 
+  summarise(abs_value = mean(abs_value))
+            #se_surv_fish   = sd(n_surv)/sqrt(length(n_surv)),
+            #mean_size      = mean(mean_size),
+            #mean_emer      = mean(mean_emer))
+            #se_size        = sd(mean_size)/sqrt(length(mean_size)))
+
+baseline_means <- trt %>% 
+  subset(synchrony == 'med' & asymmetry == 'none') 
+baseline_means <- baseline_means[,5:6] 
+colnames(baseline_means)[2] <- "baseline_value"
+
+# now, add in baseline averages (conditions at med sync and symmetic comp) to run data
+run <- left_join(run, baseline_means, by = "variable")  
+trt <- left_join(trt, baseline_means, by = "variable")
+   
+run <- run %>% 
+  mutate(baseline_adj = (abs_value - baseline_value)/baseline_value)
+
+trt <- trt %>% 
+  mutate(baseline_adj = (abs_value - baseline_value)/baseline_value)
 
 ```
 

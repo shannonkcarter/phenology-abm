@@ -173,17 +173,15 @@ ind_time$time <- as.numeric(ind_time$time)
 Now, I want to make some summarised datasets. First with one row per individual, then with one row per run number, and finally with one row per treatment. 
 
 ```{r}
-
+ 
 # First, summarize by individual and add some individual level properies
 ind <- ind_time %>% 
-  group_by(run_num, sync_fish, sync_dfly, asym_fish, asym_dfly,  # trt info
-           surv_fish, surv_dfly, biom_fish, biom_dfly, biom_tot, # run-level output
-           sp, id, meta) %>%
+  group_by(run_num, sp, id, meta) %>%
   summarise(max_size = max(size),                    # max/final size. size at metam or death
             hatch_date = min(time[size > 0]),        # hatch date = when size jumps from 0
             end_date = min(time[size == max(size)]), # end (meta or death) date is first day at max size
             growth_time = end_date - hatch_date,     # lifespan
-            growth_rate = max(size)/growth_time)     # lifetime growth rate
+            growth_rate = max(size)/growth_time)     # lifetime growth rate; size/lifespan
 
 # This is a good way to verify that the calculations worked
 # N_survivors from netlogo should = sum or metamorphs
@@ -216,17 +214,16 @@ trt$mean_dfly <- factor(trt$mean_dfly, levels = c("dfly v early", "dfly early", 
 ################# PASTED FROM OTHER PIPELINE #################
 # first, by run number
 run <- ind %>% 
-  select(run_num, sync_fish, sync_dfly, asym_fish, asym_dfly,  # trt info
-         surv_fish, surv_dfly, biom_fish, biom_dfly, biom_tot) %>%
-  unique(.)
-
-run$mean_emer <- run$mean_emer/run$n_surv
+  group_by(run_num, sp) %>%
+  summarise(mean_mass = sum(meta * max_size)/sum(meta),    # only using individuals that survived
+            mean_emer = sum(meta * end_date)/sum(meta),    # meta * var is 0 for ind that don't meta
+            mean_grow = sum(meta * growth_rate)/sum(meta)) # sum(meta) is number of survivors
 
 # gather different response variables
 run <- run %>% 
-  group_by(run_num, synchrony, asymmetry) %>% 
-  gather(n_surv, biomass, mean_size, mean_emer, key = "variable", value = "abs_value") %>% 
-  arrange(run_num)
+  group_by(run_num, sp) %>% 
+  gather(mean_mass, mean_emer, mean_grow, key = "variable", value = "abs_value") %>% 
+  arrange(run_num, sp)
 
 # now by treatment
 trt <- run %>% 

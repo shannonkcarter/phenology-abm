@@ -154,43 +154,25 @@ Now, do the same separate and gather operations to parse the time vector and put
 ```{r}
 
 # Separate the size time series- each space represents a new time point
-test <- test %>% 
+ind_time <- test %>% 
   separate(s, into = as.character(c(0:250)), sep = " ") %>% # it's easiest for each run to be the same length
   select(-c(as.character(0))) %>%                           # I drop this because there's only a value for ind 1
   group_by(run_num) %>% 
   gather(as.character(1:250), key = "time", value = 'size') %>%
+  rename(meta = m) %>% 
   arrange(run_num, sp, as.numeric(id))
 
 # Netlogo is bad at rounding, so have to do it here
-test$size <- round(as.numeric(test$size), 3)
+ind_time$size <- round(as.numeric(ind_time$size), 3)
+ind_time$time <- as.numeric(ind_time$time)
 
 ```
-
-# Compile & Tidy
-
-Now, rejoin this individual data with the treatment information, and write a csv. This csv has one line per individual per time step. So nrow should be max(run_num) x (ndfly + nfish) x total_time
-```{r}
-
-# Rejoin with data associated wiht each run number (trt info, run-level response vars)
-ind_time <- left_join(test, params, by = "run_num")
-ind_time <- ind_time %>%
-  select(run_num, sync_fish, sync_dfly, asym_fish, asym_dfly,  # trt info
-         surv_fish, surv_dfly, biom_fish, biom_dfly, biom_tot, # run-level output
-         time, sp, id, m, size) %>%                            # ind/time output
-  rename(meta = m)
-
-write.csv(ind_time, "individual_time2sp.csv")
-
-```
-
 
 # Summarize by Individual
 
 Now, I want to make some summarised datasets. First with one row per individual, then with one row per run number, and finally with one row per treatment. 
 
 ```{r}
-ind_time <- read.csv("individual_time2sp.csv", header = T)
-ind_time$time <- as.numeric(ind_time$time)
 
 # First, summarize by individual and add some individual level properies
 ind <- ind_time %>% 
@@ -234,7 +216,8 @@ trt$mean_dfly <- factor(trt$mean_dfly, levels = c("dfly v early", "dfly early", 
 ################# PASTED FROM OTHER PIPELINE #################
 # first, by run number
 run <- ind %>% 
-  group_by(run_num, sync_fish, sync_dfly, asym_fish, asym_dfly, surv_fish, surv_dfly) %>%
+  select(run_num, sync_fish, sync_dfly, asym_fish, asym_dfly,  # trt info
+         surv_fish, surv_dfly, biom_fish, biom_dfly, biom_tot) %>%
   unique(.)
 
 run$mean_emer <- run$mean_emer/run$n_surv
@@ -268,6 +251,24 @@ run <- run %>%
 
 trt <- trt %>% 
   mutate(baseline_adj = (abs_value - baseline_value)/baseline_value)
+
+```
+
+# Compile & Tidy
+
+Now, rejoin this individual data with the treatment information, and write a csv. This csv has one line per individual per time step. So nrow should be max(run_num) x (ndfly + nfish) x total_time
+```{r}
+
+# Rejoin with data associated with each run number (trt info, run-level response vars)
+ind_time <- left_join(test, params, by = "run_num")
+ind_time <- ind_time %>%
+  select(run_num, sync_fish, sync_dfly, asym_fish, asym_dfly,  # trt info
+         surv_fish, surv_dfly, biom_fish, biom_dfly, biom_tot, # run-level output
+         time, sp, id, m, size) %>%                            # ind/time output
+  rename(meta = m)
+
+write.csv(ind_time, "individual_time2sp.csv")
+ind_time <- read.csv("individual_time2sp.csv", header = T)
 
 ```
 

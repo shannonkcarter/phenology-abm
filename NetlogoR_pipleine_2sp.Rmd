@@ -88,7 +88,7 @@ test <- data %>%
          sizes_fish = X.size.list.fish..of.fishes, # list of size for each ind for each time step
          sizes_dfly = X.size.list.dfly..of.dflies) # i.e., [0 0 1 ... 9 9 9] [0 0 1 ... 6 7 7] [1 ind]
           
-# Extract parameter values-- these are the 'treatments' and inputs of the model for each run
+# Extract parameter values-- these are the 'treatments', inputs, and run-level results of the model for each run
 # I'll rejoin the output data with params later, after some summarizing/processing
 # Here, add qualitative levels for the treatment parameters. This will be different for each BS
 params <- test[,1:15]
@@ -106,14 +106,16 @@ levels(params$asym_dfly) <- c("none", "mild", "strong")
 
 # Parse Individuals
 
-The 'sizes_x' columns have a time series of size for each individual (so each 'sizes_x' column has 50 individuals x 150 time steps values). We ultimately want one row per individual per time step. Let's first separate by individual. 
+The 'sizes_x' columns have a time series of size for each individual. So in this case, each 'sizes_x' column contains 40 individuals x 250 time steps values. Individuals are contained in brackets, with space-delimited values representing the individual's size at that time step, i.e., [0 0 0 1 2 ... 9] [0 0 1 1 ... 5]. We ultimately want one row per individual per time step. So first, we need to separate by "]" to put individuals in columns, then gather individuals to rows. Then separate rows by " " to put time step in columns, then gather time to rows. All the while, doing fishes and dflies in parallel to maintain species identity.
+
+I treat the 'meta_x' columns in this step too. They're formatted similarly, except there's no time series- just one value per individual, i.e., [0 0 1 1 0 1 0 ...]. So I only have to separate and gather once.
 
 ```{r}
 
-# First, separate so that each individual has it's 2 columns: 1 for meta, 1 for size list
+# First, separate meta and sizes columns. Now each column only has data for one individual
 test <- test %>% 
   separate(meta_fish,                               # separate meta_fish 
-          into = paste("m.f_", c(1:40), sep = ""),  # labels for new vars: mf_1, mf_2...m = meta, f = fish
+          into = paste("m.f_", c(1:40), sep = ""),  # labels for new vars: mf_1, mf_2... m = meta, f = fish
           sep = " ") %>%                            # every space marks a new ind
   separate(meta_dfly,
           into = paste("m.d_", c(1:40), sep = ""),
@@ -125,7 +127,8 @@ test <- test %>%
            into = paste("s.d_", c(1:40), sep = ""),  
            sep = "]")                               
 
-# Next, I'll gather so individuals appear in rows and spread so column are diff variables
+# This megapipe spreads and gathers across meta and size for both species
+# It's hard to follow all together- was built piece by piece to troubleshoot, and put together at the end
 test <- test %>%
   select(run_num, m.f_1:m.f_40, m.d_1:m.d_40, s.f_1:s.f_40, s.d_1:s.d_40) %>% # keep run_num as unique id
   gather(key, value, -run_num) %>%                                            # gather all but run_num
@@ -152,28 +155,28 @@ Now, do the same separate and gather operations to parse the time vector and put
 
 # Separate the size time series- each space represents a new time point
 test <- test %>% 
-  separate(s, into = as.character(c(0:250)), sep = " ") %>% 
-  select(-c(as.character(0))) %>%         # I drop this because there's only a value for ind 1
+  separate(s, into = as.character(c(0:250)), sep = " ") %>% # it's easiest for each run to be the same length
+  select(-c(as.character(0))) %>%                           # I drop this because there's only a value for ind 1
   group_by(run_num) %>% 
-  gather(as.character(1:250), key = "time", value = 'current_size') %>%
+  gather(as.character(1:250), key = "time", value = 'size') %>%
   arrange(run_num, sp, as.numeric(id))
 
-test$current_size <- round(as.numeric(test$current_size), 3)
+# Netlogo is bad at rounding, so have to do it here
+test$size <- round(as.numeric(test$size), 3)
 
 ```
 
 # Compile & Tidy
 
-Now, join the two species' dataframes together, rejoin with the treatment information, and write a csv. This csv has one line per individual per time step. So nrow should be max(run_num) x (ndfly + nfish) x total_time
+Now, rejoin this individual data with the treatment information, and write a csv. This csv has one line per individual per time step. So nrow should be max(run_num) x (ndfly + nfish) x total_time
 ```{r}
 
-# Rejoin with treatment identifiers for each run number
-### ADD NEW PARAM VARIABLES TO SELECT
+# Rejoin with data associated wiht each run number (trt info, run-level response vars)
 ind_time <- left_join(test, params, by = "run_num")
 ind_time <- ind_time %>%
-  select(run_num, sync_fish, sync_dfly, mean_fish, mean_dfly,
-         asym_fish, asym_dfly, surv_fish, surv_dfly, time, sp,
-         id, m, current_size) %>% 
+  select(run_num, sync_fish, sync_dfly, asym_fish, asym_dfly,  # trt info
+         surv_fish, surv_dfly, biom_fish, biom_dfly, biom_tot, # run-level output
+         time, sp, id, m, size) %>%                            # ind/time output
   rename(meta = m)
 
 write.csv(ind_time, "individual_time2sp.csv")
@@ -181,35 +184,38 @@ write.csv(ind_time, "individual_time2sp.csv")
 ```
 
 
-## Summarize by Individual
+# Summarize by Individual
 
-Now, I want to make some summarised datasets. First with one row per individual, then with one row per run number 
+Now, I want to make some summarised datasets. First with one row per individual, then with one row per run number, and finally with one row per treatment. 
 
 ```{r}
 ind_time <- read.csv("individual_time2sp.csv", header = T)
 ind_time$time <- as.numeric(ind_time$time)
 
+# First, summarize by individual and add some individual level properies
 ind <- ind_time %>% 
-  group_by(run_num, sp, id, meta, sync_fish, sync_dfly, asym_fish, asym_dfly,
-           mean_dfly, surv_dfly, surv_fish) %>%
-  summarise(max_size = max(current_size),
-            hatch_date = min(time[current_size > 0]),
-            end_date = min(time[current_size == max(current_size)]),
-            growth_time = end_date - hatch_date,
-            growth_rate = max(current_size)/growth_time)
+  group_by(run_num, sync_fish, sync_dfly, asym_fish, asym_dfly,  # trt info
+           surv_fish, surv_dfly, biom_fish, biom_dfly, biom_tot, # run-level output
+           sp, id, meta) %>%
+  summarise(max_size = max(size),                    # max/final size. size at metam or death
+            hatch_date = min(time[size > 0]),        # hatch date = when size jumps from 0
+            end_date = min(time[size == max(size)]), # end (meta or death) date is first day at max size
+            growth_time = end_date - hatch_date,     # lifespan
+            growth_rate = max(size)/growth_time)     # lifetime growth rate
 
-# Currently, number of metamorphs doesn't match raw data. think it might be a >= mismatch. check.
+# This is a good way to verify that the calculations worked
+# N_survivors from netlogo should = sum or metamorphs
 ind$meta <- as.numeric(ind$meta)
 check <- ind %>% 
   group_by(run_num, surv_dfly, surv_fish) %>%
   summarize(meta_check = sum(meta))
 ggplot(check, aes(x = surv_fish + surv_dfly, y = meta_check)) +
-  geom_jitter(alpha = 0.5) + theme_bw() +
+  geom_point(alpha = 1/5) + theme_bw() +
   geom_abline(slope = 1, intercept = 0)
 
 ```
 
-## Summarize by Treatment
+# Summarize by Run Number & Treatment
 
 Now, make a df with 1 row per unique treatment with means/se's 
 ```{r}

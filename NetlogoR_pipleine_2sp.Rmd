@@ -166,6 +166,15 @@ ind_time <- test %>%
 ind_time$size <- round(as.numeric(ind_time$size), 3)
 ind_time$time <- as.numeric(ind_time$time)
 
+# Rejoin with data associated with each run number (trt info, run-level response vars)
+ind_time <- left_join(ind_time, params, by = "run_num")
+ind_time <- ind_time %>%
+  select(run_num, sync_fish, sync_dfly, asym_fish, asym_dfly,  # trt info
+         surv_fish, surv_dfly, biom_fish, biom_dfly, biom_tot, # run-level output
+         time, sp, id, meta, size)                             # ind/time output
+
+write.csv(ind_time, "individual_time2sp.csv")
+
 ```
 
 # Summarize by Individual
@@ -183,13 +192,20 @@ ind <- ind_time %>%
             growth_time = end_date - hatch_date,     # lifespan
             growth_rate = max(size)/growth_time)     # lifetime growth rate; size/lifespan
 
+ind <- left_join(ind, params, by = "run_num")
+ind <- ind %>%
+  select(run_num, sync_fish, sync_dfly, asym_fish, asym_dfly,  # trt info
+         surv_fish, surv_dfly, biom_fish, biom_dfly, biom_tot, # run-level output
+         sp, id, meta, hatch_date,       
+         end_date, growth_time, growth_rate, max_size)
+
 # This is a good way to verify that the calculations worked
 # N_survivors from netlogo should = sum or metamorphs
 ind$meta <- as.numeric(ind$meta)
 check <- ind %>% 
   group_by(run_num, surv_dfly, surv_fish) %>%
-  summarize(meta_check = sum(meta))
-ggplot(check, aes(x = surv_fish + surv_dfly, y = meta_check)) +
+  summarize(meta_check = sum(meta)) %>% 
+  ggplot(aes(x = surv_fish + surv_dfly, y = meta_check)) +
   geom_point(alpha = 1/5) + theme_bw() +
   geom_abline(slope = 1, intercept = 0)
 
@@ -199,19 +215,7 @@ ggplot(check, aes(x = surv_fish + surv_dfly, y = meta_check)) +
 
 Now, make a df with 1 row per unique treatment with means/se's 
 ```{r}
-trt <- params %>% 
-  group_by(sync_dfly, mean_dfly, mean_dfly_num, sync_dfly_num) %>% 
-  summarise(mean_surv_dfly = mean(surv_dfly),
-            mean_surv_fish = mean(surv_fish),
-            se_surv_dfly   = sd(surv_dfly)/sqrt(length(surv_dfly)),
-            se_surv_fish   = sd(surv_fish)/sqrt(length(surv_fish)))
 
-ind$sync_dfly <- factor(ind$sync_dfly, levels = c("low", "med", "high"))
-ind$mean_dfly <- factor(ind$mean_dfly, levels = c("dfly v early", "dfly early", "same", "fish early", "fish v early"))
-trt$sync_dfly <- factor(trt$sync_dfly, levels = c("low", "med", "high"))
-trt$mean_dfly <- factor(trt$mean_dfly, levels = c("dfly v early", "dfly early", "same", "fish early", "fish v early"))
-
-################# PASTED FROM OTHER PIPELINE #################
 # first, by run number
 run <- ind %>% 
   group_by(run_num, sp) %>%
@@ -225,10 +229,13 @@ run <- run %>%
   gather(mean_mass, mean_emer, mean_grow, key = "variable", value = "abs_value") %>% 
   arrange(run_num, sp)
 
+run <- left_join(run, params, by = "run_num")
+
 # now by treatment
 trt <- run %>% 
-  group_by(sync, synchrony, asym, asymmetry, variable) %>% 
-  summarise(abs_value = mean(abs_value))
+  group_by(sync_fish, asym_fish, variable) %>% 
+  summarise(mean_value = mean(abs_value),
+            se_value   = sd(abs_value)/sqrt(6))
             #se_surv_fish   = sd(n_surv)/sqrt(length(n_surv)),
             #mean_size      = mean(mean_size),
             #mean_emer      = mean(mean_emer))
@@ -256,15 +263,6 @@ trt <- trt %>%
 Now, rejoin this individual data with the treatment information, and write a csv. This csv has one line per individual per time step. So nrow should be max(run_num) x (ndfly + nfish) x total_time
 ```{r}
 
-# Rejoin with data associated with each run number (trt info, run-level response vars)
-ind_time <- left_join(test, params, by = "run_num")
-ind_time <- ind_time %>%
-  select(run_num, sync_fish, sync_dfly, asym_fish, asym_dfly,  # trt info
-         surv_fish, surv_dfly, biom_fish, biom_dfly, biom_tot, # run-level output
-         time, sp, id, m, size) %>%                            # ind/time output
-  rename(meta = m)
-
-write.csv(ind_time, "individual_time2sp.csv")
 ind_time <- read.csv("individual_time2sp.csv", header = T)
 
 ```

@@ -361,11 +361,11 @@ ggplot(trt, aes(x = sync_fish, y = mean_exp, color = asym_fish)) +
 
 ```{r, echo = F}
 
-ggplot(subset(ind, subset = (species == "dfly")), 
-                aes(x = hatch_date, y = meta, color = sync_dfly)) +
+ggplot(subset(ind, subset = (sp == "f")), 
+                aes(x = hatch_date, y = meta, color = sync_fish)) +
   geom_point(alpha = 0.25) + theme_bw() +
   stat_smooth(method = 'glm', method.args = 'binomial', size = 2, alpha = 0.5, se = F) +
-  facet_wrap(~mean_dfly) +
+  facet_wrap(~asym_fish) +
   scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
   labs(title = "Probability of dragonfly survival by hatching date",
        x = "hatching date",
@@ -375,7 +375,7 @@ ggplot(subset(ind, subset = (species == "dfly")),
 ```{r, echo = F}
 
 ## Subset to include only individuals that metamorphed
-ind_surv <- subset(ind, subset = (meta == 1 & species == "dfly"))
+ind_surv <- subset(ind, subset = (meta == 1 & sp == "f"))
 
 ## Original hatching and metamorph
 ggplot(ind_surv, aes(hatch_date)) + theme_bw() +
@@ -383,8 +383,8 @@ ggplot(ind_surv, aes(hatch_date)) + theme_bw() +
   geom_density(size = 1, alpha = 0.25, fill = "black", color = "gray39") + 
   # blue: metamorphosis dates of survivors, scaled to day 0
   geom_density(data = ind_surv, size = 1, alpha = 0.5, color = "steelblue4", fill = "steelblue4",
-               aes(x = meta_date)) +
-  facet_grid(sync_dfly ~ mean_dfly , scales = "free_y") + 
+               aes(x = end_date)) +
+  facet_grid(sync_fish ~ asym_fish , scales = "free_y") + 
   theme(strip.text.x = element_text(size = 14),
         strip.text.y = element_text(size = 14)) +
   labs(title = "Phenology across ontogeny",

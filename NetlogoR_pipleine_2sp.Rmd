@@ -64,7 +64,7 @@ First, let's rename columns and drop some that we don't need. I keep some column
 
 For this model, I had two turtle types (fishes and dflies), and varied the timing of hatching and densities of each. Outputs I collected from Netlogo were number of survivors of each turtle type and a vector of sizes for each individual turtle.
 
-```{r}
+```{r inspect}
 # select and rename columns. new_name = old name. 
 # renaming everything I keep, so can rename with select
 test <- data %>% 
@@ -110,7 +110,7 @@ The 'sizes_x' columns have a time series of size for each individual. So in this
 
 I treat the 'meta_x' columns in this step too. They're formatted similarly, except there's no time series- just one value per individual, i.e., [0 0 1 1 0 1 0 ...]. So I only have to separate and gather once.
 
-```{r}
+```{r parse individuals}
 
 # First, separate meta and sizes columns. Now each column only has data for one individual
 test <- test %>% 
@@ -151,7 +151,7 @@ test$s <- gsub("]", "", test$s, fixed = T)
 
 Now, do the same separate and gather operations to parse the time vector and put in long format.
 
-```{r}
+```{r parse time}
 
 # Separate the size time series- each space represents a new time point
 ind_time <- test %>% 
@@ -181,7 +181,7 @@ write.csv(ind_time, "individual_time2sp.csv")
 
 Now, I want to make some summarised datasets. First with one row per individual, then with one row per run number, and finally with one row per treatment. 
 
-```{r}
+```{r individual summary}
  
 # First, summarize by individual and add some individual level properies
 ind <- ind_time %>% 
@@ -192,12 +192,14 @@ ind <- ind_time %>%
             growth_time = end_date - hatch_date,     # lifespan
             growth_rate = max(size)/growth_time)     # lifetime growth rate; size/lifespan
 
+# Rejoin with parameters and write csv
 ind <- left_join(ind, params, by = "run_num")
 ind <- ind %>%
   select(run_num, sync_fish, sync_dfly, asym_fish, asym_dfly,  # trt info
          surv_fish, surv_dfly, biom_fish, biom_dfly, biom_tot, # run-level output
          sp, id, meta, hatch_date,       
          end_date, growth_time, growth_rate, max_size)
+write.csv(ind, "ind.csv")
 
 # This is a good way to verify that the calculations worked
 # N_survivors from netlogo should = sum or metamorphs
@@ -208,62 +210,59 @@ check <- ind %>%
   ggplot(aes(x = surv_fish + surv_dfly, y = meta_check)) +
   geom_point(alpha = 1/5) + theme_bw() +
   geom_abline(slope = 1, intercept = 0)
-
+check
 ```
 
-# Summarize by Run Number & Treatment
+# Summarize by Treatment
 
-Now, make a df with 1 row per unique treatment with means/se's 
-```{r}
+Now, I want to summarize to get means and error for each run and each treatment. 
+```{r treatment summary}
 
 # first, by run number
 run <- ind %>% 
   group_by(run_num, sp) %>%
-  summarise(mean_mass = sum(meta * max_size)/sum(meta),    # only using individuals that survived
-            mean_emer = sum(meta * end_date)/sum(meta),    # meta * var is 0 for ind that don't meta
-            mean_grow = sum(meta * growth_rate)/sum(meta)) # sum(meta) is number of survivors
-
-# gather different response variables
-run <- run %>% 
-  group_by(run_num, sp) %>% 
-  gather(mean_mass, mean_emer, mean_grow, key = "variable", value = "abs_value") %>% 
+  filter(meta == 1) %>% 
+  summarise(mean_mass = mean(max_size),
+            se_mass   = sd(max_size)/sum(meta),
+            mean_emer = mean(end_date),
+            se_emer   = sd(end_date)/sum(meta),
+            mean_grow = mean(growth_rate),
+            se_grow   = sd(growth_rate)/sum(meta)) %>% 
+  gather(mean_mass, se_mass, mean_emer, se_emer, mean_grow, se_grow,
+         key = "variable", value = "abs_value") %>% 
+  separate(variable, into = c("prop","var"), by = "_") %>% 
+  spread(prop, abs_value) %>% 
   arrange(run_num, sp)
 
+# Rejoin with parameters & write csv
 run <- left_join(run, params, by = "run_num")
+write.csv(run, "run.csv")
 
-# now by treatment
+# Now by treatment
 trt <- run %>% 
-  group_by(sync_fish, asym_fish, variable) %>% 
-  summarise(mean_value = mean(abs_value),
-            se_value   = sd(abs_value)/sqrt(6))
-            #se_surv_fish   = sd(n_surv)/sqrt(length(n_surv)),
-            #mean_size      = mean(mean_size),
-            #mean_emer      = mean(mean_emer))
-            #se_size        = sd(mean_size)/sqrt(length(mean_size)))
+  group_by(sync_fish, asym_fish, var) %>% 
+  summarise(mean_exp = mean(mean),
+            se_exp   = sd(mean)/sqrt(6))
 
-baseline_means <- trt %>% 
-  subset(synchrony == 'med' & asymmetry == 'none') 
-baseline_means <- baseline_means[,5:6] 
-colnames(baseline_means)[2] <- "baseline_value"
-
-# now, add in baseline averages (conditions at med sync and symmetic comp) to run data
-run <- left_join(run, baseline_means, by = "variable")  
-trt <- left_join(trt, baseline_means, by = "variable")
-   
-run <- run %>% 
-  mutate(baseline_adj = (abs_value - baseline_value)/baseline_value)
-
+# Rejoin with parameters & write csv
+trt <- left_join(trt, params, by = c("sync_fish", "asym_fish"))
 trt <- trt %>% 
-  mutate(baseline_adj = (abs_value - baseline_value)/baseline_value)
+  select(-run_num, -c(13:18)) %>% 
+  unique(.)
+write.csv(trt, "trt.csv")
 
 ```
 
-# Compile & Tidy
+# Load Final Data
 
-Now, rejoin this individual data with the treatment information, and write a csv. This csv has one line per individual per time step. So nrow should be max(run_num) x (ndfly + nfish) x total_time
-```{r}
+When revisiting the same behavior space multiple times, skip the data processing and just load the final tidy data.
+
+```{r load data}
 
 ind_time <- read.csv("individual_time2sp.csv", header = T)
+ind <- read.csv("ind.csv", header = T)
+run <- read.csv("run.csv", header = T)
+trt <- read.csv("trt.csv", header = T)
 
 ```
 
@@ -273,9 +272,9 @@ Here are some diagnostic plots to get a quick look at the data. These will give 
 
 
 ```{r, echo = F}
-ggplot(ind, aes(x = hatch_date, color = species, fill = species)) + theme_bw() +
+ggplot(ind, aes(x = hatch_date, color = sp, fill = sp)) + theme_bw() +
   geom_density(alpha = 0.5, size = 1.2) +
-  facet_grid(sync_dfly ~ mean_dfly) +
+  facet_grid(sync_fish ~ asym_fish) +
   scale_color_manual(values = c("#F28335", "#489C92")) +
   scale_fill_manual(values = c("#F28335", "#489C92")) +
   labs(title = "Hatching timing treatments",

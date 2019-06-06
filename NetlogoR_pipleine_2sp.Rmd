@@ -264,6 +264,19 @@ ind <- read.csv("ind.csv", header = T)
 run <- read.csv("run.csv", header = T)
 trt <- read.csv("trt.csv", header = T)
 
+# get factors in line
+ind_time$asym_fish <- factor(ind_time$asym_fish, levels = c("none", "mild", "strong"))
+ind_time$sync_fish <- factor(ind_time$sync_fish, levels = c("low", "med", "high"))
+
+ind$asym_fish <- factor(ind$asym_fish, levels = c("none", "mild", "strong"))
+ind$sync_fish <- factor(ind$sync_fish, levels = c("low", "med", "high"))
+
+run$asym_fish <- factor(run$asym_fish, levels = c("none", "mild", "strong"))
+run$sync_fish <- factor(run$sync_fish, levels = c("low", "med", "high"))
+
+trt$asym_fish <- factor(trt$asym_fish, levels = c("none", "mild", "strong"))
+trt$sync_fish <- factor(trt$sync_fish, levels = c("low", "med", "high"))
+
 ```
 
 # Plots
@@ -284,10 +297,10 @@ ggplot(ind, aes(x = hatch_date, color = sp, fill = sp)) + theme_bw() +
 
 
 ```{r, echo = F}
-ggplot(ind, aes(x = hatch_date, y = max_size, color = species)) +
+ggplot(ind, aes(x = hatch_date, y = max_size, color = sp)) +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
   stat_smooth() +
-  facet_grid(sync_dfly ~ mean_dfly, scales = 'free') + theme_bw() +
+  facet_grid(sync_fish ~ asym_fish, scales = 'free') + theme_bw() +
   scale_color_manual(values = c("#F28335", "#489C92")) +
   labs(title = "Final size by hatching date",
        x = "hatching date",
@@ -298,10 +311,10 @@ ggplot(ind, aes(x = hatch_date, y = max_size, color = species)) +
 ```{r, echo = F}
 
 # even if they beat resource by 6 days
-ggplot(ind, aes(x = hatch_date, y = growth_time, color = species)) + theme_bw() +
+ggplot(ind, aes(x = hatch_date, y = growth_time, color = sp)) + theme_bw() +
   geom_point(alpha = 0.65, size = 2) +
   stat_smooth(method = "lm", formula = y ~ poly(x, 2), se = T, size = 2) +
-  facet_grid(sync_dfly ~ mean_dfly, scales = "free") + 
+  facet_grid(sync_fish ~ asym_fish, scales = "free") + 
   theme(#legend.position = "none",
         strip.text.x = element_text(size = 14),
         strip.text.y = element_text(size = 14)) +
@@ -314,10 +327,10 @@ ggplot(ind, aes(x = hatch_date, y = growth_time, color = species)) + theme_bw() 
 
 ```{r, echo = F}
 # Looks like in several cases, there are some individuals hatching on the last day, way later than the others. Check.
-ggplot(ind, aes(x = hatch_date, y = meta, color = species)) + theme_bw() +
+ggplot(ind, aes(x = hatch_date, y = meta, color = sp)) + theme_bw() +
   geom_point(alpha = 0.25) + 
   stat_smooth(method = 'glm', method.args = 'binomial', se = F) +
-  facet_grid(sync_dfly ~ mean_dfly, scales = "free") + 
+  facet_grid(sync_fish ~ asym_fish, scales = "free") + 
   xlab("hatch date") + ylab("probability of survival") +
   theme(strip.text.x = element_text(size = 14),
         strip.text.y = element_text(size = 14)) +
@@ -328,10 +341,13 @@ ggplot(ind, aes(x = hatch_date, y = meta, color = species)) + theme_bw() +
 ```
 
 ```{r, echo = F}
-ggplot(params, aes(x = mean_dfly_num, y = surv_dfly/50, color = sync_dfly)) +
-  geom_point(size = 2, alpha = 0.5) + 
-  stat_smooth(size = 2, method = "lm", se = T, 
-              aes(x = mean_dfly_num, fill = sync_dfly)) +
+ggplot(trt, aes(x = sync_fish, y = mean_exp, color = asym_fish)) +
+  geom_point(size = 2) + 
+  geom_errorbar(aes(max = mean_exp + se_exp, min = mean_exp - se_exp), width = 0) +
+  geom_line() +
+  #stat_smooth(size = 2, method = "lm", se = T, 
+  #            aes(x = sync_fish, fill = asym_fish)) +
+  facet_wrap(~var, scales = "free") +
   xlab("mean arrival") + ylab("number survivors")  +
   scale_fill_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
   scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +

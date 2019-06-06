@@ -255,16 +255,17 @@ write.csv(trt, "trt.csv")
 
 # Load Final Data
 
-When revisiting the same behavior space multiple times, skip the data processing and just load the final tidy data.
+When revisiting the same behavior space multiple times, skip the data processing and just load the final tidy data. Every time I do a new behavior space in NetLogo, I'll run the processing steps below and these data frames will be updated.
 
 ```{r load data}
 
+# Processing to creat these dfs is done below, but can load these if working w same BS
 ind_time <- read.csv("individual_time2sp.csv", header = T)
 ind <- read.csv("ind.csv", header = T)
 run <- read.csv("run.csv", header = T)
 trt <- read.csv("trt.csv", header = T)
 
-# get factors in line
+# Get factors in line
 ind_time$asym_fish <- factor(ind_time$asym_fish, levels = c("none", "mild", "strong"))
 ind_time$sync_fish <- factor(ind_time$sync_fish, levels = c("low", "med", "high"))
 

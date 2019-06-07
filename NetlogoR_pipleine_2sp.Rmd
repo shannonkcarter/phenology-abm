@@ -33,16 +33,42 @@ library(extrafont)
 
 
 ## Load universal plotting elements
-mytheme <- theme(panel.background = element_blank(),
-                 panel.grid.minor = element_blank(), 
-                 panel.grid.major = element_blank(),
-                 axis.text  = element_text(size = rel(1.3), colour = "black"),
-                 axis.title = element_text(size = rel(2.0)),
-                 axis.line  = element_line(colour = "black"))
+mytheme <- theme_light(base_size = 15, base_family = "Poppins") +
+  theme(legend.text = element_text(size = 10),
+        legend.title = element_text(size = 11),
+        text = element_text(size = 14, family = "Rockwell"),    
+        axis.title = element_text(size = 12),
+        panel.grid = element_blank())
+
+```
+# Load Final Data
+
+When revisiting the same behavior space multiple times, skip the data processing and just load the final tidy data. Every time I do a new behavior space in NetLogo, I'll run the processing steps below and these data frames will be updated.
+
+```{r load data}
+
+# Processing to creat these dfs is done below, but can load these if working w same BS
+ind_time <- read.csv("individual_time2sp.csv", header = T)
+ind <- read.csv("ind.csv", header = T)
+run <- read.csv("run.csv", header = T)
+trt <- read.csv("trt.csv", header = T)
+
+# Get factors in line
+ind_time$asym_fish <- factor(ind_time$asym_fish, levels = c("none", "mild", "strong"))
+ind_time$sync_fish <- factor(ind_time$sync_fish, levels = c("low", "med", "high"))
+
+ind$asym_fish <- factor(ind$asym_fish, levels = c("none", "mild", "strong"))
+ind$sync_fish <- factor(ind$sync_fish, levels = c("low", "med", "high"))
+
+run$asym_fish <- factor(run$asym_fish, levels = c("none", "mild", "strong"))
+run$sync_fish <- factor(run$sync_fish, levels = c("low", "med", "high"))
+
+trt$asym_fish <- factor(trt$asym_fish, levels = c("none", "mild", "strong"))
+trt$sync_fish <- factor(trt$sync_fish, levels = c("low", "med", "high"))
 
 ```
 
-# Import Data 
+# Import Raw Data 
 
 First, be sure you export behavior space data from Netlogo in "table" format. When the raw data is exported as a spreadsheet, it comes in a really gnarly format. I haven't figured out a way for R to read it because it's not even close to rectangular, big header, mix of space delimited and bracket delimited, etc.. It's a mess. The table is still a bit messy, but much easier to wrangle.
 
@@ -221,62 +247,51 @@ Now, I want to summarize to get means and error for each run and each treatment.
 # first, by run number
 run <- ind %>% 
   group_by(run_num, sp) %>%
-  filter(meta == 1) %>% 
-  summarise(mean_mass = mean(max_size),
-            se_mass   = sd(max_size)/sum(meta),
-            mean_emer = mean(end_date),
-            se_emer   = sd(end_date)/sum(meta),
-            mean_grow = mean(growth_rate),
-            se_grow   = sd(growth_rate)/sum(meta)) %>% 
-  gather(mean_mass, se_mass, mean_emer, se_emer, mean_grow, se_grow,
+  filter(meta == 1) %>%                              # response variables only consider survivors
+  summarise(mean_biom = sum(max_size),               # check this and survival against raw output
+            se_biom   = "NA",                        # 1 biom value per run, so no error
+            mean_surv = sum(meta),                   # check this an biom against raw output
+            se_surv   = "NA",                        # 1 surv value per run; just a placeholder
+            mean_mass = mean(max_size),              # should be biom/surv
+            se_mass   = sd(max_size)/sqrt(sum(meta)),# error
+            mean_emer = mean(end_date),              # emer is emergence date-- phenology of emergence
+            se_emer   = sd(end_date)/sqrt(sum(meta)),# error
+            mean_grow = mean(growth_rate),           # grow is individual time to development. size/time
+            se_grow   = sd(growth_rate)/sqrt(sum(meta))) %>% 
+  gather(mean_mass, se_mass, mean_emer, se_emer,     # gather all response variables
+         mean_grow, se_grow, 
+         mean_biom, se_biom, mean_surv, se_surv,
          key = "variable", value = "abs_value") %>% 
-  separate(variable, into = c("prop","var"), by = "_") %>% 
-  spread(prop, abs_value) %>% 
+  separate(variable, into = c("prop", "var"), by = "_") %>% # separate the name-- mean/se and variable
+  spread(prop, abs_value) %>%                               # spread so mean and se are separate columns
   arrange(run_num, sp)
 
 # Rejoin with parameters & write csv
-run <- left_join(run, params, by = "run_num")
+run <- left_join(run, params, by = c("run_num"))
+run$mean <- round(as.numeric(run$mean), 2)
+run$se <- round(as.numeric(run$se), 2)
+run <- run %>% select(-c(surv_fish, surv_dfly, biom_fish, biom_dfly)) # these are redundant w calcs above
 write.csv(run, "run.csv")
 
 # Now by treatment
 trt <- run %>% 
-  group_by(sync_fish, asym_fish, var) %>% 
-  summarise(mean_exp = mean(mean),
-            se_exp   = sd(mean)/sqrt(6))
+  group_by(sync_fish, asym_fish, sp, var) %>% 
+  summarise(mean_exp = mean(mean),            
+            se_exp   = sd(mean)/sqrt(6))      # 6 replicates
 
 # Rejoin with parameters & write csv
 trt <- left_join(trt, params, by = c("sync_fish", "asym_fish"))
 trt <- trt %>% 
-  select(-run_num, -c(13:18)) %>% 
-  unique(.)
+  select(-run_num, -c(14:19)) %>% 
+  unique(.) %>% 
+  rename(mean = mean_exp, se = se_exp) %>%
+  select(sync_fish, sync_dfly, asym_fish, asym_dfly, # put them in an intuitive order
+         mean_fish, mean_dfly, n_fish, n_dfly, 
+         sp, var, mean, se)
+
+trt$mean <- round(as.numeric(trt$mean), 2)
+trt$se <- round(as.numeric(trt$se), 2)
 write.csv(trt, "trt.csv")
-
-```
-
-# Load Final Data
-
-When revisiting the same behavior space multiple times, skip the data processing and just load the final tidy data. Every time I do a new behavior space in NetLogo, I'll run the processing steps below and these data frames will be updated.
-
-```{r load data}
-
-# Processing to creat these dfs is done below, but can load these if working w same BS
-ind_time <- read.csv("individual_time2sp.csv", header = T)
-ind <- read.csv("ind.csv", header = T)
-run <- read.csv("run.csv", header = T)
-trt <- read.csv("trt.csv", header = T)
-
-# Get factors in line
-ind_time$asym_fish <- factor(ind_time$asym_fish, levels = c("none", "mild", "strong"))
-ind_time$sync_fish <- factor(ind_time$sync_fish, levels = c("low", "med", "high"))
-
-ind$asym_fish <- factor(ind$asym_fish, levels = c("none", "mild", "strong"))
-ind$sync_fish <- factor(ind$sync_fish, levels = c("low", "med", "high"))
-
-run$asym_fish <- factor(run$asym_fish, levels = c("none", "mild", "strong"))
-run$sync_fish <- factor(run$sync_fish, levels = c("low", "med", "high"))
-
-trt$asym_fish <- factor(trt$asym_fish, levels = c("none", "mild", "strong"))
-trt$sync_fish <- factor(trt$sync_fish, levels = c("low", "med", "high"))
 
 ```
 
@@ -286,22 +301,23 @@ Here are some diagnostic plots to get a quick look at the data. These will give 
 
 
 ```{r, echo = F}
-ggplot(ind, aes(x = hatch_date, color = sp, fill = sp)) + theme_bw() +
+ggplot(ind, aes(x = hatch_date, color = sp, fill = sp)) + mytheme +
   geom_density(alpha = 0.5, size = 1.2) +
   facet_grid(sync_fish ~ asym_fish) +
   scale_color_manual(values = c("#F28335", "#489C92")) +
   scale_fill_manual(values = c("#F28335", "#489C92")) +
   labs(title = "Hatching timing treatments",
        x = "hatching date",
-       y = "density of individuals")
+       y = "density of individuals") 
 ```
 
 
 ```{r, echo = F}
-ggplot(ind, aes(x = hatch_date, y = max_size, color = sp)) +
+#ggplot(subset(ind, subset = (meta ==1)),
+ggplot(ind, aes(x = hatch_date, y = max_size, color = sp)) + mytheme +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
   stat_smooth() +
-  facet_grid(sync_fish ~ asym_fish, scales = 'free') + theme_bw() +
+  facet_grid(sync_fish ~ asym_fish, scales = 'free') + 
   scale_color_manual(values = c("#F28335", "#489C92")) +
   labs(title = "Final size by hatching date",
        x = "hatching date",
@@ -312,29 +328,25 @@ ggplot(ind, aes(x = hatch_date, y = max_size, color = sp)) +
 ```{r, echo = F}
 
 # even if they beat resource by 6 days
-ggplot(ind, aes(x = hatch_date, y = growth_time, color = sp)) + theme_bw() +
-  geom_point(alpha = 0.65, size = 2) +
-  stat_smooth(method = "lm", formula = y ~ poly(x, 2), se = T, size = 2) +
+ggplot(subset(ind, subset = (meta == 1)), 
+       aes(x = hatch_date, y = growth_time, color = sp)) + mytheme +
+  geom_point(alpha = 0.2, size = 1) +
+  stat_smooth(method = "lm", formula = y ~ poly(x, 2), se = T, size = 1) +
   facet_grid(sync_fish ~ asym_fish, scales = "free") + 
-  theme(#legend.position = "none",
-        strip.text.x = element_text(size = 14),
-        strip.text.y = element_text(size = 14)) +
   scale_color_manual(values = c("#F28335", "#489C92")) + 
   labs(title = "Growth rate by hatching date",
        x = "hatching date",
-       y = "density of individuals")
+       y = "days to metamorphosis")
 
 ```
 
 ```{r, echo = F}
 # Looks like in several cases, there are some individuals hatching on the last day, way later than the others. Check.
-ggplot(ind, aes(x = hatch_date, y = meta, color = sp)) + theme_bw() +
+ggplot(ind, aes(x = hatch_date, y = meta, color = sp)) + mytheme +
   geom_point(alpha = 0.25) + 
-  stat_smooth(method = 'glm', method.args = 'binomial', se = F) +
+  stat_smooth(method = 'glm', method.args = 'binomial', se = F, size = 1.5) +
   facet_grid(sync_fish ~ asym_fish, scales = "free") + 
   xlab("hatch date") + ylab("probability of survival") +
-  theme(strip.text.x = element_text(size = 14),
-        strip.text.y = element_text(size = 14)) +
   scale_color_manual(values = c("#F28335", "#489C92")) +
   labs(title = "Survival probability by hatching date",
        x = "hatching date",
@@ -342,31 +354,30 @@ ggplot(ind, aes(x = hatch_date, y = meta, color = sp)) + theme_bw() +
 ```
 
 ```{r, echo = F}
-ggplot(trt, aes(x = sync_fish, y = mean_exp, color = asym_fish)) +
+ggplot(subset(trt, subset = (sp == "f")),
+       aes(x = sync_fish, y = mean_exp, color = asym_fish)) + mytheme +
   geom_point(size = 2) + 
   geom_errorbar(aes(max = mean_exp + se_exp, min = mean_exp - se_exp), width = 0) +
   geom_line() +
   #stat_smooth(size = 2, method = "lm", se = T, 
   #            aes(x = sync_fish, fill = asym_fish)) +
-  facet_wrap(~var, scales = "free") +
+  facet_wrap(~ var, scales = "free") +
   xlab("mean arrival") + ylab("number survivors")  +
   scale_fill_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
   scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
-  theme_bw() +
-    labs(title = "Survival of dragonflies in different phenology treatments",
-       x = "mean arrival (earliest to latest)",
-       y = "proportion survival")
-
+  labs(title = "Responses of vital rates to phenology manipulations",
+       x = "phenological synchrony of fish",
+       y = "mean +/- se")
 
 ```
 
 ```{r, echo = F}
 
 ggplot(subset(ind, subset = (sp == "f")), 
-                aes(x = hatch_date, y = meta, color = sync_fish)) +
+                aes(x = hatch_date, y = meta, color = asym_fish)) +
   geom_point(alpha = 0.25) + theme_bw() +
   stat_smooth(method = 'glm', method.args = 'binomial', size = 2, alpha = 0.5, se = F) +
-  facet_wrap(~asym_fish) +
+  facet_wrap(~ sync_fish) +
   scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
   labs(title = "Probability of dragonfly survival by hatching date",
        x = "hatching date",

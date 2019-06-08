@@ -31,7 +31,6 @@ library(ggsci)
 library(extrafont)
 #extrafont::loadfonts(device = "win")
 
-
 ## Load universal plotting elements
 mytheme <- theme_light(base_size = 15, base_family = "Poppins") +
   theme(legend.text = element_text(size = 10),

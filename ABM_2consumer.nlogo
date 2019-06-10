@@ -399,7 +399,7 @@ n-fishes
 n-fishes
 0
 200
-40.0
+50.0
 1
 1
 NIL
@@ -414,7 +414,7 @@ var-hatch-fishes
 var-hatch-fishes
 0
 20
-3.0
+25.0
 1
 1
 NIL
@@ -534,7 +534,7 @@ mean-hatch-fishes
 mean-hatch-fishes
 0
 100
-15.0
+60.0
 1
 1
 NIL
@@ -549,7 +549,7 @@ asym-slope-fishes
 asym-slope-fishes
 0
 1
-1.0
+0.5
 0.1
 1
 NIL
@@ -583,7 +583,7 @@ n-dflies
 n-dflies
 0
 200
-40.0
+50.0
 1
 1
 NIL
@@ -598,7 +598,7 @@ mean-hatch-dflies
 mean-hatch-dflies
 0
 100
-32.0
+40.0
 1
 1
 NIL
@@ -613,7 +613,7 @@ var-hatch-dflies
 var-hatch-dflies
 0
 20
-17.0
+5.0
 1
 1
 NIL
@@ -628,7 +628,7 @@ asym-slope-dflies
 asym-slope-dflies
 0
 1
-1.0
+0.5
 0.1
 1
 NIL
@@ -1680,27 +1680,29 @@ NetLogo 6.0
       <value value="false"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="n-dflies">
-      <value value="40"/>
+      <value value="50"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="n-fishes">
-      <value value="40"/>
+      <value value="50"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="sprout-tick">
       <value value="0"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="var-hatch-fishes">
       <value value="5"/>
-      <value value="10"/>
       <value value="15"/>
+      <value value="25"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="var-hatch-dflies">
-      <value value="10"/>
+      <value value="5"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="mean-hatch-fishes">
-      <value value="15"/>
+      <value value="20"/>
+      <value value="40"/>
+      <value value="60"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="mean-hatch-dflies">
-      <value value="30"/>
+      <value value="40"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="growth-per-patch">
       <value value="0.05"/>
@@ -1712,12 +1714,10 @@ NetLogo 6.0
       <value value="0"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="asym-slope-dflies">
-      <value value="0"/>
+      <value value="0.5"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="asym-slope-fishes">
-      <value value="0"/>
       <value value="0.5"/>
-      <value value="1"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>

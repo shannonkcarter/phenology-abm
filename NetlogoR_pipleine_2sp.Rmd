@@ -53,16 +53,20 @@ run <- read.csv("run.csv", header = T)
 trt <- read.csv("trt.csv", header = T)
 
 # Get factors in line
-ind_time$asym_fish <- factor(ind_time$asym_fish, levels = c("none", "mild", "strong"))
+#ind_time$asym_fish <- factor(ind_time$asym_fish, levels = c("none", "mild", "strong"))
+ind_time$mean_fish <- factor(ind_time$mean_fish, levels = c("early", "same", "late"))
 ind_time$sync_fish <- factor(ind_time$sync_fish, levels = c("low", "med", "high"))
 
-ind$asym_fish <- factor(ind$asym_fish, levels = c("none", "mild", "strong"))
+#ind$asym_fish <- factor(ind$asym_fish, levels = c("none", "mild", "strong"))
+ind$mean_fish <- factor(ind$mean_fish, levels = c("early", "same", "late"))
 ind$sync_fish <- factor(ind$sync_fish, levels = c("low", "med", "high"))
 
-run$asym_fish <- factor(run$asym_fish, levels = c("none", "mild", "strong"))
+#run$asym_fish <- factor(run$asym_fish, levels = c("none", "mild", "strong"))
+run$mean_fish <- factor(run$mean_fish, levels = c("early", "same", "late"))
 run$sync_fish <- factor(run$sync_fish, levels = c("low", "med", "high"))
 
-trt$asym_fish <- factor(trt$asym_fish, levels = c("none", "mild", "strong"))
+#trt$asym_fish <- factor(trt$asym_fish, levels = c("none", "mild", "strong"))
+trt$mean_fish <- factor(trt$mean_fish, levels = c("early", "same", "late"))
 trt$sync_fish <- factor(trt$sync_fish, levels = c("low", "med", "high"))
 
 ```
@@ -75,7 +79,7 @@ First, load the data. I've done a ton of different experiments in NetLogo, and n
 
 ```{r load table data}
 
-data <- read.table("ABM_2Consumer_2.csv",
+data <- read.table("ABM_2Consumer_3.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
@@ -118,14 +122,14 @@ test <- data %>%
 # Here, add qualitative levels for the treatment parameters. This will be different for each BS
 params <- test[,1:15]
 params$sync_fish <- as.factor(params$sync_fish)
-params$asym_fish <- as.factor(params$asym_fish)
+params$mean_fish <- as.factor(params$mean_fish)
 levels(params$sync_fish) <- c("high", "med", "low")
-levels(params$asym_fish) <- c("none", "mild", "strong")
+levels(params$mean_fish) <- c("early", "same", "late")
 
 params$sync_dfly <- as.factor(params$sync_dfly)
-params$asym_dfly <- as.factor(params$asym_dfly)
+params$mean_dfly <- as.factor(params$mean_dfly)
 levels(params$sync_dfly) <- c("high", "med", "low")
-levels(params$asym_dfly) <- c("none", "mild", "strong")
+levels(params$mean_dfly) <- c("early", "same", "late")
 
 ```
 
@@ -140,22 +144,22 @@ I treat the 'meta_x' columns in this step too. They're formatted similarly, exce
 # First, separate meta and sizes columns. Now each column only has data for one individual
 test <- test %>% 
   separate(meta_fish,                               # separate meta_fish 
-          into = paste("m.f_", c(1:40), sep = ""),  # labels for new vars: mf_1, mf_2... m = meta, f = fish
+          into = paste("m.f_", c(1:50), sep = ""),  # labels for new vars: mf_1, mf_2... m = meta, f = fish
           sep = " ") %>%                            # every space marks a new ind
   separate(meta_dfly,
-          into = paste("m.d_", c(1:40), sep = ""),
+          into = paste("m.d_", c(1:50), sep = ""),
           sep = " ") %>% 
   separate(sizes_fish,                              # separate sizes_fish
-           into = paste("s.f_", c(1:40), sep = ""), # labels for new vars: sf_1, sf_2... s = size, f = fish
+           into = paste("s.f_", c(1:50), sep = ""), # labels for new vars: sf_1, sf_2... s = size, f = fish
            sep = "]") %>%                           # every ] marks a new ind
   separate(sizes_dfly,                              
-           into = paste("s.d_", c(1:40), sep = ""),  
+           into = paste("s.d_", c(1:50), sep = ""),  
            sep = "]")                               
 
 # This megapipe spreads and gathers across meta and size for both species
 # It's hard to follow all together- was built piece by piece to troubleshoot, and put together at the end
 test <- test %>%
-  select(run_num, m.f_1:m.f_40, m.d_1:m.d_40, s.f_1:s.f_40, s.d_1:s.d_40) %>% # keep run_num as unique id
+  select(run_num, m.f_1:m.f_50, m.d_1:m.d_50, s.f_1:s.f_50, s.d_1:s.d_50) %>% # keep run_num as unique id
   gather(key, value, -run_num) %>%                                            # gather all but run_num
   separate(key, into = c("var_sp", "id"), sep = "_") %>%  # 'var_sp' indicates 'variable' or 'species'
   spread(var_sp, value) %>%                               # spread by 'var_sp' placeholder var
@@ -194,11 +198,11 @@ ind_time$time <- as.numeric(ind_time$time)
 # Rejoin with data associated with each run number (trt info, run-level response vars)
 ind_time <- left_join(ind_time, params, by = "run_num")
 ind_time <- ind_time %>%
-  select(run_num, sync_fish, sync_dfly, asym_fish, asym_dfly,  # trt info
+  select(run_num, sync_fish, sync_dfly, mean_fish, mean_dfly,  # trt info
          surv_fish, surv_dfly, biom_fish, biom_dfly, biom_tot, # run-level output
          time, sp, id, meta, size)                             # ind/time output
 
-#write.csv(ind_time, "individual_time2sp.csv")
+write.csv(ind_time, "individual_time2sp.csv")
 
 ```
 
@@ -220,11 +224,11 @@ ind <- ind_time %>%
 # Rejoin with parameters and write csv
 ind <- left_join(ind, params, by = "run_num")
 ind <- ind %>%
-  select(run_num, sync_fish, sync_dfly, asym_fish, asym_dfly,  # trt info
+  select(run_num, sync_fish, sync_dfly, mean_fish, mean_dfly,  # trt info
          surv_fish, surv_dfly, biom_fish, biom_dfly, biom_tot, # run-level output
          sp, id, meta, hatch_date,       
          end_date, growth_time, growth_rate, max_size)
-#write.csv(ind, "ind.csv")
+write.csv(ind, "ind.csv")
 
 # This is a good way to verify that the calculations worked
 # N_survivors from netlogo should = sum or metamorphs
@@ -270,27 +274,27 @@ run <- left_join(run, params, by = c("run_num"))
 run$mean <- round(as.numeric(run$mean), 2)
 run$se <- round(as.numeric(run$se), 2)
 run <- run %>% select(-c(surv_fish, surv_dfly, biom_fish, biom_dfly)) # these are redundant w calcs above
-#write.csv(run, "run.csv")
+write.csv(run, "run.csv")
 
 # Now by treatment
 trt <- run %>% 
-  group_by(sync_fish, asym_fish, sp, var) %>% 
+  group_by(sync_fish, mean_fish, sp, var) %>% 
   summarise(mean_exp = mean(mean),            
             se_exp   = sd(mean)/sqrt(6))      # 6 replicates
 
 # Rejoin with parameters & write csv
-trt <- left_join(trt, params, by = c("sync_fish", "asym_fish"))
+trt <- left_join(trt, params, by = c("sync_fish", "mean_fish"))
 trt <- trt %>% 
   select(-run_num, -c(14:19)) %>% 
   unique(.) %>% 
   rename(mean = mean_exp, se = se_exp) %>%
-  select(sync_fish, sync_dfly, asym_fish, asym_dfly, # put them in an intuitive order
-         mean_fish, mean_dfly, n_fish, n_dfly, 
+  select(sync_fish, sync_dfly, mean_fish, mean_dfly, # put them in an intuitive order
+         asym_fish, asym_dfly, n_fish, n_dfly, 
          sp, var, mean, se)
 
 trt$mean <- round(as.numeric(trt$mean), 2)
 trt$se <- round(as.numeric(trt$se), 2)
-#write.csv(trt, "trt.csv")
+write.csv(trt, "trt.csv")
 
 ```
 
@@ -302,7 +306,7 @@ Here are some diagnostic plots to get a quick look at the data. These will give 
 ```{r, echo = F}
 ggplot(ind, aes(x = hatch_date, color = sp, fill = sp)) + mytheme +
   geom_density(alpha = 0.5, size = 1.2) +
-  facet_grid(sync_fish ~ asym_fish) +
+  facet_grid(sync_fish ~ mean_fish) +
   scale_color_manual(values = c("#F28335", "#489C92")) +
   scale_fill_manual(values = c("#F28335", "#489C92")) +
   labs(title = "Hatching timing treatments",
@@ -316,7 +320,7 @@ ggplot(ind, aes(x = hatch_date, color = sp, fill = sp)) + mytheme +
 ggplot(ind, aes(x = hatch_date, y = max_size, color = sp)) + mytheme +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
   stat_smooth() +
-  facet_grid(sync_fish ~ asym_fish, scales = 'free') + 
+  facet_grid(sync_fish ~ mean_fish, scales = 'free') + 
   scale_color_manual(values = c("#F28335", "#489C92")) +
   labs(title = "Final size by hatching date",
        x = "hatching date",
@@ -326,12 +330,11 @@ ggplot(ind, aes(x = hatch_date, y = max_size, color = sp)) + mytheme +
 
 ```{r, echo = F}
 
-# even if they beat resource by 6 days
 ggplot(subset(ind, subset = (meta == 1)), 
        aes(x = hatch_date, y = growth_time, color = sp)) + mytheme +
   geom_point(alpha = 0.2, size = 1) +
   stat_smooth(method = "lm", formula = y ~ poly(x, 2), se = T, size = 1) +
-  facet_grid(sync_fish ~ asym_fish, scales = "free") + 
+  facet_grid(sync_fish ~ mean_fish, scales = "free") + 
   scale_color_manual(values = c("#F28335", "#489C92")) + 
   labs(title = "Growth rate by hatching date",
        x = "hatching date",
@@ -344,7 +347,7 @@ ggplot(subset(ind, subset = (meta == 1)),
 ggplot(ind, aes(x = hatch_date, y = meta, color = sp)) + mytheme +
   geom_point(alpha = 0.25) + 
   stat_smooth(method = 'glm', method.args = 'binomial', se = F, size = 1.5) +
-  facet_grid(sync_fish ~ asym_fish, scales = "free") + 
+  facet_grid(sync_fish ~ mean_fish, scales = "free") + 
   xlab("hatch date") + ylab("probability of survival") +
   scale_color_manual(values = c("#F28335", "#489C92")) +
   labs(title = "Survival probability by hatching date",
@@ -354,18 +357,16 @@ ggplot(ind, aes(x = hatch_date, y = meta, color = sp)) + mytheme +
 
 ```{r, echo = F}
 ggplot(subset(trt, subset = (sp == "f")),
-       aes(x = sync_fish, y = mean, color = asym_fish, group = asym_fish)) + mytheme +
+       aes(x = mean_fish, y = mean, color = sync_fish, group = sync_fish)) + mytheme +
   geom_point(size = 2) + 
   geom_errorbar(aes(max = mean + se, min = mean - se), width = 0) +
   geom_line() +
-  #stat_smooth(size = 2, method = "lm", se = T, 
-  #            aes(x = sync_fish, fill = asym_fish)) +
   facet_wrap(~ var, scales = "free") +
   xlab("mean arrival") + ylab("number survivors")  +
   scale_fill_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
   scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
   labs(title = "Responses of vital rates to phenology manipulations",
-       x = "phenological synchrony of fish",
+       x = "mean hatching time (relative to competitor)",
        y = "mean +/- se")
 
 ```
@@ -373,10 +374,10 @@ ggplot(subset(trt, subset = (sp == "f")),
 ```{r, echo = F}
 
 ggplot(subset(ind, subset = (sp == "f")), 
-                aes(x = hatch_date, y = meta, color = asym_fish)) + mytheme +
+                aes(x = hatch_date, y = meta, color = sync_fish)) + mytheme +
   geom_point(alpha = 0.25) + 
   stat_smooth(method = 'glm', method.args = 'binomial', size = 1.5, alpha = 0.5, se = F) +
-  facet_wrap(~ sync_fish) +
+  facet_wrap(~ mean_fish) +
   scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
   labs(title = "Probability of fish survival by hatching date",
        x = "hatching date",
@@ -395,7 +396,7 @@ ggplot(ind_surv, aes(hatch_date)) + mytheme +
   # blue: metamorphosis dates of survivors, scaled to day 0
   geom_density(data = ind_surv, size = 1, alpha = 0.5, color = "steelblue4", fill = "steelblue4",
                aes(x = end_date)) +
-  facet_grid(sync_fish ~ asym_fish , scales = "free_y") + 
+  facet_grid(sync_fish ~ mean_fish , scales = "free_y") + 
   theme(strip.text.x = element_text(size = 14),
         strip.text.y = element_text(size = 14)) +
   labs(title = "Phenology across ontogeny",

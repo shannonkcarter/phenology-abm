@@ -33,12 +33,12 @@ library(extrafont)
 
 
 ## Load universal plotting elements
-mytheme <- theme(panel.background = element_blank(),
-                 panel.grid.minor = element_blank(), 
-                 panel.grid.major = element_blank(),
-                 axis.text  = element_text(size = rel(1.3), colour = "black"),
-                 axis.title = element_text(size = rel(2.0)),
-                 axis.line  = element_line(colour = "black"))
+mytheme <- theme_light(base_size = 15, base_family = "Poppins") +
+  theme(legend.text = element_text(size = 10),
+        legend.title = element_text(size = 11),
+        text = element_text(size = 14, family = "Rockwell"),    
+        axis.title = element_text(size = 12),
+        panel.grid = element_blank())
 
 ```
 

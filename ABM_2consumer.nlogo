@@ -140,7 +140,7 @@ ask dflies
     set n-meta-fishes count fishes with [color = yellow]             ; at this point, set the number of metamorphs to the number of yellow fish
     set n-dead-fishes count fishes with [color = red]                ; at this point, set the number of dead fish to the number of red fish
     set biom-fishes sum [size] of fishes with [color = yellow]       ; biomass = biomass export-- only counting those that survive and advance to next stage
-    ;set mean-size-fishes mean [size] of fishes with [color = yellow] ; throws an error in interface, but works in behaviorspace. I thought these calculated only at the end...
+    set mean-size-fishes mean [size] of fishes with [color = yellow] ; throws an error in interface, but works in behaviorspace. I thought these calculated only at the end...
 
     ; dfly related
     set n-meta-dflies count dflies with [color = yellow]             ; at this point, set the number of metamorphs to the number of yellow fish
@@ -275,7 +275,7 @@ end
 to metamorph-fish
   ; each time step, they think about metamorphosing, but only do so if they meet this criteria:
   ; mortality*minimumsize / (mortality - rgr)
-  if breed = fishes and size > (1.02 / (0.170000001 - 10 * recent-growth-fish)) and size > 6  ; have the .000001 there so that the denominator won't ever be 0
+  if breed = fishes and size > (0.102 / (0.0170000001 - recent-growth-fish)) and size > 6  ; have the .000001 there so that the denominator won't ever be 0
   [
     set color yellow                   ; ones that metamorph turn yellow
     set meta-fish? 1                   ; turtles-own variable to tell us whether they metamporphed
@@ -286,7 +286,7 @@ end
 to metamorph-dfly
   ; each time step, they think about metamorphosing, but only do so if they meet this criteria:
   ; mortality*minimumsize / (mortality - rgr)
-  if breed = dflies and size > (1.02 / (0.170000001 - 10 * recent-growth-dfly)) and size > 6  ; have the .000001 there so that the denominator won't ever be 0
+  if breed = dflies and size > (0.102 / (0.0170000001 - recent-growth-dfly)) and size > 6  ; have the .000001 there so that the denominator won't ever be 0
   [
     set color yellow                   ; ones that metamorph turn yellow
     set meta-dfly? 1                   ; turtles-own variable to tell us whether they metamporphed
@@ -399,7 +399,7 @@ n-fishes
 n-fishes
 0
 200
-50.0
+80.0
 1
 1
 NIL
@@ -413,7 +413,7 @@ SLIDER
 var-hatch-fishes
 var-hatch-fishes
 0
-20
+30
 25.0
 1
 1
@@ -534,7 +534,7 @@ mean-hatch-fishes
 mean-hatch-fishes
 0
 100
-60.0
+40.0
 1
 1
 NIL
@@ -549,7 +549,7 @@ asym-slope-fishes
 asym-slope-fishes
 0
 1
-0.5
+1.0
 0.1
 1
 NIL
@@ -583,7 +583,7 @@ n-dflies
 n-dflies
 0
 200
-50.0
+0.0
 1
 1
 NIL
@@ -1661,6 +1661,59 @@ NetLogo 6.0
       <value value="1"/>
     </enumeratedValueSet>
   </experiment>
+  <experiment name="1Consumer" repetitions="6" runMetricsEveryStep="false">
+    <setup>setup</setup>
+    <go>go</go>
+    <metric>n-meta-fishes</metric>
+    <metric>n-dead-fishes</metric>
+    <metric>mean-size-fishes</metric>
+    <metric>[meta-fish?] of fishes</metric>
+    <metric>[size-list-fish] of fishes</metric>
+    <metric>biom-fishes</metric>
+    <enumeratedValueSet variable="show-label?">
+      <value value="false"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="n-dflies">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="n-fishes">
+      <value value="80"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="sprout-tick">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="var-hatch-fishes">
+      <value value="5"/>
+      <value value="15"/>
+      <value value="25"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="var-hatch-dflies">
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mean-hatch-fishes">
+      <value value="40"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="mean-hatch-dflies">
+      <value value="40"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="growth-per-patch">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="grass-grow-rate">
+      <value value="6"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="grass-death-rate">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="asym-slope-dflies">
+      <value value="0.5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="asym-slope-fishes">
+      <value value="0"/>
+      <value value="0.5"/>
+      <value value="1"/>
+    </enumeratedValueSet>
+  </experiment>
   <experiment name="2Consumer" repetitions="6" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
@@ -1680,10 +1733,10 @@ NetLogo 6.0
       <value value="false"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="n-dflies">
-      <value value="50"/>
+      <value value="40"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="n-fishes">
-      <value value="50"/>
+      <value value="40"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="sprout-tick">
       <value value="0"/>

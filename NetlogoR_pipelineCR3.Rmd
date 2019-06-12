@@ -51,7 +51,7 @@ First, load the data. I've done a ton of different experiments in NetLogo, and n
 ```{r load table data}
 
 ## First, import the data
-data <- read.table("bs_CRnometa_13.csv",
+data <- read.table("bs_CRnometa_15.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
@@ -73,13 +73,13 @@ test <- data %>%                              # rename the df here bc the raw da
          #total_time = X.step.,               # length of time the experiment ran
          density = n.fishes,                  # initial number of turtles
          sync = var.hatch.fishes,             # trt var: amount of variation in individual hatching timing
-         asym = asymmetry.slope,              # trt var: size dependent per capita growth rates
+         asym = asym.slope.fishes,            # trt var: size dependent per capita growth rates
          n_surv = n.meta.fishes,              # number of individuals that 'metamorphed' that run
-         n_dead   = n.dead.fishes,            # number of individuals that did not metamorphose
-         biomass = biomass,                   # sum mass of all survivors of a run
-         mean_size = mean.size,               # mean size of individuals that metamorphosed
-         meta_list = X.meta...of.fishes,      # list holding the survival outcome (0/1) for each individual
-         sizes = X.fish.size.list..of.fishes) # list of size for each ind for each time
+         n_dead = n.dead.fishes,              # number of individuals that did not metamorphose
+         biomass = biom.fishes,               # sum mass of all survivors of a run
+         mean_size = mean.size.fishes,        # mean size of individuals that metamorphosed
+         meta_list = X.meta.fish...of.fishes, # list holding the survival outcome (0/1) for each individual
+         sizes = X.size.list.fish..of.fishes) # list of size for each ind for each time
          
 ```
 
@@ -94,7 +94,7 @@ The data currently has 1 row per experiment run. Ultimately, we need to extract 
 params <- test[,1:8]
 params$synchrony <- as.factor(params$sync)
 params$asymmetry <- as.factor(params$asym)
-levels(params$synchrony) <- list("low" = 15, "med" = 10, "high" = 5)
+levels(params$synchrony) <- list("low" = 25, "med" = 15, "high" = 5)
 levels(params$asymmetry) <- list("none" = 0, "mild" = 0.5, "strong" = 1)
 
 ```
@@ -176,7 +176,7 @@ ind_time <- test %>%
          time, n_surv, n_dead, biomass, mean_size, fish_id, meta, size) %>% 
   rename(id = fish_id)
 ind_time$size <- as.numeric(ind_time$size)
-#write.csv(ind_time, "individual_time_CR.csv")
+write.csv(ind_time, "individual_time_CR.csv")
 
 ```
 
@@ -207,40 +207,53 @@ ind <- ind_time %>%
 ```{r}
 # first, by run number
 run <- ind %>% 
-  group_by(run_num, sync, synchrony, asym, asymmetry, n_surv, n_dead, mean_size, biomass) %>%
-  summarise(mean_emer = sum(meta * end_date))
-           
-run$mean_emer <- run$mean_emer/run$n_surv
-
-# gather different response variables
-run <- run %>% 
-  group_by(run_num, synchrony, asymmetry) %>% 
-  gather(n_surv, biomass, mean_size, mean_emer, key = "variable", value = "abs_value") %>% 
+  group_by(run_num) %>%
+  filter(meta == 1) %>%                              # response variables only consider survivors
+  summarise(mean_biom = sum(final_size),               # check this and survival against raw output
+            se_biom   = "NA",                        # 1 biom value per run, so no error
+            mean_surv = sum(meta),                   # check this an biom against raw output
+            se_surv   = "NA",                        # 1 surv value per run; just a placeholder
+            mean_mass = mean(final_size),              # should be biom/surv
+            se_mass   = sd(final_size)/sqrt(sum(meta)),# error
+            mean_emer = mean(end_date),              # emer is emergence date-- phenology of emergence
+            se_emer   = sd(end_date)/sqrt(sum(meta)),# error
+            mean_grow = mean(growth_rate),           # grow is individual time to development. size/time
+            se_grow   = sd(growth_rate)/sqrt(sum(meta))) %>% 
+  gather(mean_mass, se_mass, mean_emer, se_emer,     # gather all response variables
+         mean_grow, se_grow, 
+         mean_biom, se_biom, mean_surv, se_surv,
+         key = "variable", value = "abs_value") %>% 
+  separate(variable, into = c("prop", "var"), by = "_") %>% # separate the name-- mean/se and variable
+  spread(prop, abs_value) %>%                               # spread so mean and se are separate columns
   arrange(run_num)
+
+# Rejoin with parameters & write csv
+run <- left_join(run, params, by = c("run_num"))
+run$abs_value <- round(as.numeric(run$mean), 2)
+run$se <- round(as.numeric(run$se), 2)
+run <- run %>% 
+  select(run_num, synchrony, asymmetry, var, abs_value, se) #drop ones that are redundant w calcs above
 
 # now by treatment
 trt <- run %>% 
-  group_by(sync, synchrony, asym, asymmetry, variable) %>% 
-  summarise(abs_value = mean(abs_value))
-            #se_surv_fish   = sd(n_surv)/sqrt(length(n_surv)),
-            #mean_size      = mean(mean_size),
-            #mean_emer      = mean(mean_emer))
-            #se_size        = sd(mean_size)/sqrt(length(mean_size)))
+  group_by(synchrony, asymmetry, var) %>% 
+  summarise(abs_value_exp = mean(abs_value),
+            se_exp    = sd(abs_value)/sqrt(6))
 
 baseline_means <- trt %>% 
   subset(synchrony == 'med' & asymmetry == 'none') 
-baseline_means <- baseline_means[,5:6] 
+baseline_means <- baseline_means[,3:5] 
 colnames(baseline_means)[2] <- "baseline_value"
 
 # now, add in baseline averages (conditions at med sync and symmetic comp) to run data
-run <- left_join(run, baseline_means, by = "variable")  
-trt <- left_join(trt, baseline_means, by = "variable")
+run <- left_join(run, baseline_means, by = "var")  
+trt <- left_join(trt, baseline_means, by = "var")
    
 run <- run %>% 
   mutate(baseline_adj = (abs_value - baseline_value)/baseline_value)
 
 trt <- trt %>% 
-  mutate(baseline_adj = (abs_value - baseline_value)/baseline_value)
+  mutate(baseline_adj = (abs_value_exp - baseline_value)/baseline_value)
 
 ```
 
@@ -261,10 +274,10 @@ trt_nobaseline <- subset(trt, subset = asymmetry != "none" & synchrony != "med")
 run_nobaseline <- subset(run, subset = asymmetry != "none" & synchrony != "med")
 
 ggplot(trt_nobaseline, 
-       aes(x = variable, y = baseline_adj, 
+       aes(x = var, y = baseline_adj, 
            colour = interaction(asymmetry, synchrony), shape = interaction(asymmetry, synchrony)))+
   geom_point(data = run_nobaseline,
-              aes(x = variable, y = baseline_adj, 
+              aes(x = var, y = baseline_adj, 
                   group = interaction(asymmetry, synchrony)),
               size = 2, alpha = 0.25,
               position = position_jitterdodge(dodge.width = 0.5, jitter.width = 0.2)) +
@@ -273,7 +286,7 @@ ggplot(trt_nobaseline,
               position = position_dodge(width = 0.5),
               show.legend = F) +
   geom_hline(aes(yintercept = 0), color = "grey70", size = 0.6) +
-  geom_point(aes(variable, baseline_adj), 
+  geom_point(aes(var, baseline_adj), 
              size = 4,
              position = position_dodge(width = 0.5)) +
   coord_flip() +

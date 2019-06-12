@@ -218,7 +218,7 @@ ind_time$synchrony <- ordered(ind_time$synchrony, levels = c("low", "med", "high
 ind_time$asymmetry <- ordered(ind_time$asymmetry, levels = c("none", "mild", "strong"))
 ind_time$size <- as.numeric(ind_time$size)
 
-write.csv(ind_time, "ind_time1sp.csv")
+#write.csv(ind_time, "ind_time1sp.csv")
 
 # Here, set a minimum threshold for metamorphosis. Future runs will have this modeled implicitly
 ind <- ind_time %>% 
@@ -228,7 +228,7 @@ ind <- ind_time %>%
             end_date = min(time[size == max(size)]),
             growth_time = end_date - hatch_date,
             growth_rate = max(size)/growth_time)
-write.csv(ind, "ind1sp.csv")
+#write.csv(ind, "ind1sp.csv")
 
 ```
 
@@ -263,7 +263,6 @@ run$abs_value <- round(as.numeric(run$mean), 2)
 run$se <- round(as.numeric(run$se), 2)
 run <- run %>% 
   select(run_num, synchrony, asymmetry, var, abs_value, se) #drop ones that are redundant w calcs above
-write.csv(run, "run1sp.csv")
 
 # now by treatment
 trt <- run %>% 
@@ -285,7 +284,8 @@ run <- run %>%
 
 trt <- trt %>% 
   mutate(baseline_adj = (abs_value_exp - baseline_value)/baseline_value)
-write.csv(trt, "trt1sp.csv")
+#write.csv(trt, "trt1sp.csv")
+#write.csv(run, "run1sp.csv")
 
 ```
 

@@ -49,10 +49,10 @@ When revisiting the same behavior space multiple times, skip the data processing
 ```{r load data, echo = F, include = F}
 
 # Processing to creat these dfs is done below, but can load these if working w same BS
-ind_time <- read.csv("individual_time2sp.csv", header = T)
-ind <- read.csv("ind.csv", header = T)
-run <- read.csv("run.csv", header = T)
-trt <- read.csv("trt.csv", header = T)
+ind_time <- read.csv("ind_time2sp.csv", header = T)
+ind <- read.csv("ind2sp.csv", header = T)
+run <- read.csv("run2sp.csv", header = T)
+trt <- read.csv("trt2sp.csv", header = T)
 
 # Get factors in line
 #ind_time$asym_fish <- factor(ind_time$asym_fish, levels = c("none", "mild", "strong"))
@@ -204,7 +204,7 @@ ind_time <- ind_time %>%
          surv_fish, surv_dfly, biom_fish, biom_dfly, biom_tot, # run-level output
          time, sp, id, meta, size)                             # ind/time output
 
-#write.csv(ind_time, "individual_time2sp.csv")
+write.csv(ind_time, "ind_time2sp.csv")
 
 ```
 
@@ -230,7 +230,7 @@ ind <- ind %>%
          surv_fish, surv_dfly, biom_fish, biom_dfly, biom_tot, # run-level output
          sp, id, meta, hatch_date,       
          end_date, growth_time, growth_rate, max_size)
-#write.csv(ind, "ind.csv")
+write.csv(ind, "ind2sp.csv")
 
 # This is a good way to verify that the calculations worked
 # N_survivors from netlogo should = sum or metamorphs
@@ -276,7 +276,7 @@ run <- left_join(run, params, by = c("run_num"))
 run$mean <- round(as.numeric(run$mean), 2)
 run$se <- round(as.numeric(run$se), 2)
 run <- run %>% select(-c(surv_fish, surv_dfly, biom_fish, biom_dfly)) # these are redundant w calcs above
-#write.csv(run, "run.csv")
+write.csv(run, "run2sp.csv")
 
 # Now by treatment
 trt <- run %>% 
@@ -296,7 +296,7 @@ trt <- trt %>%
 
 trt$mean <- round(as.numeric(trt$mean), 2)
 trt$se <- round(as.numeric(trt$se), 2)
-#write.csv(trt, "trt.csv")
+write.csv(trt, "trt2sp.csv")
 
 ```
 
@@ -321,7 +321,7 @@ ggplot(ind, aes(x = hatch_date, color = sp, fill = sp)) + mytheme +
 #ggplot(subset(ind, subset = (meta ==1)),
 ggplot(ind, aes(x = hatch_date, y = max_size, color = sp)) + mytheme +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
-  stat_smooth() +
+  stat_smooth(se = F) +
   facet_grid(sync_fish ~ mean_fish) + 
   scale_color_manual(values = c("#F28335", "#489C92")) +
   scale_x_continuous(limits = c(0, 140), breaks = seq(0, 120, by = 30)) +
@@ -339,7 +339,6 @@ ggplot(subset(ind, subset = (meta == 1)),
   stat_smooth(method = "lm", formula = y ~ poly(x, 2), se = T, size = 1) +
   facet_grid(sync_fish ~ mean_fish, scales = "free") + 
   scale_color_manual(values = c("#F28335", "#489C92")) + 
-  
   labs(title = "Growth rate by hatching date",
        x = "hatching date",
        y = "days to metamorphosis")

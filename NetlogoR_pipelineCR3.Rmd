@@ -33,7 +33,7 @@ library(extrafont)
 
 
 ## Load universal plotting elements
-mytheme <- theme_light(base_size = 15, base_family = "Poppins") +
+mytheme <- theme_bw(base_size = 15, base_family = "Poppins") +
   theme(legend.text = element_text(size = 10),
         legend.title = element_text(size = 11),
         text = element_text(size = 14, family = "Rockwell"),    
@@ -300,8 +300,8 @@ ggplot(trt_nobaseline,
                                 "high synchrony, mild asymmetry", "high synchrony, strong asymmetry"),
                      values = c("#D8B709", "#D8B709", "#02401B", "#02401B")) +
   labs(x = NULL, y = "Proportional deviation from baseline case\n(medium synchrony, symmetric competition)") +
-  scale_x_discrete(breaks = c("n_surv", "mean_size", "mean_emer", "biomass"),
-                   labels = c("survival", "mean per\ncapita size", "time to\nemergence", "biomass export")) +
+  scale_x_discrete(breaks = c("surv", "mass", "biom", "emer", "grow"),
+                   labels = c("survival", "mean per\ncapita size", "biomass export", "time to\nemergence", "mean per\ncapita growth rate")) +
   theme_light(base_size = 15, base_family = "Poppins") +
   theme(legend.text = element_text(size = 10),
         legend.title = element_text(size = 11),
@@ -324,7 +324,7 @@ ggplot(ind, aes(x = hatch_date)) + theme_bw() +
 Now, distributions of sizes of individuals at the end of the experiment, grouped by treatment. The vertical lines represent different size thresholds I considered for metamorphosis. Since these distributions of sizes for each treatment are so different, it doesn't make sense to set a size threshold for survival. Results are pretty sensitive to it. Instead, model optimal timing of metamorphosis so that both size and age at metamorphosis are plastic and can be captured.
 
 ```{r, echo = F}
-ggplot(ind, aes(x = final_size, fill = as.factor(meta))) + theme_bw() +
+ggplot(ind, aes(x = final_size, fill = as.factor(meta))) + mytheme +
   geom_density(alpha = 0.5, size = 0.8) +
   facet_grid(asymmetry ~ synchrony) +
   scale_fill_uchicago() +
@@ -333,7 +333,7 @@ ggplot(ind, aes(x = final_size, fill = as.factor(meta))) + theme_bw() +
        x = "size",
        y = "density of individuals")
 
-ggplot(subset(ind, subset = (meta == 1)), aes(x = end_date, fill = asymmetry)) + theme_bw() +
+ggplot(subset(ind, subset = (meta == 1)), aes(x = end_date, fill = asymmetry)) + mytheme +
   geom_density(alpha = 0.5, size = 0.8) +
   facet_grid(. ~ synchrony) +
   scale_fill_uchicago() +
@@ -346,48 +346,38 @@ ggplot(subset(ind, subset = (meta == 1)), aes(x = end_date, fill = asymmetry)) +
 
 ```{r, echo = F}
 growthrates <- ggplot(ind_time, 
-                      aes(x = time, y = size, color = as.factor(id))) + theme_bw() +
+                      aes(x = time, y = size, color = as.factor(id))) + mytheme +
   geom_point() +
   #geom_line(alpha = 0.25) +
   geom_smooth(se = F) + 
   scale_color_uchicago() +
   facet_grid(synchrony ~ asymmetry) +
   theme(legend.position = "none") 
-#growthrates
+growthrates
 
 ```
 
 
 ```{r, echo = F}
-ggplot(ind_time, aes(x = size, y = growth, color = meta)) +
-  geom_jitter(alpha = 0.25)+
-  #stat_smooth() +
-  ylim(0, 0.25) + xlim(1, 10)
-
 
 ggplot(ind, aes(x = hatch_date, y = final_size, color = as.factor(meta))) +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
   stat_smooth() +
-  facet_grid(asymmetry ~ synchrony) + theme_bw() +
+  facet_grid(asymmetry ~ synchrony) + mytheme +
   labs(title = "Final size by hatching date",
        x = "hatching date",
        y = "final size") +
-  scale_color_manual(values = wes_palette(n = 2, name = "Cavalcanti1")) +
-  theme_light(base_size = 15, base_family = "Poppins") +
-  theme(legend.position = "none",
-        axis.title = element_text(size = 12),
-        text = element_text(family = "Rockwell", size = 12),
-        plot.caption = element_text(size = 9, color = "grey50"),
-        panel.grid = element_blank())
+  scale_color_uchicago()
 
 ggplot(ind, aes(x = hatch_date, y = growth_rate, color = as.factor(meta))) +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
   stat_smooth() +
   geom_hline(yintercept = c(0.05, 0.15), linetype = 'dashed', alpha = 0.5) +
-  facet_grid(asymmetry ~ synchrony) + theme_bw() +
+  facet_grid(asymmetry ~ synchrony) + mytheme +
   labs(title = "Growth rate by hatching date",
        x = "hatching date",
-       y = "growth rate (final size - initial size) / time")
+       y = "growth rate (final size - initial size) / time") +
+  scale_color_uchicago()
 
 ```
 
@@ -395,7 +385,7 @@ Probability of individuals surviving based on hatching date for each treatment
 
 ```{r, echo = F}
 # Looks like in several cases, there are some individuals hatching on the last day, way later than the others. Check.
-ggplot(ind, aes(x = hatch_date, y = meta, color = asymmetry)) + theme_bw() +
+ggplot(ind, aes(x = hatch_date, y = meta, color = asymmetry)) + mytheme +
   geom_point(alpha = 0.05) + 
   stat_smooth(size = 1.5, method = 'glm', method.args = 'binomial', se = F) +
   facet_grid(synchrony ~ .) + 
@@ -405,8 +395,8 @@ ggplot(ind, aes(x = hatch_date, y = meta, color = asymmetry)) + theme_bw() +
   labs(title = "Survival probability by hatching date",
        x = "hatching date",
        y = "probability of survival") +
-  scale_color_uchicago()
-  #scale_color_manual(values = wes_palette(n = 3, name = "Cavalcanti1"))
+  #scale_color_uchicago() 
+  scale_color_manual(values = wes_palette(n = 3, name = "Cavalcanti1"))
 
 
 ```
@@ -415,54 +405,38 @@ Proportion survival/metamorphosis by treatment
 
 ```{r, echo = F}
 # treatment means
-surv_means <- ggplot(trt, aes(x = synchrony, y = mean_surv_fish, group = asymmetry, 
-                              fill = asymmetry, color = asymmetry, shape = asymmetry)) +   
+
+variable_names <- list(
+  'surv' = "survival",
+  'biom' = "biomass export",
+  'mass' = "per capita mass", 
+  'emer' = "emergence date",
+  'grow' = "per capita growth rate"
+)
+
+variable_labeller <- function(variable, value){
+  return(variable_names[value])
+}
+
+ggplot(trt, aes(x = synchrony, y = abs_value_exp, group = asymmetry, 
+                              fill = asymmetry, color = asymmetry, shape = asymmetry)) + mytheme +  
   geom_line(size = 0.7, position = position_dodge(width = 0.2)) +
   geom_errorbar(size = 1, width = 0, position = position_dodge(width = 0.2),                   
-                aes(ymin = mean_surv_fish - se_surv_fish, 
-                   ymax = mean_surv_fish + se_surv_fish)) +  
-  geom_point(size = 5, color = 'black', position = position_dodge(width = 0.2)) +   
+                aes(ymin = abs_value_exp - se_exp.x,
+                    ymax = abs_value_exp + se_exp.x)) +  
+  geom_point(size = 4, color = 'black', position = position_dodge(width = 0.2)) +   
   labs(shape = "asymmetry", 
        fill = 'asymmetry', 
        color = "asymmetry",
        x = "hatching synchrony",
-       y = "number of survivors") +
-  theme(legend.position = c(0.1, 0.22),
-        axis.title = element_text(size = 12),
-        axis.text  = element_text(size = 10)) +
+       y = "mean +/- s.e.") +
+  theme(legend.position = c(0.75, 0.22)) +
+  facet_wrap(. ~ var, scales = 'free_y', labeller = variable_labeller) +
   scale_fill_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
   scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
-  scale_shape_manual(values = c(21, 24, 23))  
-surv_means + theme_bw()
+  scale_shape_manual(values = c(21, 24, 23))
 
 ```
-
-Mean per capita sizes of individuals by treatment
-
-```{r, echo = F}
-# treatment means
-# need to see how succeptible both of these are to "survive" criteria
-size_means <- ggplot(trt, aes(x = synchrony, y = mean_size, group = asymmetry, 
-                              fill = asymmetry, color = asymmetry, shape = asymmetry)) +   
-  geom_line(size = 0.7, position = position_dodge(width = 0.2)) +
-  #geom_errorbar(size = 1, width = 0, position = position_dodge(width = 0.2),                   
-  #              aes(ymin = mean_surv_fish - se_surv_fish, 
-  #                 ymax = mean_surv_fish + se_surv_fish)) +  
-  geom_point(size = 5, color = 'black', position = position_dodge(width = 0.2)) +   
-  labs(shape = "asymmetry", 
-       fill = 'asymmetry', 
-       color = "asymmetry",
-       x = "hatching synchrony",
-       y = "mean per capita size") +
-  theme(legend.position = c(0.1, 0.22),
-        axis.title = element_text(size = 12),
-        axis.text  = element_text(size = 10)) +
-  scale_fill_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
-  scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
-  scale_shape_manual(values = c(21, 24, 23))  
-size_means + theme_bw()
-```
-
 
 
 ```{r, include = F}

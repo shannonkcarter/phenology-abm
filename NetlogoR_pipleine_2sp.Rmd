@@ -32,14 +32,16 @@ library(extrafont)
 #extrafont::loadfonts(device = "win")
 
 ## Load universal plotting elements
-mytheme <- theme_bw(base_size = 15, base_family = "Poppins") +
+mytheme <- theme_bw(base_size = 15, base_family = "Franklin Gothic Medium") +
   theme(legend.text = element_text(size = 10),
         legend.title = element_text(size = 11),
-        text = element_text(size = 14, family = "Rockwell"),    
+        text = element_text(size = 14),     
         axis.title = element_text(size = 12),
+        axis.text  = element_text(size = 10, family = "Consolas"),
         panel.grid = element_blank())
 
 ```
+
 # Load Final Data
 
 When revisiting the same behavior space multiple times, skip the data processing and just load the final tidy data. Every time I do a new behavior space in NetLogo, I'll run the processing steps below and these data frames will be updated.
@@ -202,7 +204,7 @@ ind_time <- ind_time %>%
          surv_fish, surv_dfly, biom_fish, biom_dfly, biom_tot, # run-level output
          time, sp, id, meta, size)                             # ind/time output
 
-write.csv(ind_time, "individual_time2sp.csv")
+#write.csv(ind_time, "individual_time2sp.csv")
 
 ```
 
@@ -228,7 +230,7 @@ ind <- ind %>%
          surv_fish, surv_dfly, biom_fish, biom_dfly, biom_tot, # run-level output
          sp, id, meta, hatch_date,       
          end_date, growth_time, growth_rate, max_size)
-write.csv(ind, "ind.csv")
+#write.csv(ind, "ind.csv")
 
 # This is a good way to verify that the calculations worked
 # N_survivors from netlogo should = sum or metamorphs
@@ -237,7 +239,7 @@ check <- ind %>%
   group_by(run_num, surv_dfly, surv_fish) %>%
   summarize(meta_check = sum(meta)) %>% 
   ggplot(aes(x = surv_fish + surv_dfly, y = meta_check)) +
-  geom_point(alpha = 1/5) + theme_bw() +
+  geom_point(alpha = 1/5) + theme_bw() + mytheme +
   geom_abline(slope = 1, intercept = 0)
 check
 ```
@@ -274,7 +276,7 @@ run <- left_join(run, params, by = c("run_num"))
 run$mean <- round(as.numeric(run$mean), 2)
 run$se <- round(as.numeric(run$se), 2)
 run <- run %>% select(-c(surv_fish, surv_dfly, biom_fish, biom_dfly)) # these are redundant w calcs above
-write.csv(run, "run.csv")
+#write.csv(run, "run.csv")
 
 # Now by treatment
 trt <- run %>% 
@@ -294,7 +296,7 @@ trt <- trt %>%
 
 trt$mean <- round(as.numeric(trt$mean), 2)
 trt$se <- round(as.numeric(trt$se), 2)
-write.csv(trt, "trt.csv")
+#write.csv(trt, "trt.csv")
 
 ```
 
@@ -320,8 +322,9 @@ ggplot(ind, aes(x = hatch_date, color = sp, fill = sp)) + mytheme +
 ggplot(ind, aes(x = hatch_date, y = max_size, color = sp)) + mytheme +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
   stat_smooth() +
-  facet_grid(sync_fish ~ mean_fish, scales = 'free') + 
+  facet_grid(sync_fish ~ mean_fish) + 
   scale_color_manual(values = c("#F28335", "#489C92")) +
+  scale_x_continuous(limits = c(0, 140), breaks = seq(0, 120, by = 30)) +
   labs(title = "Final size by hatching date",
        x = "hatching date",
        y = "final size")
@@ -336,6 +339,7 @@ ggplot(subset(ind, subset = (meta == 1)),
   stat_smooth(method = "lm", formula = y ~ poly(x, 2), se = T, size = 1) +
   facet_grid(sync_fish ~ mean_fish, scales = "free") + 
   scale_color_manual(values = c("#F28335", "#489C92")) + 
+  
   labs(title = "Growth rate by hatching date",
        x = "hatching date",
        y = "days to metamorphosis")
@@ -347,27 +351,46 @@ ggplot(subset(ind, subset = (meta == 1)),
 ggplot(ind, aes(x = hatch_date, y = meta, color = sp)) + mytheme +
   geom_point(alpha = 0.25) + 
   stat_smooth(method = 'glm', method.args = 'binomial', se = F, size = 1.5) +
-  facet_grid(sync_fish ~ mean_fish, scales = "free") + 
+  facet_grid(sync_fish ~ mean_fish) + 
   xlab("hatch date") + ylab("probability of survival") +
   scale_color_manual(values = c("#F28335", "#489C92")) +
+  scale_x_continuous(limits = c(0, 140), breaks = seq(0, 120, by = 30)) +
   labs(title = "Survival probability by hatching date",
        x = "hatching date",
        y = "probability of survival")
 ```
 
 ```{r, echo = F}
+
+variable_names <- list(
+  'surv' = "survival",
+  'biom' = "biomass export",
+  'mass' = "per capita mass", 
+  'emer' = "emergence date",
+  'grow' = "per capita growth rate"
+)
+
+variable_labeller <- function(variable, value){
+  return(variable_names[value])
+}
+
 ggplot(subset(trt, subset = (sp == "f")),
-       aes(x = mean_fish, y = mean, color = sync_fish, group = sync_fish)) + mytheme +
-  geom_point(size = 2) + 
+       aes(x = mean_fish, y = mean, fill = sync_fish, color = sync_fish, group = sync_fish, shape = sync_fish)) + mytheme +
+  geom_point(size = 3, color = 'black') + 
   geom_errorbar(aes(max = mean + se, min = mean - se), width = 0) +
   geom_line() +
-  facet_wrap(~ var, scales = "free") +
+  facet_wrap(~ var, scales = "free", labeller = variable_labeller) +
   xlab("mean arrival") + ylab("number survivors")  +
+  theme(legend.position = c(0.75, 0.22)) +
   scale_fill_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
   scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
   labs(title = "Responses of vital rates to phenology manipulations",
        x = "mean hatching time (relative to competitor)",
-       y = "mean +/- se")
+       y = "mean +/- se",
+       fill = "hatching\nsynchrony",
+       color = "hatching\nsynchrony", 
+       shape = "hatching\nsynchrony") +
+  scale_shape_manual(values = c(21, 24, 23))
 
 ```
 
@@ -379,6 +402,7 @@ ggplot(subset(ind, subset = (sp == "f")),
   stat_smooth(method = 'glm', method.args = 'binomial', size = 1.5, alpha = 0.5, se = F) +
   facet_wrap(~ mean_fish) +
   scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
+  scale_x_continuous(limits = c(0, 140), breaks = seq(0, 120, by = 30)) +
   labs(title = "Probability of fish survival by hatching date",
        x = "hatching date",
        y = "probability of survival")
@@ -390,17 +414,17 @@ ggplot(subset(ind, subset = (sp == "f")),
 ind_surv <- subset(ind, subset = (meta == 1 & sp == "f"))
 
 ## Original hatching and metamorph
-ggplot(ind_surv, aes(hatch_date)) + mytheme +
+ggplot(ind_surv, aes(end_date)) + mytheme +
   # gray: original/imposed hatching synchrony
-  geom_density(size = 1, alpha = 0.25, fill = "black", color = "gray39") + 
+  geom_density(size = 1, alpha = 0.25, fill = "#F28335", color = "#F28335") + 
   # blue: metamorphosis dates of survivors, scaled to day 0
-  geom_density(data = ind_surv, size = 1, alpha = 0.5, color = "steelblue4", fill = "steelblue4",
-               aes(x = end_date)) +
-  facet_grid(sync_fish ~ mean_fish , scales = "free_y") + 
+  #geom_density(data = ind_surv, size = 1, alpha = 0.5, color = "steelblue4", fill = "steelblue4",
+  #             aes(x = end_date)) +
+  facet_grid(sync_fish ~ mean_fish) + 
   theme(strip.text.x = element_text(size = 14),
         strip.text.y = element_text(size = 14)) +
+  scale_x_continuous(limits = c(60, 250), breaks = seq(60, 250, by = 60)) +
   labs(title = "Phenology across ontogeny",
-       subtitle = "hatching phenology in gray, emergence phenology in blue",
        x = "date",
        y = "density of individuals")
 

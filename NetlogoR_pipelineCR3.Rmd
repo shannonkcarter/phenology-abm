@@ -33,12 +33,40 @@ library(extrafont)
 
 
 ## Load universal plotting elements
-mytheme <- theme_bw(base_size = 15, base_family = "Poppins") +
+mytheme <- theme_bw(base_size = 15, base_family = "Franklin Gothic Medium") +
   theme(legend.text = element_text(size = 10),
         legend.title = element_text(size = 11),
-        text = element_text(size = 14, family = "Rockwell"),    
+        text = element_text(size = 14),     
         axis.title = element_text(size = 12),
+        axis.text  = element_text(size = 10, family = "Consolas"),
         panel.grid = element_blank())
+
+```
+
+# Load Final Data
+
+When revisiting the same behavior space multiple times, skip the data processing and just load the final tidy data. Every time I do a new behavior space in NetLogo, I'll run the processing steps below and these data frames will be updated.
+
+```{r load data, echo = F, include = F}
+
+# Processing to creat these dfs is done below, but can load these if working w same BS
+ind_time <- read.csv("ind_time1sp.csv", header = T)
+ind <- read.csv("ind1sp.csv", header = T)
+run <- read.csv("run1sp.csv", header = T)
+trt <- read.csv("trt1sp.csv", header = T)
+
+# Get factors in line
+ind_time$asymmetry <- factor(ind_time$asymmetry, levels = c("none", "mild", "strong"))
+ind_time$synchrony <- factor(ind_time$synchrony, levels = c("low", "med", "high"))
+
+ind$asymmetry <- factor(ind$asymmetry, levels = c("none", "mild", "strong"))
+ind$synchrony <- factor(ind$synchrony, levels = c("low", "med", "high"))
+
+run$asymmetry <- factor(run$asymmetry, levels = c("none", "mild", "strong"))
+run$synchrony <- factor(run$synchrony, levels = c("low", "med", "high"))
+
+trt$asymmetry <- factor(trt$asymmetry, levels = c("none", "mild", "strong"))
+trt$synchrony <- factor(trt$synchrony, levels = c("low", "med", "high"))
 
 ```
 
@@ -65,7 +93,7 @@ Next, let's rename columns and drop some that we don't need. I keep some columns
 
 For this model, I have one turtle type (fishes), and varied the timing of hatching and per capita growth rates individuals. The Netlogo output includes parameter values and a vector of sizes over time for each turtle
 
-```{r remane and select}
+```{r rename and select}
 
 # renaming everything I keep, so can rename with select. new_name = old name. 
 test <- data %>%                              # rename the df here bc the raw data takes a long time to load
@@ -176,7 +204,6 @@ ind_time <- test %>%
          time, n_surv, n_dead, biomass, mean_size, fish_id, meta, size) %>% 
   rename(id = fish_id)
 ind_time$size <- as.numeric(ind_time$size)
-write.csv(ind_time, "individual_time_CR.csv")
 
 ```
 
@@ -191,6 +218,8 @@ ind_time$synchrony <- ordered(ind_time$synchrony, levels = c("low", "med", "high
 ind_time$asymmetry <- ordered(ind_time$asymmetry, levels = c("none", "mild", "strong"))
 ind_time$size <- as.numeric(ind_time$size)
 
+write.csv(ind_time, "ind_time1sp.csv")
+
 # Here, set a minimum threshold for metamorphosis. Future runs will have this modeled implicitly
 ind <- ind_time %>% 
   group_by(run_num, id, sync, asym, synchrony, asymmetry, n_surv, n_dead, biomass, mean_size, meta) %>%
@@ -199,12 +228,13 @@ ind <- ind_time %>%
             end_date = min(time[size == max(size)]),
             growth_time = end_date - hatch_date,
             growth_rate = max(size)/growth_time)
+write.csv(ind, "ind1sp.csv")
 
 ```
 
 ## Summarize by Treatment 
 
-```{r}
+```{r treatment summary}
 # first, by run number
 run <- ind %>% 
   group_by(run_num) %>%
@@ -233,6 +263,7 @@ run$abs_value <- round(as.numeric(run$mean), 2)
 run$se <- round(as.numeric(run$se), 2)
 run <- run %>% 
   select(run_num, synchrony, asymmetry, var, abs_value, se) #drop ones that are redundant w calcs above
+write.csv(run, "run1sp.csv")
 
 # now by treatment
 trt <- run %>% 
@@ -254,6 +285,7 @@ run <- run %>%
 
 trt <- trt %>% 
   mutate(baseline_adj = (abs_value_exp - baseline_value)/baseline_value)
+write.csv(trt, "trt1sp.csv")
 
 ```
 
@@ -328,6 +360,7 @@ ggplot(ind, aes(x = final_size, fill = as.factor(meta))) + mytheme +
   geom_density(alpha = 0.5, size = 0.8) +
   facet_grid(asymmetry ~ synchrony) +
   scale_fill_uchicago() +
+  scale_x_continuous(limits = c(0, 15), breaks = seq(0, 15, by = 5)) +
   #geom_vline(xintercept = c(8, 10, 12), linetype = 'dashed') + 
   labs(title = "Distribution of individual body sizes by treatment",
        x = "size",
@@ -337,6 +370,7 @@ ggplot(subset(ind, subset = (meta == 1)), aes(x = end_date, fill = asymmetry)) +
   geom_density(alpha = 0.5, size = 0.8) +
   facet_grid(. ~ synchrony) +
   scale_fill_uchicago() +
+  scale_x_continuous(limits = c(0, 250), breaks = seq(0, 250, by = 50)) +
   #geom_vline(xintercept = c(8, 10, 12), linetype = 'dashed') + 
   labs(title = "Phenology at emergence",
        x = "day of emergence",
@@ -374,6 +408,7 @@ ggplot(ind, aes(x = hatch_date, y = growth_rate, color = as.factor(meta))) +
   stat_smooth() +
   geom_hline(yintercept = c(0.05, 0.15), linetype = 'dashed', alpha = 0.5) +
   facet_grid(asymmetry ~ synchrony) + mytheme +
+  scale_x_continuous(limits = c(0, 140), breaks = seq(0, 120, by = 30)) +
   labs(title = "Growth rate by hatching date",
        x = "hatching date",
        y = "growth rate (final size - initial size) / time") +
@@ -395,6 +430,7 @@ ggplot(ind, aes(x = hatch_date, y = meta, color = asymmetry)) + mytheme +
   labs(title = "Survival probability by hatching date",
        x = "hatching date",
        y = "probability of survival") +
+  scale_x_continuous(limits = c(0, 140), breaks = seq(0, 120, by = 30)) +
   #scale_color_uchicago() 
   scale_color_manual(values = wes_palette(n = 3, name = "Cavalcanti1"))
 

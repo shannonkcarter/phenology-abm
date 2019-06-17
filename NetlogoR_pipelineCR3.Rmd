@@ -310,7 +310,7 @@ ggplot(trt_nobaseline,
               show.legend = F) +
   geom_hline(aes(yintercept = 0), color = "grey70", size = 0.6) +
   geom_point(aes(var, baseline_adj), 
-             size = 4,
+             size = 4, 
              position = position_dodge(width = 0.5)) +
   coord_flip() +
   scale_y_continuous(limits = c(-0.5, 0.5), expand = c(0.005, 0.005)) +
@@ -340,9 +340,11 @@ ggplot(trt, aes(x = synchrony, y = abs_value_exp,
   facet_wrap(~var, scales = "free") +
   labs(title = "Responses of population vital rates to phenological manipulations",
        y = "mean +/- se") + 
-  scale_shape_manual(values = c(21, 24, 23)) +
-  scale_color_manual(values = wes_palette("Cavalcanti1")) +
-  scale_fill_manual(values = wes_palette("Cavalcanti1"))
+  scale_color_uchicago() +
+  scale_fill_uchicago() +
+  scale_shape_manual(values = c(21, 24, 23)) 
+  #scale_color_manual(values = wes_palette("Darjeeling1")) +
+  #scale_fill_manual(values = wes_palette("Darjeeling1"))
 ```
 
 

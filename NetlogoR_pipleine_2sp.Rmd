@@ -80,7 +80,6 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 First, load the data. I've done a ton of different experiments in NetLogo, and not always certain each new one will be an improvement over the old or even work at all. So I keep most of the runs and number the files sequentially.
 
 ```{r load table data}
-
 data <- read.table("ABM_2Consumer_3.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
@@ -142,7 +141,6 @@ The 'sizes_x' columns have a time series of size for each individual. So in this
 I treat the 'meta_x' columns in this step too. They're formatted similarly, except there's no time series- just one value per individual, i.e., [0 0 1 1 0 1 0 ...]. So I only have to separate and gather once.
 
 ```{r parse individuals}
-
 # First, separate meta and sizes columns. Now each column only has data for one individual
 test <- test %>% 
   separate(meta_fish,                               # separate meta_fish 
@@ -183,7 +181,6 @@ test$s <- gsub("]", "", test$s, fixed = T)
 Now, do the same separate and gather operations to parse the time vector and put in long format.
 
 ```{r parse time}
-
 # Separate the size time series- each space represents a new time point
 ind_time <- test %>% 
   separate(s, into = as.character(c(0:250)), sep = " ") %>% # it's easiest for each run to be the same length
@@ -213,7 +210,6 @@ write.csv(ind_time, "ind_time2sp.csv")
 Now, I want to make some summarised datasets. First with one row per individual, then with one row per run number, and finally with one row per treatment. 
 
 ```{r individual summary}
- 
 # First, summarize by individual and add some individual level properies
 ind <- ind_time %>% 
   group_by(run_num, sp, id, meta) %>%
@@ -248,7 +244,6 @@ check
 
 Now, I want to summarize to get means and error for each run and each treatment. 
 ```{r treatment summary}
-
 # first, by run number
 run <- ind %>% 
   group_by(run_num, sp) %>%

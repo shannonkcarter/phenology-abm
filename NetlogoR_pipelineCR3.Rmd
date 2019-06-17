@@ -77,7 +77,6 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 First, load the data. I've done a ton of different experiments in NetLogo, and not always certain each new one will be an improvement over the old or even work at all. So I keep most of the runs and number the files sequentially.
 
 ```{r load table data}
-
 ## First, import the data
 data <- read.table("bs_CRnometa_15.csv",
                    header = T,  
@@ -94,7 +93,6 @@ Next, let's rename columns and drop some that we don't need. I keep some columns
 For this model, I have one turtle type (fishes), and varied the timing of hatching and per capita growth rates individuals. The Netlogo output includes parameter values and a vector of sizes over time for each turtle
 
 ```{r rename and select}
-
 # renaming everything I keep, so can rename with select. new_name = old name. 
 test <- data %>%                              # rename the df here bc the raw data takes a long time to load
   select(run_num = X.run.number.,             # each run number is an experimental unit (i.e, a mesocom)
@@ -116,7 +114,6 @@ test <- data %>%                              # rename the df here bc the raw da
 The data currently has 1 row per experiment run. Ultimately, we need to extract data in some columns so that we have one row per time step per individual. Even though this dataset isn't super wide, I have an easier time doing these manipulations without extraneous columns distracting me. So, I pull out the data that has one value per run (i.e., treatment variables and population level response variables like survival) and save it to rejoin with the data later.
 
 ```{r extract parameters}
-
 # I'll rejoin the output data with params later, after some summarizing/processing
 # Add qualitative levels for the treatment params, bc useful for plotting. This will be different for each BS
 params <- test[,1:8]
@@ -133,7 +130,6 @@ levels(params$asymmetry) <- list("none" = 0, "mild" = 0.5, "strong" = 1)
 The 'sizes' columns have a time series of size for each individual (so each 'sizes_fish' column has X individuals x Y time steps values). We ultimately want one row per individual per time step. Let's first separate by individual. 
 
 ```{r parse individuals}
-
 # First, separate so that each individual has it's own column
 test <- test %>% 
   separate(sizes,                                      
@@ -195,7 +191,7 @@ test <- test %>%
 # Compile & Tidy
 
 Now, rejoin with the treatment information, and write a csv. This csv has one line per individual per time step. So nrow should be max(run_num) x (ndfly + nfish) x total_time
-```{r complie & tidy}
+```{r individual time}
 
 # Rejoin with treatment identifiers for each run number
 test <- left_join(test, params, by = "run_num")
@@ -213,6 +209,7 @@ ind_time$size <- as.numeric(ind_time$size)
 Now, I want to make some summarised datasets. First with one row per individual, then with one row per run number 
 
 ```{r individual summary}
+
 #ind_time <- read.csv("individual_time_CR.csv", header = T)
 ind_time$synchrony <- ordered(ind_time$synchrony, levels = c("low", "med", "high"))
 ind_time$asymmetry <- ordered(ind_time$asymmetry, levels = c("none", "mild", "strong"))
@@ -227,7 +224,7 @@ ind <- ind_time %>%
             hatch_date = min(time[size > 0]),
             end_date = min(time[size == max(size)]),
             growth_time = end_date - hatch_date,
-            growth_rate = max(size)/growth_time)
+            growth_rate = max(size)/growth_time) 
 #write.csv(ind, "ind1sp.csv")
 
 ```
@@ -296,12 +293,6 @@ Here are some diagnostic plots to get a quick look at the data. These will give 
 ```{r}
 ## LOLIPOP PLOT
 
-## load fonts
-#extrafont::loadfonts(device = "win")
-
-## final plot
-## set seed to fix position of jittered points
-#set.seed(123)
 trt_nobaseline <- subset(trt, subset = asymmetry != "none" & synchrony != "med")
 run_nobaseline <- subset(run, subset = asymmetry != "none" & synchrony != "med")
 
@@ -334,24 +325,26 @@ ggplot(trt_nobaseline,
   labs(x = NULL, y = "Proportional deviation from baseline case\n(medium synchrony, symmetric competition)") +
   scale_x_discrete(breaks = c("surv", "mass", "biom", "emer", "grow"),
                    labels = c("survival", "mean per\ncapita size", "biomass export", "time to\nemergence", "mean per\ncapita growth rate")) +
-  theme_light(base_size = 15, base_family = "Poppins") +
-  theme(legend.text = element_text(size = 10),
-        legend.title = element_text(size = 11),
-        text = element_text(size = 14, family = "Rockwell"),    
-        axis.title = element_text(size = 12),
-        panel.grid = element_blank())
+  mytheme + theme(axis.text.y = element_text(family = "Franklin Gothic Medium"))
+  
 ```
 
-First, a visual of the synchrony treatments.
-
-```{r, echo = F}
-ggplot(ind, aes(x = hatch_date)) + theme_bw() +
-  geom_density(alpha = 0.5, size = 1.2) +
-  facet_grid(. ~ synchrony) +
-  labs(title = "Hatching timing treatments",
-       x = "hatching date",
-       y = "density of individuals")
+More traditional means plot
+```{r}
+ggplot(trt, aes(x = synchrony, y = abs_value_exp, 
+                fill = asymmetry, color = asymmetry, group = asymmetry, shape = asymmetry)) + 
+  mytheme +
+  geom_line() +
+  geom_point(size = 3, color = "black") +
+  geom_errorbar(aes(ymin = (abs_value_exp - se_exp.x), ymax = abs_value_exp + se_exp.x), width = 0) +
+  facet_wrap(~var, scales = "free") +
+  labs(title = "Responses of population vital rates to phenological manipulations",
+       y = "mean +/- se") + 
+  scale_shape_manual(values = c(21, 24, 23)) +
+  scale_color_manual(values = wes_palette("Cavalcanti1")) +
+  scale_fill_manual(values = wes_palette("Cavalcanti1"))
 ```
+
 
 Now, distributions of sizes of individuals at the end of the experiment, grouped by treatment. The vertical lines represent different size thresholds I considered for metamorphosis. Since these distributions of sizes for each treatment are so different, it doesn't make sense to set a size threshold for survival. Results are pretty sensitive to it. Instead, model optimal timing of metamorphosis so that both size and age at metamorphosis are plastic and can be captured.
 
@@ -367,11 +360,14 @@ ggplot(ind, aes(x = final_size, fill = as.factor(meta))) + mytheme +
        y = "density of individuals")
 
 ggplot(subset(ind, subset = (meta == 1)), aes(x = end_date, fill = asymmetry)) + mytheme +
+  geom_vline(data = subset(trt, subset = (var == "emer")), 
+             aes(xintercept = abs_value_exp, color = asymmetry), 
+             linetype = 'dashed', size = 1.2) + 
   geom_density(alpha = 0.5, size = 0.8) +
   facet_grid(. ~ synchrony) +
-  scale_fill_uchicago() +
   scale_x_continuous(limits = c(0, 250), breaks = seq(0, 250, by = 50)) +
-  #geom_vline(xintercept = c(8, 10, 12), linetype = 'dashed') + 
+  scale_fill_uchicago() +
+  scale_color_uchicago() +
   labs(title = "Phenology at emergence",
        x = "day of emergence",
        y = "density of individuals")
@@ -414,6 +410,17 @@ ggplot(ind, aes(x = hatch_date, y = growth_rate, color = as.factor(meta))) +
        y = "growth rate (final size - initial size) / time") +
   scale_color_uchicago()
 
+```
+
+A visual of the synchrony treatments.
+
+```{r, echo = F}
+ggplot(ind, aes(x = hatch_date)) + mytheme +
+  geom_density(alpha = 0.5, size = 1.2) +
+  facet_grid(. ~ synchrony) +
+  labs(title = "Hatching timing treatments",
+       x = "hatching date",
+       y = "density of individuals")
 ```
 
 Probability of individuals surviving based on hatching date for each treatment

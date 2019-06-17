@@ -331,6 +331,19 @@ ggplot(trt_nobaseline,
 
 More traditional means plot
 ```{r}
+
+variable_names <- list(
+  'surv' = "survival",
+  'biom' = "biomass export",
+  'mass' = "per capita mass", 
+  'emer' = "emergence date",
+  'grow' = "per capita growth rate"
+)
+
+variable_labeller <- function(variable, value){
+  return(variable_names[value])
+}
+
 ggplot(trt, aes(x = synchrony, y = abs_value_exp, 
                 fill = asymmetry, color = asymmetry, group = asymmetry, shape = asymmetry)) + 
   mytheme +
@@ -339,12 +352,15 @@ ggplot(trt, aes(x = synchrony, y = abs_value_exp,
   geom_errorbar(aes(ymin = (abs_value_exp - se_exp.x), ymax = abs_value_exp + se_exp.x), width = 0) +
   facet_wrap(~var, scales = "free") +
   labs(title = "Responses of population vital rates to phenological manipulations",
-       y = "mean +/- se") + 
-  scale_color_uchicago() +
-  scale_fill_uchicago() +
-  scale_shape_manual(values = c(21, 24, 23)) 
-  #scale_color_manual(values = wes_palette("Darjeeling1")) +
-  #scale_fill_manual(values = wes_palette("Darjeeling1"))
+       y = "mean +/- se", 
+       x = "phenological synchrony at hatching") + 
+  #scale_color_uchicago() +
+  #scale_fill_uchicago() +
+  scale_color_manual(values = wes_palette("Darjeeling1")) +
+  scale_fill_manual(values = wes_palette("Darjeeling1")) + 
+  scale_shape_manual(values = c(21, 24, 23))  + 
+  theme(legend.position = c(0.75, 0.25)) 
+  
 ```
 
 
@@ -441,7 +457,7 @@ ggplot(ind, aes(x = hatch_date, y = meta, color = asymmetry)) + mytheme +
        y = "probability of survival") +
   scale_x_continuous(limits = c(0, 140), breaks = seq(0, 120, by = 30)) +
   #scale_color_uchicago() 
-  scale_color_manual(values = wes_palette(n = 3, name = "Cavalcanti1"))
+  scale_color_manual(values = wes_palette(n = 3, name = "Darjeeling1"))
 
 
 ```
@@ -452,11 +468,11 @@ Proportion survival/metamorphosis by treatment
 # treatment means
 
 variable_names <- list(
-  'surv' = "survival",
   'biom' = "biomass export",
+  'emer' = "emergence date", 
+  'grow' = "per capita growth rate",
   'mass' = "per capita mass", 
-  'emer' = "emergence date",
-  'grow' = "per capita growth rate"
+  'surv' = "survival"
 )
 
 variable_labeller <- function(variable, value){
@@ -469,7 +485,7 @@ ggplot(trt, aes(x = synchrony, y = abs_value_exp, group = asymmetry,
   geom_errorbar(size = 1, width = 0, position = position_dodge(width = 0.2),                   
                 aes(ymin = abs_value_exp - se_exp.x,
                     ymax = abs_value_exp + se_exp.x)) +  
-  geom_point(size = 4, color = 'black', position = position_dodge(width = 0.2)) +   
+  geom_point(size = 3, color = 'black', position = position_dodge(width = 0.2)) +   
   labs(shape = "asymmetry", 
        fill = 'asymmetry', 
        color = "asymmetry",
@@ -477,8 +493,8 @@ ggplot(trt, aes(x = synchrony, y = abs_value_exp, group = asymmetry,
        y = "mean +/- s.e.") +
   theme(legend.position = c(0.75, 0.22)) +
   facet_wrap(. ~ var, scales = 'free_y', labeller = variable_labeller) +
-  scale_fill_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
-  scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
+  scale_fill_manual(values = wes_palette(n = 3, name = "Darjeeling1")) +
+  scale_color_manual(values = wes_palette(n = 3, name = "Darjeeling1")) +
   scale_shape_manual(values = c(21, 24, 23))
 
 ```

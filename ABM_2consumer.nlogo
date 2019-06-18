@@ -140,7 +140,7 @@ ask dflies
     set n-meta-fishes count fishes with [color = yellow]             ; at this point, set the number of metamorphs to the number of yellow fish
     set n-dead-fishes count fishes with [color = red]                ; at this point, set the number of dead fish to the number of red fish
     set biom-fishes sum [size] of fishes with [color = yellow]       ; biomass = biomass export-- only counting those that survive and advance to next stage
-    set mean-size-fishes mean [size] of fishes with [color = yellow] ; throws an error in interface, but works in behaviorspace. I thought these calculated only at the end...
+    ;set mean-size-fishes mean [size] of fishes with [color = yellow] ; throws an error in interface, but works in behaviorspace. I thought these calculated only at the end...
 
     ; dfly related
     set n-meta-dflies count dflies with [color = yellow]             ; at this point, set the number of metamorphs to the number of yellow fish
@@ -399,7 +399,7 @@ n-fishes
 n-fishes
 0
 200
-80.0
+45.0
 1
 1
 NIL
@@ -583,7 +583,7 @@ n-dflies
 n-dflies
 0
 200
-0.0
+45.0
 1
 1
 NIL

@@ -354,10 +354,8 @@ ggplot(trt, aes(x = synchrony, y = abs_value_exp,
   labs(title = "Responses of population vital rates to phenological manipulations",
        y = "mean +/- se", 
        x = "phenological synchrony at hatching") + 
-  scale_color_uchicago() +
-  scale_fill_uchicago() +
-  #scale_color_manual(values = wes_palette("Darjeeling1")) +
-  #scale_fill_manual(values = wes_palette("Darjeeling1")) + 
+  scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
   scale_shape_manual(values = c(21, 24, 23))  + 
   theme(legend.position = c(0.75, 0.25)) 
   
@@ -384,8 +382,8 @@ ggplot(subset(ind, subset = (meta == 1)), aes(x = end_date, fill = asymmetry)) +
   geom_density(alpha = 0.5, size = 0.8) +
   facet_grid(. ~ synchrony) +
   scale_x_continuous(limits = c(0, 250), breaks = seq(0, 250, by = 50)) +
-  scale_fill_uchicago() +
-  scale_color_uchicago() +
+  scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
   labs(title = "Phenology at emergence",
        x = "day of emergence",
        y = "density of individuals")
@@ -457,49 +455,10 @@ ggplot(ind, aes(x = hatch_date, y = meta, color = asymmetry)) + mytheme +
        x = "hatching date",
        y = "probability of survival") +
   scale_x_continuous(limits = c(0, 140), breaks = seq(0, 120, by = 30)) +
-  #scale_color_uchicago() 
-  scale_color_manual(values = wes_palette(n = 3, name = "Darjeeling1"))
+  scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) 
 
 
 ```
-
-Proportion survival/metamorphosis by treatment
-
-```{r, echo = F}
-# treatment means
-
-variable_names <- list(
-  'biom' = "biomass export",
-  'emer' = "emergence date", 
-  'grow' = "per capita growth rate",
-  'mass' = "per capita mass", 
-  'surv' = "survival"
-)
-
-variable_labeller <- function(variable, value){
-  return(variable_names[value])
-}
-
-ggplot(trt, aes(x = synchrony, y = abs_value_exp, group = asymmetry, 
-                              fill = asymmetry, color = asymmetry, shape = asymmetry)) + mytheme +  
-  geom_line(size = 0.7, position = position_dodge(width = 0.2)) +
-  geom_errorbar(size = 1, width = 0, position = position_dodge(width = 0.2),                   
-                aes(ymin = abs_value_exp - se_exp.x,
-                    ymax = abs_value_exp + se_exp.x)) +  
-  geom_point(size = 3, color = 'black', position = position_dodge(width = 0.2)) +   
-  labs(shape = "asymmetry", 
-       fill = 'asymmetry', 
-       color = "asymmetry",
-       x = "hatching synchrony",
-       y = "mean +/- s.e.") +
-  theme(legend.position = c(0.75, 0.22)) +
-  facet_wrap(. ~ var, scales = 'free_y', labeller = variable_labeller) +
-  scale_fill_manual(values = wes_palette(n = 3, name = "Darjeeling1")) +
-  scale_color_manual(values = wes_palette(n = 3, name = "Darjeeling1")) +
-  scale_shape_manual(values = c(21, 24, 23))
-
-```
-
 
 ```{r, include = F}
 

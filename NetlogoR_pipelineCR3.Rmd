@@ -78,7 +78,7 @@ First, load the data. I've done a ton of different experiments in NetLogo, and n
 
 ```{r load table data}
 ## First, import the data
-data <- read.table("bs_CRnometa_15.csv",
+data <- read.table("bs_CRnometa_16.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
@@ -421,6 +421,7 @@ ggplot(ind, aes(x = hatch_date, y = growth_rate, color = as.factor(meta))) +
   geom_hline(yintercept = c(0.05, 0.15), linetype = 'dashed', alpha = 0.5) +
   facet_grid(asymmetry ~ synchrony) + mytheme +
   scale_x_continuous(limits = c(0, 140), breaks = seq(0, 120, by = 30)) +
+  ylim(0,0.25) +
   labs(title = "Growth rate by hatching date",
        x = "hatching date",
        y = "growth rate (final size - initial size) / time") +

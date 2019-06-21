@@ -399,7 +399,7 @@ n-fishes
 n-fishes
 0
 200
-45.0
+80.0
 1
 1
 NIL
@@ -414,7 +414,7 @@ var-hatch-fishes
 var-hatch-fishes
 0
 30
-25.0
+20.0
 1
 1
 NIL
@@ -583,7 +583,7 @@ n-dflies
 n-dflies
 0
 200
-45.0
+0.0
 1
 1
 NIL

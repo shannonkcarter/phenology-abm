@@ -357,12 +357,12 @@ ggplot(ind, aes(x = hatch_date, y = meta, color = sp)) + mytheme +
 ```{r, echo = F}
 
 variable_names <- list(
-  'surv' = "survival",
-  'biom' = "biomass export",
-  'mass' = "per capita mass", 
+  'biom' = "biomass export", 
   'emer' = "emergence date",
-  'grow' = "per capita growth rate"
-)
+  'grow' = "per capita growth rate",
+  'mass' = "per capita mass",
+  'surv' = "survival"
+  )
 
 variable_labeller <- function(variable, value){
   return(variable_names[value])

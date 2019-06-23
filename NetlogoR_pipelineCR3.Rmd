@@ -78,7 +78,7 @@ First, load the data. I've done a ton of different experiments in NetLogo, and n
 
 ```{r load table data}
 ## First, import the data
-data <- read.table("bs_CRnometa_16.csv",
+data <- read.table("bs_CRnometa_growthtest.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
@@ -313,7 +313,7 @@ ggplot(trt_nobaseline,
              size = 4, 
              position = position_dodge(width = 0.5)) +
   coord_flip() +
-  scale_y_continuous(limits = c(-0.5, 0.5), expand = c(0.005, 0.005)) +
+  #scale_y_continuous(limits = c(-0.5, 0.5), expand = c(0.005, 0.005)) +
   scale_shape_manual(name = "Synchrony & Symmetry",
                      labels = c("low synchrony, mild asymmetry", "low synchrony, strong asymmetry", 
                                 "high synchrony, mild asymmetry", "high synchrony, strong asymmetry"),
@@ -406,18 +406,30 @@ growthrates
 
 ```{r, echo = F}
 
+# size by hatch date
 ggplot(ind, aes(x = hatch_date, y = final_size, color = as.factor(meta))) +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
-  stat_smooth() +
+  stat_smooth(se = F) +
   facet_grid(asymmetry ~ synchrony) + mytheme +
   labs(title = "Final size by hatching date",
        x = "hatching date",
        y = "final size") +
   scale_color_uchicago()
 
+# development time by hatch date
+ggplot(ind, aes(x = hatch_date, y = (end_date - hatch_date), color = as.factor(meta))) +
+  geom_point(size = 1, alpha = 0.2, position = 'jitter') +
+  #stat_smooth(se = F) +
+  facet_grid(asymmetry ~ synchrony) + mytheme +
+  labs(title = "Development time by hatching date",
+       x = "hatching date",
+       y = "development time") +
+  scale_color_uchicago()
+
+# growth rate by hatch date
 ggplot(ind, aes(x = hatch_date, y = growth_rate, color = as.factor(meta))) +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
-  stat_smooth() +
+  stat_smooth(se = F) +
   geom_hline(yintercept = c(0.05, 0.15), linetype = 'dashed', alpha = 0.5) +
   facet_grid(asymmetry ~ synchrony) + mytheme +
   scale_x_continuous(limits = c(0, 140), breaks = seq(0, 120, by = 30)) +

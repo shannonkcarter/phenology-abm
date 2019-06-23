@@ -80,7 +80,7 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 First, load the data. I've done a ton of different experiments in NetLogo, and not always certain each new one will be an improvement over the old or even work at all. So I keep most of the runs and number the files sequentially.
 
 ```{r load table data}
-data <- read.table("ABM_2Consumer_3.csv",
+data <- read.table("ABM_2Consumer_4.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need

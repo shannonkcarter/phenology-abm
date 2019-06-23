@@ -233,7 +233,7 @@ to eat-grass
     min                                                        ; minimum between max they could eat and number of patches available
     (
       list                                                     ; have to make a list otherwise it will call for too many agents.
-        (asym-slope-dflies * size + (5 - 5 * asym-slope-dflies))   ; max-meal = slope*size + intercept. put intercept in terms of slope so that they're controlled by the same variable. easier for BS
+        (1.5 * asym-slope-dflies * size + (5 - 5 * asym-slope-dflies))   ; max-meal = slope*size + intercept. put intercept in terms of slope so that they're controlled by the same variable. easier for BS
         (0.2 * count patches with [pcolor = 52])               ; when resources are running low, a single turtle (i.e., the one randomly assigned to eat first) can't eat all the remaining patches
       )
     )
@@ -261,7 +261,7 @@ to eat-grass
 
   ;; SET A LABEL FOR INTERFACE DIAGNOSTICS
   ifelse show-label?
-  [set label round(size)]  ; can be useful to show size, size-list, age, hatch tick, etc. when troubleshooting
+  [set label (size / (ticks - hatch-tick))]  ; can be useful to show size, size-list, age, hatch tick, etc. when troubleshooting
   [set label ""]
 
 end
@@ -399,7 +399,7 @@ n-fishes
 n-fishes
 0
 200
-80.0
+40.0
 1
 1
 NIL
@@ -414,7 +414,7 @@ var-hatch-fishes
 var-hatch-fishes
 0
 30
-20.0
+25.0
 1
 1
 NIL
@@ -534,7 +534,7 @@ mean-hatch-fishes
 mean-hatch-fishes
 0
 100
-40.0
+80.0
 1
 1
 NIL
@@ -549,7 +549,7 @@ asym-slope-fishes
 asym-slope-fishes
 0
 1
-1.0
+0.0
 0.1
 1
 NIL
@@ -583,7 +583,7 @@ n-dflies
 n-dflies
 0
 200
-0.0
+40.0
 1
 1
 NIL
@@ -598,7 +598,7 @@ mean-hatch-dflies
 mean-hatch-dflies
 0
 100
-40.0
+60.0
 1
 1
 NIL
@@ -628,7 +628,7 @@ asym-slope-dflies
 asym-slope-dflies
 0
 1
-0.5
+0.0
 0.1
 1
 NIL
@@ -1714,7 +1714,7 @@ NetLogo 6.0
       <value value="1"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="2Consumer" repetitions="6" runMetricsEveryStep="false">
+  <experiment name="2Consumer" repetitions="10" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
     <metric>n-meta-fishes</metric>
@@ -1750,12 +1750,12 @@ NetLogo 6.0
       <value value="5"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="mean-hatch-fishes">
-      <value value="20"/>
       <value value="40"/>
       <value value="60"/>
+      <value value="80"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="mean-hatch-dflies">
-      <value value="40"/>
+      <value value="60"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="growth-per-patch">
       <value value="0.05"/>

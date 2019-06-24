@@ -196,14 +196,15 @@ to eat-grass
   if breed = fishes
   [
   let max-meal                                                 ; max-meal is the maximum number of patches an individual *could* eat. not always realized.
-  (
-    min                                                        ; minimum between max they could eat and number of patches available
-    (
-      list                                                     ; have to make a list otherwise it will call for too many agents.
-        (asym-slope-fishes * size + (5 - 5 * asym-slope-fishes))   ; max-meal = slope*size + intercept. put intercept in terms of slope so that they're controlled by the same variable. easier for BS
-        (0.2 * count patches with [pcolor = 52])               ; when resources are running low, a single turtle (i.e., the one randomly assigned to eat first) can't eat all the remaining patches
-      )
-    )
+  (3 + asym-slope-fishes * size)
+  ;(
+  ;  min                                                        ; minimum between max they could eat and number of patches available
+  ;  (
+  ;    list                                                     ; have to make a list otherwise it will call for too many agents.
+  ;      (asym-slope-fishes * size + (5 - 5 * asym-slope-fishes))   ; max-meal = slope*size + intercept. put intercept in terms of slope so that they're controlled by the same variable. easier for BS
+  ;      (0.2 * count patches with [pcolor = 52])               ; when resources are running low, a single turtle (i.e., the one randomly assigned to eat first) can't eat all the remaining patches
+  ;    )
+  ;  )
 
   ;; LOCAL VARIABLES FOR FEEDING GAINS
   let growth-this-tick 0                        ; at the start of each tick, they haven't grown that tick
@@ -229,14 +230,15 @@ to eat-grass
   if breed = dflies
   [
   let max-meal                                                 ; max-meal is the maximum number of patches an individual *could* eat. not always realized.
-  (
-    min                                                        ; minimum between max they could eat and number of patches available
-    (
-      list                                                     ; have to make a list otherwise it will call for too many agents.
-        (1.5 * asym-slope-dflies * size + (5 - 5 * asym-slope-dflies))   ; max-meal = slope*size + intercept. put intercept in terms of slope so that they're controlled by the same variable. easier for BS
-        (0.2 * count patches with [pcolor = 52])               ; when resources are running low, a single turtle (i.e., the one randomly assigned to eat first) can't eat all the remaining patches
-      )
-    )
+  (3 + 1.5 * size * asym-slope-dflies)
+  ;(
+  ;  min                                                        ; minimum between max they could eat and number of patches available
+  ;  (
+  ;    list                                                     ; have to make a list otherwise it will call for too many agents.
+  ;      (1.5 * asym-slope-dflies * size + (5 - 5 * asym-slope-dflies))   ; max-meal = slope*size + intercept. put intercept in terms of slope so that they're controlled by the same variable. easier for BS
+  ;      (0.2 * count patches with [pcolor = 52])               ; when resources are running low, a single turtle (i.e., the one randomly assigned to eat first) can't eat all the remaining patches
+  ;    )
+  ;  )
 
   ;; LOCAL VARIABLES FOR FEEDING GAINS
   let growth-this-tick 0                        ; at the start of each tick, they haven't grown that tick
@@ -261,7 +263,7 @@ to eat-grass
 
   ;; SET A LABEL FOR INTERFACE DIAGNOSTICS
   ifelse show-label?
-  [set label (size / (ticks - hatch-tick))]  ; can be useful to show size, size-list, age, hatch tick, etc. when troubleshooting
+  [set label round(size)] ; / (ticks - hatch-tick))]  ; can be useful to show size, size-list, age, hatch tick, etc. when troubleshooting
   [set label ""]
 
 end
@@ -399,7 +401,7 @@ n-fishes
 n-fishes
 0
 200
-40.0
+0.0
 1
 1
 NIL
@@ -414,7 +416,7 @@ var-hatch-fishes
 var-hatch-fishes
 0
 30
-25.0
+0.0
 1
 1
 NIL
@@ -521,7 +523,7 @@ SWITCH
 379
 show-label?
 show-label?
-1
+0
 1
 -1000
 
@@ -549,7 +551,7 @@ asym-slope-fishes
 asym-slope-fishes
 0
 1
-0.0
+1.0
 0.1
 1
 NIL
@@ -583,7 +585,7 @@ n-dflies
 n-dflies
 0
 200
-40.0
+1.0
 1
 1
 NIL

@@ -78,7 +78,7 @@ First, load the data. I've done a ton of different experiments in NetLogo, and n
 
 ```{r load table data}
 ## First, import the data
-data <- read.table("bs_CRnometa_growthtest.csv",
+data <- read.table("bs_CRnometa_17.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need

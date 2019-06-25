@@ -277,7 +277,7 @@ end
 to metamorph-fish
   ; each time step, they think about metamorphosing, but only do so if they meet this criteria:
   ; mortality*minimumsize / (mortality - rgr)
-  if breed = fishes and size > (0.102 / (0.0170000001 - recent-growth-fish)) and size > 6  ; have the .000001 there so that the denominator won't ever be 0
+  if breed = fishes and size > (0.102 / (0.0170000001 - recent-growth-fish)) and size > 6 and recent-growth-fish < 0.017 ; have the .000001 there so that the denominator won't ever be 0
   [
     set color yellow                   ; ones that metamorph turn yellow
     set meta-fish? 1                   ; turtles-own variable to tell us whether they metamporphed
@@ -288,7 +288,7 @@ end
 to metamorph-dfly
   ; each time step, they think about metamorphosing, but only do so if they meet this criteria:
   ; mortality*minimumsize / (mortality - rgr)
-  if breed = dflies and size > (0.102 / (0.0170000001 - recent-growth-dfly)) and size > 6  ; have the .000001 there so that the denominator won't ever be 0
+  if breed = dflies and size > (0.102 / (0.0170000001 - recent-growth-dfly)) and size > 6 and recent-growth-dfly < 0.017 ; have the .000001 there so that the denominator won't ever be 0
   [
     set color yellow                   ; ones that metamorph turn yellow
     set meta-dfly? 1                   ; turtles-own variable to tell us whether they metamporphed
@@ -401,7 +401,7 @@ n-fishes
 n-fishes
 0
 200
-1.0
+80.0
 1
 1
 NIL
@@ -416,7 +416,7 @@ var-hatch-fishes
 var-hatch-fishes
 0
 30
-0.0
+25.0
 1
 1
 NIL
@@ -523,7 +523,7 @@ SWITCH
 379
 show-label?
 show-label?
-0
+1
 1
 -1000
 
@@ -536,7 +536,7 @@ mean-hatch-fishes
 mean-hatch-fishes
 0
 100
-1.0
+40.0
 1
 1
 NIL
@@ -551,7 +551,7 @@ asym-slope-fishes
 asym-slope-fishes
 0
 1
-0.7
+1.0
 0.1
 1
 NIL
@@ -600,7 +600,7 @@ mean-hatch-dflies
 mean-hatch-dflies
 0
 100
-60.0
+40.0
 1
 1
 NIL
@@ -630,7 +630,7 @@ asym-slope-dflies
 asym-slope-dflies
 0
 1
-0.0
+0.5
 0.1
 1
 NIL

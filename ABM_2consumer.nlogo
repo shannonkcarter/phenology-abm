@@ -401,7 +401,7 @@ n-fishes
 n-fishes
 0
 200
-80.0
+40.0
 1
 1
 NIL
@@ -536,7 +536,7 @@ mean-hatch-fishes
 mean-hatch-fishes
 0
 100
-40.0
+80.0
 1
 1
 NIL
@@ -551,7 +551,7 @@ asym-slope-fishes
 asym-slope-fishes
 0
 1
-1.0
+0.5
 0.1
 1
 NIL
@@ -585,7 +585,7 @@ n-dflies
 n-dflies
 0
 200
-0.0
+40.0
 1
 1
 NIL
@@ -600,7 +600,7 @@ mean-hatch-dflies
 mean-hatch-dflies
 0
 100
-40.0
+60.0
 1
 1
 NIL

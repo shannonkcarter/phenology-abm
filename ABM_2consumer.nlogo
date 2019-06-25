@@ -196,7 +196,7 @@ to eat-grass
   if breed = fishes
   [
   let max-meal                                                 ; max-meal is the maximum number of patches an individual *could* eat. not always realized.
-  (3 + asym-slope-fishes * size)
+  (asym-slope-fishes * size + 3)
   ;(
   ;  min                                                        ; minimum between max they could eat and number of patches available
   ;  (
@@ -401,7 +401,7 @@ n-fishes
 n-fishes
 0
 200
-0.0
+1.0
 1
 1
 NIL
@@ -536,7 +536,7 @@ mean-hatch-fishes
 mean-hatch-fishes
 0
 100
-80.0
+1.0
 1
 1
 NIL
@@ -551,7 +551,7 @@ asym-slope-fishes
 asym-slope-fishes
 0
 1
-1.0
+0.7
 0.1
 1
 NIL
@@ -585,7 +585,7 @@ n-dflies
 n-dflies
 0
 200
-1.0
+0.0
 1
 1
 NIL

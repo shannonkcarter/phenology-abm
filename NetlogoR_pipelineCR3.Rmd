@@ -293,8 +293,8 @@ Here are some diagnostic plots to get a quick look at the data. These will give 
 ```{r}
 ## LOLIPOP PLOT
 
-trt_nobaseline <- subset(trt, subset = asymmetry != "none" & synchrony != "med")
-run_nobaseline <- subset(run, subset = asymmetry != "none" & synchrony != "med")
+trt_nobaseline <- subset(trt, subset = asymmetry != "none" & synchrony != "med" & synchrony != "lm" & synchrony != "mh")
+run_nobaseline <- subset(run, subset = asymmetry != "none" & synchrony != "med" & synchrony != "lm" & synchrony != "mh")
 
 ggplot(trt_nobaseline, 
        aes(x = var, y = baseline_adj, 
@@ -313,7 +313,7 @@ ggplot(trt_nobaseline,
              size = 4, 
              position = position_dodge(width = 0.5)) +
   coord_flip() +
-  #scale_y_continuous(limits = c(-0.5, 0.5), expand = c(0.005, 0.005)) +
+  scale_y_continuous(limits = c(-0.5, 0.5), expand = c(0.005, 0.005)) +
   scale_shape_manual(name = "Synchrony & Symmetry",
                      labels = c("low synchrony, mild asymmetry", "low synchrony, strong asymmetry", 
                                 "high synchrony, mild asymmetry", "high synchrony, strong asymmetry"),
@@ -358,6 +358,45 @@ ggplot(trt, aes(x = synchrony, y = abs_value_exp,
   scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
   scale_shape_manual(values = c(21, 24, 23))  + 
   theme(legend.position = c(0.75, 0.25)) 
+  
+```
+
+## making the effect size/mean differences plot 
+```{r}
+
+## write out response variable names for facet wrap
+variable_names <- list(
+  'biom' = "biomass export",
+  'emer' = "emergence date", 
+  'grow' = "per capita growth rate", 
+  'mass' = "per capita mass", 
+  'surv' = "survival"
+)
+
+variable_labeller <- function(variable, value){
+  return(variable_names[value])
+}
+
+## first, the raw data
+ggplot(data = run, aes(x = synchrony, y = abs_value, 
+                fill = asymmetry, color = asymmetry, group = asymmetry, shape = asymmetry)) + 
+  mytheme +
+  #stat_smooth() +
+  geom_point(data = run, aes(x = synchrony, y = abs_value, fill = asymmetry), size = 1.5,
+             position = position_dodge(width = 0.5)) +
+  facet_wrap(~var, scales = "free", labeller = variable_labeller, nrow = 1) +
+  labs(title = "Responses of population vital rates to phenological manipulations",
+       y = "measurement", 
+       x = "phenological synchrony at hatching") + 
+  scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_shape_manual(values = c(21, 24, 23))  + 
+  theme(legend.position = "none") 
+  #geom_point(data = trt, aes(x = synchrony, y = abs_value_exp,
+  #                           fill = asymmetry, color = asymmetry, group = asymmetry), size = 3,
+  #           position = position_dodge(width = 0.5)) 
+  #geom_errorbar(data = trt, aes(x = synchrony, color = asymmetry, group = asymmetry, 
+  #                              ymin = (abs_value_exp - se_exp.x), ymax = abs_value_exp + se_exp.x), width = 0)
   
 ```
 
@@ -414,6 +453,7 @@ ggplot(ind, aes(x = hatch_date, y = final_size, color = as.factor(meta))) +
   labs(title = "Final size by hatching date",
        x = "hatching date",
        y = "final size") +
+  theme(legend.position = "none") +
   scale_color_uchicago()
 
 # development time by hatch date
@@ -424,6 +464,7 @@ ggplot(ind, aes(x = hatch_date, y = (end_date - hatch_date), color = as.factor(m
   labs(title = "Development time by hatching date",
        x = "hatching date",
        y = "development time") +
+  theme(legend.position = "none") +
   scale_color_uchicago()
 
 # growth rate by hatch date
@@ -437,6 +478,7 @@ ggplot(ind, aes(x = hatch_date, y = growth_rate, color = as.factor(meta))) +
   labs(title = "Growth rate by hatching date",
        x = "hatching date",
        y = "growth rate (final size - initial size) / time") +
+  theme(legend.position = "none") +
   scale_color_uchicago()
 
 ```

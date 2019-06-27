@@ -30,6 +30,7 @@ library(wesanderson)
 library(ggsci)
 library(extrafont)
 library(dabestr)
+library(cowplot)
 #extrafont::loadfonts(device = "win")
 
 
@@ -362,7 +363,21 @@ ggplot(trt, aes(x = synchrony, y = abs_value_exp,
   
 ```
 
-## making the effect size/mean differences plot 
+# Dabestr 
+
+Dabestr is a package to plot effect sizes via estimation plots. Easy to make the plots this way, but ultimately I want to recreate these in ggplot to allow more flexibility. I'll use the dabestr package to check.
+```{r}
+## testing with the dabestr
+## pare down the df for now-- one response var and 1 asymmetry
+run_dabest <- subset(run, subset = (var == "surv" & asymmetry == "strong"))
+unpaired_mean_diff <- dabest(run_dabest, synchrony, abs_value,
+                             idx = c("low", "med", "high"),
+                             paired = FALSE)
+unpaired_mean_diff
+plot(unpaired_mean_diff)
+```
+
+## Recreating dabestr plots 
 ```{r}
 
 ## write out response variable names for facet wrap
@@ -379,7 +394,7 @@ variable_labeller <- function(variable, value){
 }
 
 ## first, the raw data
-ggplot(data = run, aes(x = synchrony, y = abs_value, 
+rawdata <- ggplot(data = run, aes(x = synchrony, y = abs_value, 
                 fill = asymmetry, color = asymmetry, group = asymmetry, shape = asymmetry)) + 
   mytheme +
   #stat_smooth() +
@@ -393,26 +408,38 @@ ggplot(data = run, aes(x = synchrony, y = abs_value,
   scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
   scale_shape_manual(values = c(21, 24, 23))  + 
   theme(legend.position = "none") 
-  #geom_point(data = trt, aes(x = synchrony, y = abs_value_exp,
-  #                           fill = asymmetry, color = asymmetry, group = asymmetry), size = 3,
-  #           position = position_dodge(width = 0.5)) 
-  #geom_errorbar(data = trt, aes(x = synchrony, color = asymmetry, group = asymmetry, 
-  #                              ymin = (abs_value_exp - se_exp.x), ymax = abs_value_exp + se_exp.x), width = 0)
 
-```
+## Now, making the mean_diffs df
+mean_diffs <- subset(trt, subset = (synchrony == "low"))
+mean_diffs <- mean_diffs[,2:4]
+colnames(mean_diffs)[3] <- "baseline_mean"
 
-# Working with dabestr 
+# now, add in baseline averages (conditions at med sync and symmetic comp) to run data
+run_dabest <- run[,1:5]
+run_dabest <- left_join(run_dabest, mean_diffs, by = c("var", "asymmetry"))  
+trt_dabest <- trt[,1:5]
+trt_dabest <- left_join(trt_dabest, mean_diffs, by = c("var", "asymmetry"))
+   
+meandiffs_run <- run_dabest %>% 
+  mutate(umd = (abs_value - baseline_mean))
 
-Dabestr is a package to plot effect sizes via estimation plots. Easy to make the plots this way, but ultimately I want to recreate these in ggplot to allow more flexibility. I'll use the dabestr package to check.
-```{r}
-## testing with the dabestr
-## pare down the df for now-- one response var and 1 asymmetry
-run_dabest <- subset(run, subset = (var == "surv" & asymmetry == "strong"))
-unpaired_mean_diff <- dabest(run_dabest, synchrony, abs_value,
-                             idx = c("low", "med", "high"),
-                             paired = FALSE)
-unpaired_mean_diff
-plot(unpaired_mean_diff)
+meandiffs_trt <- trt_dabest %>% 
+  mutate(umd = (abs_value_exp - baseline_mean))
+
+mean_diffs <- ggplot(meandiffs_trt, aes(x = synchrony, y = umd, 
+                          color = asymmetry, shape = asymmetry, fill = asymmetry, group = asymmetry)) + mytheme +
+  geom_errorbar(aes(ymax = umd + se_exp.x, ymin = umd - se_exp.x), width = 0,
+                position = position_dodge(width = 0.5), size = 1) +
+  geom_point(size = 3, color = "black",
+             position = position_dodge(width = 0.5)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray") +
+  scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_shape_manual(values = c(21, 24, 23))  + 
+  facet_wrap(~var, nrow = 1, labeller = variable_labeller, scales = "free") +
+  theme(legend.position = "none")
+
+plot_grid(rawdata, mean_diffs, ncol = 1)
 ```
 
 Now, distributions of sizes of individuals at the end of the experiment, grouped by treatment. The vertical lines represent different size thresholds I considered for metamorphosis. Since these distributions of sizes for each treatment are so different, it doesn't make sense to set a size threshold for survival. Results are pretty sensitive to it. Instead, model optimal timing of metamorphosis so that both size and age at metamorphosis are plastic and can be captured.

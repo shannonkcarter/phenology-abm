@@ -29,6 +29,7 @@ library(lme4)
 library(wesanderson)
 library(ggsci)
 library(extrafont)
+library(dabestr)
 #extrafont::loadfonts(device = "win")
 
 
@@ -397,9 +398,22 @@ ggplot(data = run, aes(x = synchrony, y = abs_value,
   #           position = position_dodge(width = 0.5)) 
   #geom_errorbar(data = trt, aes(x = synchrony, color = asymmetry, group = asymmetry, 
   #                              ymin = (abs_value_exp - se_exp.x), ymax = abs_value_exp + se_exp.x), width = 0)
-  
+
 ```
 
+# Working with dabestr 
+
+Dabestr is a package to plot effect sizes via estimation plots. Easy to make the plots this way, but ultimately I want to recreate these in ggplot to allow more flexibility. I'll use the dabestr package to check.
+```{r}
+## testing with the dabestr
+## pare down the df for now-- one response var and 1 asymmetry
+run_dabest <- subset(run, subset = (var == "surv" & asymmetry == "strong"))
+unpaired_mean_diff <- dabest(run_dabest, synchrony, abs_value,
+                             idx = c("low", "med", "high"),
+                             paired = FALSE)
+unpaired_mean_diff
+plot(unpaired_mean_diff)
+```
 
 Now, distributions of sizes of individuals at the end of the experiment, grouped by treatment. The vertical lines represent different size thresholds I considered for metamorphosis. Since these distributions of sizes for each treatment are so different, it doesn't make sense to set a size threshold for survival. Results are pretty sensitive to it. Instead, model optimal timing of metamorphosis so that both size and age at metamorphosis are plastic and can be captured.
 

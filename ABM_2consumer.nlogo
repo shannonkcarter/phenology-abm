@@ -401,7 +401,7 @@ n-fishes
 n-fishes
 0
 200
-40.0
+80.0
 1
 1
 NIL
@@ -536,7 +536,7 @@ mean-hatch-fishes
 mean-hatch-fishes
 0
 100
-80.0
+40.0
 1
 1
 NIL
@@ -551,7 +551,7 @@ asym-slope-fishes
 asym-slope-fishes
 0
 1
-0.5
+1.0
 0.1
 1
 NIL
@@ -585,7 +585,7 @@ n-dflies
 n-dflies
 0
 200
-40.0
+0.0
 1
 1
 NIL
@@ -600,7 +600,7 @@ mean-hatch-dflies
 mean-hatch-dflies
 0
 100
-60.0
+40.0
 1
 1
 NIL
@@ -1686,7 +1686,9 @@ NetLogo 6.0
     </enumeratedValueSet>
     <enumeratedValueSet variable="var-hatch-fishes">
       <value value="5"/>
+      <value value="10"/>
       <value value="15"/>
+      <value value="20"/>
       <value value="25"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="var-hatch-dflies">

@@ -374,7 +374,7 @@ unpaired_mean_diff <- dabest(run_dabest, synchrony, abs_value,
                              idx = c("low", "med", "high"),
                              paired = FALSE)
 unpaired_mean_diff
-plot(unpaired_mean_diff)
+plot(unpaired_mean_diff, palette = "Dark2")
 ```
 
 ## Recreating dabestr plots 
@@ -393,23 +393,6 @@ variable_labeller <- function(variable, value){
   return(variable_names[value])
 }
 
-## first, the raw data
-rawdata <- ggplot(data = run, aes(x = synchrony, y = abs_value, 
-                fill = asymmetry, color = asymmetry, group = asymmetry, shape = asymmetry)) + 
-  mytheme +
-  #stat_smooth() +
-  geom_point(data = run, aes(x = synchrony, y = abs_value, fill = asymmetry), size = 1.5,
-             position = position_dodge(width = 0.5)) +
-  facet_wrap(~var, scales = "free", labeller = variable_labeller, nrow = 1) +
-  labs(title = "Responses of population vital rates to phenological manipulations",
-       y = "measurement", 
-       x = "phenological synchrony at hatching") + 
-  scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
-  scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
-  scale_shape_manual(values = c(21, 24, 23))  + 
-  theme(legend.position = "none") 
-
-## Now, making the mean_diffs df
 mean_diffs <- subset(trt, subset = (synchrony == "low"))
 mean_diffs <- mean_diffs[,2:4]
 colnames(mean_diffs)[3] <- "baseline_mean"
@@ -422,22 +405,45 @@ trt_dabest <- left_join(trt_dabest, mean_diffs, by = c("var", "asymmetry"))
    
 meandiffs_run <- run_dabest %>% 
   mutate(umd = (abs_value - baseline_mean))
+meandiffs_run[meandiffs_run$synchrony == "low", "umd"] <- NA 
 
 meandiffs_trt <- trt_dabest %>% 
   mutate(umd = (abs_value_exp - baseline_mean))
+meandiffs_trt[meandiffs_trt$synchrony == "low", "umd"] <- NA 
+levels(meandiffs_trt$synchrony) <- c(" ", "med - low", "high - low")
 
+
+## first, the raw data
+rawdata <- ggplot(data = run, aes(x = synchrony, y = abs_value, 
+                fill = asymmetry, color = asymmetry, group = asymmetry, shape = asymmetry)) + 
+  theme_bw() + #mytheme +
+  #stat_smooth() +
+  geom_point(data = run, aes(x = synchrony, y = abs_value, fill = asymmetry), size = 1.5,
+             position = position_dodge(width = 0.5)) +
+  facet_wrap(~var, scales = "free", labeller = variable_labeller, nrow = 1) +
+  labs(y = "measurement", 
+       x = NULL) + 
+  scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_shape_manual(values = c(21, 24, 23))  + 
+  theme(legend.position = "none") 
+
+## Now, making the mean_diffs df
 mean_diffs <- ggplot(meandiffs_trt, aes(x = synchrony, y = umd, 
-                          color = asymmetry, shape = asymmetry, fill = asymmetry, group = asymmetry)) + mytheme +
+                          color = asymmetry, shape = asymmetry, fill = asymmetry, group = asymmetry)) + theme_bw() + #mytheme +
   geom_errorbar(aes(ymax = umd + se_exp.x, ymin = umd - se_exp.x), width = 0,
                 position = position_dodge(width = 0.5), size = 1) +
   geom_point(size = 3, color = "black",
              position = position_dodge(width = 0.5)) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
   scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
   scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
   scale_shape_manual(values = c(21, 24, 23))  + 
   facet_wrap(~var, nrow = 1, labeller = variable_labeller, scales = "free") +
-  theme(legend.position = "none")
+  theme(legend.position = "none",
+        strip.background = element_blank(),
+        strip.text.x = element_blank()) +
+  labs(x = NULL, y = "mean difference")
 
 plot_grid(rawdata, mean_diffs, ncol = 1)
 ```

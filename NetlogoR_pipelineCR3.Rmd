@@ -428,11 +428,11 @@ rawdata <- ggplot(data = run, aes(x = synchrony, y = abs_value,
   scale_shape_manual(values = c(21, 24, 23))  + 
   theme(legend.position = "none", panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    strip.background = element_blank(),
-        strip.text = element_blank(),
     plot.title = element_text(hjust = 0.5),
-    plot.margin = margin(20, 20, 20, 20)) 
-
+    plot.margin = margin(20, 20, 20, 20),
+    strip.background = element_blank(),
+    strip.text = element_blank()) 
+rawdata
 ## Now, making the mean_diffs df
 mean_diffs <- ggplot(meandiffs_trt, aes(x = synchrony, y = umd, 
                           color = asymmetry, shape = asymmetry, fill = asymmetry, group = asymmetry)) + mytheme +
@@ -448,7 +448,7 @@ mean_diffs <- ggplot(meandiffs_trt, aes(x = synchrony, y = umd,
   theme(legend.position = "none",
         plot.title = element_text(hjust = 0.5),
         plot.margin = margin(20, 20, 20, 20)) +
-  labs(x = NULL, title = "mean difference", y = NULL)
+  labs(x = NULL, title = "mean difference", y = NULL) 
 
 plot_grid(rawdata, mean_diffs, ncol = 2)
 ```

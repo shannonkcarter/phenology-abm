@@ -600,3 +600,16 @@ ggplot(df, aes(x = growth, y = wt5)) + theme_bw() +
 
 ```
 
+blank facet grids for conceptual figure
+```{r}
+
+trt_grid <- ggplot(subset(trt, subset = (synchrony != 'med' & asymmetry != "mild")), x = abs_value_exp, y = se_exp.x) + mytheme +
+  facet_grid(asymmetry ~ synchrony) +
+  xlab("date") + ylab('number of individuals arriving') + 
+  theme(strip.text = element_text(size = 14),
+        axis.title = element_text(size = 14))
+trt_grid
+
+
+```
+

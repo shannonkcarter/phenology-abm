@@ -384,7 +384,7 @@ plot(unpaired_mean_diff, palette = "Dark2")
 variable_names <- list(
   'biom' = "biomass export",
   'emer' = "emergence date", 
-  'grow' = "per capita growth rate", 
+  'grow' = "per capita growth", 
   'mass' = "per capita mass", 
   'surv' = "survival"
 )
@@ -404,25 +404,24 @@ trt_dabest <- trt[,1:5]
 trt_dabest <- left_join(trt_dabest, mean_diffs, by = c("var", "asymmetry"))
    
 meandiffs_run <- run_dabest %>% 
-  mutate(umd = (abs_value - baseline_mean))
-meandiffs_run[meandiffs_run$synchrony == "low", "umd"] <- NA 
+  mutate(umd = (abs_value - baseline_mean)/baseline_mean)
+meandiffs_run <- subset(meandiffs_run, subset = (synchrony != "low"))
 
 meandiffs_trt <- trt_dabest %>% 
-  mutate(umd = (abs_value_exp - baseline_mean))
-meandiffs_trt[meandiffs_trt$synchrony == "low", "umd"] <- NA 
-levels(meandiffs_trt$synchrony) <- c(" ", "med - low", "high - low")
-
+  mutate(umd = (abs_value_exp - baseline_mean)/baseline_mean,
+         umd_se = (se_exp.x/baseline_mean))
+meandiffs_trt <- subset(meandiffs_trt, subset = (synchrony != "low"))
 
 ## first, the raw data
 rawdata <- ggplot(data = run, aes(x = synchrony, y = abs_value, 
                 fill = asymmetry, color = asymmetry, group = asymmetry, shape = asymmetry)) + 
   mytheme +
   #stat_smooth() +
-  geom_point(data = run, aes(x = synchrony, y = abs_value, fill = asymmetry), size = 1.5,
+  geom_point(size = 1.5,
              position = position_dodge(width = 0.5)) +
   facet_grid(var~., scales = "free", labeller = variable_labeller) +
-  labs(title = "raw data", 
-       x = NULL, y = NULL) + 
+  labs(title = "\nraw data", 
+       x = "phenological synchrony", y = NULL) + 
   scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
   scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
   scale_shape_manual(values = c(21, 24, 23))  + 
@@ -436,7 +435,7 @@ rawdata
 ## Now, making the mean_diffs df
 mean_diffs <- ggplot(meandiffs_trt, aes(x = synchrony, y = umd, 
                           color = asymmetry, shape = asymmetry, fill = asymmetry, group = asymmetry)) + mytheme +
-  geom_errorbar(aes(ymax = umd + se_exp.x, ymin = umd - se_exp.x), width = 0,
+  geom_errorbar(aes(ymax = umd + umd_se, ymin = umd - umd_se), width = 0,
                 position = position_dodge(width = 0.5), size = 1) +
   geom_point(size = 3, color = "black",
              position = position_dodge(width = 0.5)) +
@@ -448,9 +447,34 @@ mean_diffs <- ggplot(meandiffs_trt, aes(x = synchrony, y = umd,
   theme(legend.position = "none",
         plot.title = element_text(hjust = 0.5),
         plot.margin = margin(20, 20, 20, 20)) +
-  labs(x = NULL, title = "mean difference", y = NULL) 
+  labs(x = "phenological synchrony", title = "proportional difference\nfrom low synchrony", y = NULL) 
 
 plot_grid(rawdata, mean_diffs, ncol = 2)
+```
+
+
+```{r}
+
+
+run1 <- run[,1:5]
+mean_diffs1 <- meandiffs_trt %>% select(-c(abs_value_exp:baseline_mean))
+combined <- left_join(run1, mean_diffs1, by = c("synchrony", "asymmetry", "var"))
+combined1 <- combined %>% 
+  gather("abs_value", "umd", key = "abs_rel", value = "measurement")
+
+## first, the raw data
+attempt <- ggplot(data = combined1, aes(x = synchrony, y = measurement, 
+                fill = asymmetry, color = asymmetry, group = asymmetry, shape = asymmetry)) + 
+  mytheme +
+  #stat_smooth() +
+  geom_point(size = 1.5, position = position_dodge(width = 0.5)) +
+  facet_grid(var ~ abs_rel, scales = "free") +
+  labs(x = "phenological synchrony", y = NULL) + 
+  scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_shape_manual(values = c(21, 24, 23))
+attempt
+
 ```
 
 Now, distributions of sizes of individuals at the end of the experiment, grouped by treatment. The vertical lines represent different size thresholds I considered for metamorphosis. Since these distributions of sizes for each treatment are so different, it doesn't make sense to set a size threshold for survival. Results are pretty sensitive to it. Instead, model optimal timing of metamorphosis so that both size and age at metamorphosis are plastic and can be captured.

@@ -299,6 +299,77 @@ write.csv(trt, "trt2sp.csv")
 
 Here are some diagnostic plots to get a quick look at the data. These will give an idea of what parameter space is reasonable and interesting to explore in future behavior space runs.
 
+Dabestr plot
+
+```{r}
+## write out response variable names for facet wrap
+mean_diffs <- subset(trt, subset = (sync_fish == "low"))
+mean_diffs <- mean_diffs %>%
+  subset(sp == "f") %>% 
+  select(c("sync_fish", "mean_fish", "var", "mean", "se")) 
+colnames(mean_diffs)[5] <- "baseline_mean"
+
+# now, add in baseline averages (conditions at med sync and symmetic comp) to run data
+run_dabest <- run[,1:5]
+run_dabest <- left_join(run_dabest, mean_diffs, by = c("var", "asymmetry"))  
+trt_dabest <- trt[,1:5]
+trt_dabest <- left_join(trt_dabest, mean_diffs, by = c("var", "asymmetry"))
+   
+meandiffs_run <- run_dabest %>% 
+  mutate(umd = (abs_value - baseline_mean)/baseline_mean)
+meandiffs_run <- subset(meandiffs_run, subset = (synchrony != "low"))
+
+meandiffs_trt <- trt_dabest %>% 
+  mutate(umd = (abs_value_exp - baseline_mean)/baseline_mean,
+         umd_se = (se_exp.x/baseline_mean))
+meandiffs_trt <- subset(meandiffs_trt, subset = (synchrony != "low"))
+
+meandiffs_trt$var <- factor(meandiffs_trt$var, levels = c("surv", "biom", "mass", "grow", "emer"))
+run$var <- factor(run$var, levels = c("surv", "biom", "mass", "grow", "emer"))
+
+## first, the raw data
+rawdata <- ggplot(data = run, aes(x = synchrony, y = abs_value, 
+                fill = asymmetry, color = asymmetry, group = asymmetry, shape = asymmetry)) + 
+  mytheme +
+  #stat_smooth() +
+  geom_point(size = 1.5,
+             position = position_dodge(width = 0.5)) +
+  facet_grid(var~., scales = "free", labeller = variable_labeller) +
+  labs(title = "\nraw data", 
+       x = "phenological synchrony", y = NULL) + 
+  scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_shape_manual(values = c(21, 24, 23))  + 
+  theme(legend.position = "none", panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.title = element_text(hjust = 0.5),
+    plot.margin = margin(20, 20, 20, 20),
+    strip.background = element_blank(),
+    strip.text = element_blank()) 
+rawdata
+## Now, making the mean_diffs df
+mean_diffs <- ggplot(meandiffs_trt, aes(x = synchrony, y = umd, 
+                          color = asymmetry, shape = asymmetry, fill = asymmetry, group = asymmetry)) + mytheme +
+  geom_errorbar(aes(ymax = umd + umd_se, ymin = umd - umd_se), width = 0,
+                position = position_dodge(width = 0.5), size = 1) +
+  geom_point(size = 3, color = "black",
+             position = position_dodge(width = 0.5)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_shape_manual(values = c(21, 24, 23))  + 
+  facet_grid(var~., labeller = variable_labeller, scales = "free") +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5),
+        plot.margin = margin(20, 20, 20, 20)) +
+  labs(x = "phenological synchrony", title = "proportional difference\nfrom low synchrony", y = NULL) 
+mean_diffs
+
+plot_grid(rawdata, mean_diffs, ncol = 2)
+```
+```
+
+
 
 ```{r, echo = F}
 ggplot(ind, aes(x = hatch_date, color = sp, fill = sp)) + mytheme +
@@ -369,21 +440,20 @@ variable_labeller <- function(variable, value){
 }
 
 ggplot(subset(trt, subset = (sp == "f")),
-       aes(x = mean_fish, y = mean, fill = sync_fish, color = sync_fish, group = sync_fish, shape = sync_fish)) + mytheme +
+       aes(x = sync_fish, y = mean, fill = mean_fish, color = mean_fish, group = mean_fish, shape = mean_fish)) + mytheme +
   geom_point(size = 3, color = 'black') + 
   geom_errorbar(aes(max = mean + se, min = mean - se), width = 0) +
   geom_line() +
   facet_wrap(~ var, scales = "free", labeller = variable_labeller) +
-  xlab("mean arrival") + ylab("number survivors")  +
   theme(legend.position = c(0.75, 0.22)) +
   scale_fill_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
   scale_color_manual(values = wes_palette(n = 3, name = "GrandBudapest1")) +
   labs(title = "Responses of vital rates to phenology manipulations",
-       x = "mean hatching time (relative to competitor)",
+       x = "phenological synchrony",
        y = "mean +/- se",
-       fill = "hatching\nsynchrony",
-       color = "hatching\nsynchrony", 
-       shape = "hatching\nsynchrony") +
+       fill = "mean arrival",
+       color = "mean arrival", 
+       shape = "mean arrival") +
   scale_shape_manual(values = c(21, 24, 23))
 
 ```

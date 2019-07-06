@@ -29,6 +29,7 @@ library(lme4)
 library(wesanderson)
 library(ggsci)
 library(extrafont)
+library(cowplot)
 #extrafont::loadfonts(device = "win")
 
 ## Load universal plotting elements
@@ -302,34 +303,46 @@ Here are some diagnostic plots to get a quick look at the data. These will give 
 Dabestr plot
 
 ```{r}
+
 ## write out response variable names for facet wrap
-mean_diffs <- subset(trt, subset = (sync_fish == "low"))
-mean_diffs <- mean_diffs %>%
+variable_names <- list(
+  'surv' = "survival",
+  'biom' = "biomass export",
+  'mass' = "per capita mass",
+  'grow' = "per capita growth", 
+  'emer' = "emergence date"
+)
+
+variable_labeller <- function(variable, value){
+  return(variable_names[value])
+}
+
+## write out response variable names for facet wrap
+baseline_means <- subset(trt, subset = (sync_fish == "low"))
+baseline_means <- baseline_means %>%
   subset(sp == "f") %>% 
-  select(c("sync_fish", "mean_fish", "var", "mean", "se")) 
-colnames(mean_diffs)[5] <- "baseline_mean"
+  select(c("sync_fish", "mean_fish", "var", "mean")) 
+baseline_means <- baseline_means[,3:5]
+colnames(baseline_means)[3] <- "baseline_mean"
 
 # now, add in baseline averages (conditions at med sync and symmetic comp) to run data
-run_dabest <- run[,1:5]
-run_dabest <- left_join(run_dabest, mean_diffs, by = c("var", "asymmetry"))  
-trt_dabest <- trt[,1:5]
-trt_dabest <- left_join(trt_dabest, mean_diffs, by = c("var", "asymmetry"))
+trt_dabest <- trt %>% 
+  subset(sp == "f") %>% 
+  select(c("sync_fish", "mean_fish", "var", "mean", "se"))
+trt_dabest <- left_join(trt_dabest, baseline_means, by = c("var", "mean_fish"))
    
-meandiffs_run <- run_dabest %>% 
-  mutate(umd = (abs_value - baseline_mean)/baseline_mean)
-meandiffs_run <- subset(meandiffs_run, subset = (synchrony != "low"))
-
 meandiffs_trt <- trt_dabest %>% 
-  mutate(umd = (abs_value_exp - baseline_mean)/baseline_mean,
-         umd_se = (se_exp.x/baseline_mean))
-meandiffs_trt <- subset(meandiffs_trt, subset = (synchrony != "low"))
+  mutate(umd = (mean - baseline_mean)/baseline_mean,
+         umd_se = (se/baseline_mean))
+meandiffs_trt <- subset(meandiffs_trt, subset = (sync_fish != "low"))
+meandiffs_trt$sync_fish <- factor(meandiffs_trt$sync_fish, levels = c("med", "high"))
 
 meandiffs_trt$var <- factor(meandiffs_trt$var, levels = c("surv", "biom", "mass", "grow", "emer"))
 run$var <- factor(run$var, levels = c("surv", "biom", "mass", "grow", "emer"))
 
 ## first, the raw data
-rawdata <- ggplot(data = run, aes(x = synchrony, y = abs_value, 
-                fill = asymmetry, color = asymmetry, group = asymmetry, shape = asymmetry)) + 
+rawdata <- ggplot(data = run, aes(x = sync_fish, y = mean, 
+                fill = mean_fish, color = mean_fish, group = mean_fish, shape = mean_fish)) + 
   mytheme +
   #stat_smooth() +
   geom_point(size = 1.5,
@@ -337,8 +350,8 @@ rawdata <- ggplot(data = run, aes(x = synchrony, y = abs_value,
   facet_grid(var~., scales = "free", labeller = variable_labeller) +
   labs(title = "\nraw data", 
        x = "phenological synchrony", y = NULL) + 
-  scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
-  scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_color_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
+  scale_fill_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
   scale_shape_manual(values = c(21, 24, 23))  + 
   theme(legend.position = "none", panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
@@ -346,32 +359,35 @@ rawdata <- ggplot(data = run, aes(x = synchrony, y = abs_value,
     plot.margin = margin(20, 20, 20, 20),
     strip.background = element_blank(),
     strip.text = element_blank()) 
-rawdata
+
 ## Now, making the mean_diffs df
-mean_diffs <- ggplot(meandiffs_trt, aes(x = synchrony, y = umd, 
-                          color = asymmetry, shape = asymmetry, fill = asymmetry, group = asymmetry)) + mytheme +
+mean_diffs <- ggplot(meandiffs_trt, aes(x = sync_fish, y = umd, 
+                          color = mean_fish, shape = mean_fish, fill = mean_fish, group = mean_fish)) + mytheme +
   geom_errorbar(aes(ymax = umd + umd_se, ymin = umd - umd_se), width = 0,
                 position = position_dodge(width = 0.5), size = 1) +
   geom_point(size = 3, color = "black",
              position = position_dodge(width = 0.5)) +
   geom_hline(yintercept = 0, linetype = "dashed") +
-  scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
-  scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_color_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
+  scale_fill_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
   scale_shape_manual(values = c(21, 24, 23))  + 
-  facet_grid(var~., labeller = variable_labeller, scales = "free") +
-  theme(legend.position = "none",
+  facet_grid(var~., scales = "free", labeller = variable_labeller) +
+  theme(legend.position = "bottom",
         plot.title = element_text(hjust = 0.5),
         plot.margin = margin(20, 20, 20, 20)) +
-  labs(x = "phenological synchrony", title = "proportional difference\nfrom low synchrony", y = NULL) 
+  labs(x = "phenological synchrony", y = NULL,
+       title = "proportional difference\nfrom low synchrony", 
+       color = "relative mean arrival of focal species",
+       shape = "relative mean arrival of focal species",
+       fill = "relative mean arrival of focal species") 
 mean_diffs
 
 plot_grid(rawdata, mean_diffs, ncol = 2)
 ```
-```
-
 
 
 ```{r, echo = F}
+
 ggplot(ind, aes(x = hatch_date, color = sp, fill = sp)) + mytheme +
   geom_density(alpha = 0.5, size = 1.2) +
   facet_grid(sync_fish ~ mean_fish) +

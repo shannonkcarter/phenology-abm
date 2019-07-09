@@ -80,7 +80,7 @@ First, load the data. I've done a ton of different experiments in NetLogo, and n
 
 ```{r load table data}
 ## First, import the data
-data <- read.table("bs_CRnometa_17.csv",
+data <- read.table("bs_CRnometa_19.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
@@ -119,10 +119,10 @@ The data currently has 1 row per experiment run. Ultimately, we need to extract 
 # I'll rejoin the output data with params later, after some summarizing/processing
 # Add qualitative levels for the treatment params, bc useful for plotting. This will be different for each BS
 params <- test[,1:8]
-params$synchrony <- as.factor(params$sync)
+params$synchrony <- params$sync
 params$asymmetry <- as.factor(params$asym)
-levels(params$synchrony) <- list("low" = 25, "med" = 15, "high" = 5)
-levels(params$asymmetry) <- list("none" = 0, "mild" = 0.5, "strong" = 1)
+#levels(params$synchrony) <- list("low" = 25, "med" = 15, "high" = 5)
+levels(params$asymmetry) <- list("none" = 0, "weak" = 0.5, "strong" = 1)
 
 ```
 
@@ -171,7 +171,7 @@ test <- test %>%
   separate(size, 
            into = paste("size_", c(0:250), sep =  ""),
            sep = " ") %>% 
-  select(-c(size_0))       # I drop this because there's only a value for ind 1
+  select(-c(size_0))       # I drop this because there's only a value for ind 1, everyone else has "["
 
 # round all size values since NetLogo is insane
 test[,-c(1:3)] <- round(as.numeric(unlist(test[,-c(1:3)])), 3)
@@ -203,52 +203,56 @@ ind_time <- test %>%
   rename(id = fish_id)
 ind_time$size <- as.numeric(ind_time$size)
 
-```
+#ind_time$synchrony <- ordered(ind_time$synchrony, levels = c("low", "med", "high"))
+ind_time$asymmetry <- ordered(ind_time$asymmetry, levels = c("none", "weak", "strong"))
+ind_time$size <- as.numeric(ind_time$size)
 
+# this csv takes a while to write and overwrites the version already in the folder
+# so only run this line when I've made major changes, and this version becomes the new 'default'
+#write.csv(ind_time, "ind_time1sp.csv")
+```
 
 # Summarize by Individual
 
-Now, I want to make some summarised datasets. First with one row per individual, then with one row per run number 
+Now, I want to make some summarised datasets. First with one row per individual, then with one row per run number, then with one row per treatment. 
 
 ```{r individual summary}
 
-#ind_time <- read.csv("individual_time_CR.csv", header = T)
-ind_time$synchrony <- ordered(ind_time$synchrony, levels = c("low", "med", "high"))
-ind_time$asymmetry <- ordered(ind_time$asymmetry, levels = c("none", "mild", "strong"))
-ind_time$size <- as.numeric(ind_time$size)
-
-#write.csv(ind_time, "ind_time1sp.csv")
-
 # Here, set a minimum threshold for metamorphosis. Future runs will have this modeled implicitly
 ind <- ind_time %>% 
+  # group by everything but time- this puts us at the individual level
   group_by(run_num, id, sync, asym, synchrony, asymmetry, n_surv, n_dead, biomass, mean_size, meta) %>%
+  # calculate some metrics for each individual
   summarise(final_size = max(size),
             hatch_date = min(time[size > 0]),
             end_date = min(time[size == max(size)]),
             growth_time = end_date - hatch_date,
             growth_rate = max(size)/growth_time) 
+
+# again, only overwrite the existing csv when big changes have been made that I'm happy with
 #write.csv(ind, "ind1sp.csv")
 
 ```
 
-## Summarize by Treatment 
+## Summarize by run, then treatment 
 
 ```{r treatment summary}
 # first, by run number
 run <- ind %>% 
   group_by(run_num) %>%
-  filter(meta == 1) %>%                              # response variables only consider survivors
+  # only survivors get factored into these metrics-- we don't care how long it took someone to die
+  filter(meta == 1) %>%                                # response variables only consider survivors
   summarise(mean_biom = sum(final_size),               # check this and survival against raw output
-            se_biom   = "NA",                        # 1 biom value per run, so no error
-            mean_surv = sum(meta),                   # check this an biom against raw output
-            se_surv   = "NA",                        # 1 surv value per run; just a placeholder
+            se_biom   = "NA",                          # 1 biom value per run, so no error
+            mean_surv = sum(meta),                     # check this an biom against raw output
+            se_surv   = "NA",                          # 1 surv value per run; just a placeholder
             mean_mass = mean(final_size),              # should be biom/surv
             se_mass   = sd(final_size)/sqrt(sum(meta)),# error
-            mean_emer = mean(end_date),              # emer is emergence date-- phenology of emergence
-            se_emer   = sd(end_date)/sqrt(sum(meta)),# error
-            mean_grow = mean(growth_rate),           # grow is individual time to development. size/time
+            mean_emer = mean(end_date),                # emer is emergence date-- phenology of emergence
+            se_emer   = sd(end_date)/sqrt(sum(meta)),  # error
+            mean_grow = mean(growth_rate),             # grow is individual time to development. size/time
             se_grow   = sd(growth_rate)/sqrt(sum(meta))) %>% 
-  gather(mean_mass, se_mass, mean_emer, se_emer,     # gather all response variables
+  gather(mean_mass, se_mass, mean_emer, se_emer,       # gather all response variables
          mean_grow, se_grow, 
          mean_biom, se_biom, mean_surv, se_surv,
          key = "variable", value = "abs_value") %>% 
@@ -270,7 +274,7 @@ trt <- run %>%
             se_exp    = sd(abs_value)/sqrt(6))
 
 baseline_means <- trt %>% 
-  subset(synchrony == 'med' & asymmetry == 'none') 
+  subset(synchrony == 1 & asymmetry == 'none') 
 baseline_means <- baseline_means[,3:5] 
 colnames(baseline_means)[2] <- "baseline_value"
 
@@ -290,9 +294,9 @@ trt <- trt %>%
 
 # Plots
 
-Here are some diagnostic plots to get a quick look at the data. These will give an idea of what parameter space is reasonable and interesting to explore in future behavior space runs.
+# Lollipop
 
-```{r}
+```{r lollipop}
 ## LOLIPOP PLOT
 
 trt_nobaseline <- subset(trt, subset = asymmetry != "none" & synchrony != "med" & synchrony != "lm" & synchrony != "mh")
@@ -331,8 +335,8 @@ ggplot(trt_nobaseline,
   
 ```
 
-More traditional means plot
-```{r}
+# Absolute means
+```{r absolute means}
 
 variable_names <- list(
   'biom' = "biomass export",
@@ -366,7 +370,7 @@ ggplot(trt, aes(x = synchrony, y = abs_value_exp,
 # Dabestr 
 
 Dabestr is a package to plot effect sizes via estimation plots. Easy to make the plots this way, but ultimately I want to recreate these in ggplot to allow more flexibility. I'll use the dabestr package to check.
-```{r}
+```{r dabestr}
 ## testing with the dabestr
 ## pare down the df for now-- one response var and 1 asymmetry
 run_dabest <- subset(run, subset = (var == "surv" & asymmetry == "strong"))
@@ -377,10 +381,10 @@ unpaired_mean_diff
 plot(unpaired_mean_diff, palette = "Dark2")
 ```
 
-## Recreating dabestr plots 
-```{r}
+# Dabestr DIY 
+```{r dabestr DIY}
 
-## write out response variable names for facet wrap
+# write out response variable names for facet wrap
 variable_names <- list(
   'surv' = "survival",
   'biom' = "biomass export",
@@ -389,15 +393,19 @@ variable_names <- list(
   'emer' = "emergence date"
 )
 
+# function called in plot's facet_wrap to write full label names
 variable_labeller <- function(variable, value){
   return(variable_names[value])
 }
 
-mean_diffs <- subset(trt, subset = (synchrony == "low"))
+### PREPPING DATA ###
+
+# designate which synchrony level is the 'baseline' and pull out the mean values for all response vars at each asymmetry level
+mean_diffs <- subset(trt, subset = (synchrony == 1))
 mean_diffs <- mean_diffs[,2:4]
 colnames(mean_diffs)[3] <- "baseline_mean"
 
-# now, add in baseline averages (conditions at med sync and symmetic comp) to run data
+# now, add those baseline averages to the run data
 run_dabest <- run[,1:5]
 run_dabest <- left_join(run_dabest, mean_diffs, by = c("var", "asymmetry"))  
 trt_dabest <- trt[,1:5]
@@ -407,15 +415,19 @@ meandiffs_run <- run_dabest %>%
   mutate(umd = (abs_value - baseline_mean)/baseline_mean)
 meandiffs_run <- subset(meandiffs_run, subset = (synchrony != "low"))
 
+# ...and to the treatment data too
 meandiffs_trt <- trt_dabest %>% 
   mutate(umd = (abs_value_exp - baseline_mean)/baseline_mean,
          umd_se = (se_exp.x/baseline_mean))
 meandiffs_trt <- subset(meandiffs_trt, subset = (synchrony != "low"))
 
+# put factor levels of response variables in an intuitive order
 meandiffs_trt$var <- factor(meandiffs_trt$var, levels = c("surv", "biom", "mass", "grow", "emer"))
 run$var <- factor(run$var, levels = c("surv", "biom", "mass", "grow", "emer"))
 
-## first, the raw data
+### BUILDING PLOT ###
+
+# first, the raw data plot
 rawdata <- ggplot(data = run, aes(x = synchrony, y = abs_value, 
                 fill = asymmetry, color = asymmetry, group = asymmetry, shape = asymmetry)) + 
   mytheme +
@@ -434,14 +446,15 @@ rawdata <- ggplot(data = run, aes(x = synchrony, y = abs_value,
     plot.margin = margin(20, 20, 20, 20),
     strip.background = element_blank(),
     strip.text = element_blank()) 
-rawdata
-## Now, making the mean_diffs df
+
+# now, the mean-differences plot
 mean_diffs <- ggplot(meandiffs_trt, aes(x = synchrony, y = umd, 
                           color = asymmetry, shape = asymmetry, fill = asymmetry, group = asymmetry)) + mytheme +
   geom_errorbar(aes(ymax = umd + umd_se, ymin = umd - umd_se), width = 0,
                 position = position_dodge(width = 0.5), size = 1) +
   geom_point(size = 3, color = "black",
              position = position_dodge(width = 0.5)) +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2)) +
   geom_hline(yintercept = 0, linetype = "dashed") +
   scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
   scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
@@ -450,9 +463,9 @@ mean_diffs <- ggplot(meandiffs_trt, aes(x = synchrony, y = umd,
   theme(legend.position = "none",
         plot.title = element_text(hjust = 0.5),
         plot.margin = margin(20, 20, 20, 20)) +
-  labs(x = "phenological synchrony", title = "proportional difference\nfrom low synchrony", y = NULL) 
-mean_diffs
+  labs(x = "phenological synchrony", title = "proportional difference\nfrom high synchrony", y = NULL) 
 
+# put them together. can't neatly put a 
 plot_grid(rawdata, mean_diffs, ncol = 2)
 ```
 

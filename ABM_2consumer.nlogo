@@ -416,7 +416,7 @@ var-hatch-fishes
 var-hatch-fishes
 0
 30
-25.0
+30.0
 1
 1
 NIL
@@ -1685,11 +1685,16 @@ NetLogo 6.0
       <value value="0"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="var-hatch-fishes">
-      <value value="5"/>
+      <value value="1"/>
+      <value value="4"/>
+      <value value="7"/>
       <value value="10"/>
-      <value value="15"/>
-      <value value="20"/>
-      <value value="25"/>
+      <value value="13"/>
+      <value value="18"/>
+      <value value="21"/>
+      <value value="24"/>
+      <value value="27"/>
+      <value value="30"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="var-hatch-dflies">
       <value value="5"/>

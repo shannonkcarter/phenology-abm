@@ -81,7 +81,7 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 First, load the data. I've done a ton of different experiments in NetLogo, and not always certain each new one will be an improvement over the old or even work at all. So I keep most of the runs and number the files sequentially.
 
 ```{r load table data}
-data <- read.table("ABM_2Consumer_5.csv",
+data <- read.table("ABM_2Consumer_6.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
@@ -123,15 +123,15 @@ test <- data %>%
 # I'll rejoin the output data with params later, after some summarizing/processing
 # Here, add qualitative levels for the treatment parameters. This will be different for each BS
 params <- test[,1:15]
-params$sync_fish <- as.factor(params$sync_fish)
+#params$sync_fish <- as.factor(params$sync_fish)
 params$mean_fish <- as.factor(params$mean_fish)
-levels(params$sync_fish) <- c("high", "med", "low")
+#levels(params$sync_fish) <- c("high", "med", "low")
 levels(params$mean_fish) <- c("early", "same", "late")
 
-params$sync_dfly <- as.factor(params$sync_dfly)
-params$mean_dfly <- as.factor(params$mean_dfly)
-levels(params$sync_dfly) <- c("high", "med", "low")
-levels(params$mean_dfly) <- c("early", "same", "late")
+#params$sync_dfly <- as.factor(params$sync_dfly)
+#params$mean_dfly <- as.factor(params$mean_dfly)
+#levels(params$sync_dfly) <- c("high", "med", "low")
+#levels(params$mean_dfly) <- c("early", "same", "late")
 
 ```
 
@@ -318,7 +318,7 @@ variable_labeller <- function(variable, value){
 }
 
 ## write out response variable names for facet wrap
-baseline_means <- subset(trt, subset = (sync_fish == "low"))
+baseline_means <- subset(trt, subset = (sync_fish == 0))
 baseline_means <- baseline_means %>%
   subset(sp == "f") %>% 
   select(c("sync_fish", "mean_fish", "var", "mean")) 
@@ -334,8 +334,8 @@ trt_dabest <- left_join(trt_dabest, baseline_means, by = c("var", "mean_fish"))
 meandiffs_trt <- trt_dabest %>% 
   mutate(umd = (mean - baseline_mean)/baseline_mean,
          umd_se = (se/baseline_mean))
-meandiffs_trt <- subset(meandiffs_trt, subset = (sync_fish != "low"))
-meandiffs_trt$sync_fish <- factor(meandiffs_trt$sync_fish, levels = c("med", "high"))
+meandiffs_trt <- subset(meandiffs_trt, subset = (sync_fish != 0))
+#meandiffs_trt$sync_fish <- factor(meandiffs_trt$sync_fish, levels = c("med", "high"))
 
 meandiffs_trt$var <- factor(meandiffs_trt$var, levels = c("surv", "biom", "mass", "grow", "emer"))
 run$var <- factor(run$var, levels = c("surv", "biom", "mass", "grow", "emer"))
@@ -345,10 +345,10 @@ rawdata <- ggplot(data = run, aes(x = sync_fish, y = mean,
                 fill = mean_fish, color = mean_fish, group = mean_fish, shape = mean_fish)) + 
   mytheme +
   #stat_smooth() +
-  geom_point(size = 1.5,
+  geom_point(size = 1.5, alpha = 0.5,
              position = position_dodge(width = 0.5)) +
   facet_grid(var~., scales = "free", labeller = variable_labeller) +
-  labs(title = "\nraw data", 
+  labs(title = "\nabsolute data", 
        x = "phenological synchrony", y = NULL) + 
   scale_color_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
   scale_fill_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
@@ -367,12 +367,13 @@ mean_diffs <- ggplot(meandiffs_trt, aes(x = sync_fish, y = umd,
                 position = position_dodge(width = 0.5), size = 1) +
   geom_point(size = 3, color = "black",
              position = position_dodge(width = 0.5)) +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2)) +
   geom_hline(yintercept = 0, linetype = "dashed") +
   scale_color_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
   scale_fill_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
   scale_shape_manual(values = c(21, 24, 23))  + 
   facet_grid(var~., scales = "free", labeller = variable_labeller) +
-  theme(legend.position = "bottom",
+  theme(legend.position = "none",
         plot.title = element_text(hjust = 0.5),
         plot.margin = margin(20, 20, 20, 20)) +
   labs(x = "phenological synchrony", y = NULL,

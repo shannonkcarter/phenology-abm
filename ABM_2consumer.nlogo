@@ -401,7 +401,7 @@ n-fishes
 n-fishes
 0
 200
-80.0
+40.0
 1
 1
 NIL
@@ -536,7 +536,7 @@ mean-hatch-fishes
 mean-hatch-fishes
 0
 100
-40.0
+80.0
 1
 1
 NIL
@@ -551,7 +551,7 @@ asym-slope-fishes
 asym-slope-fishes
 0
 1
-1.0
+0.5
 0.1
 1
 NIL
@@ -585,7 +585,7 @@ n-dflies
 n-dflies
 0
 200
-0.0
+40.0
 1
 1
 NIL
@@ -600,7 +600,7 @@ mean-hatch-dflies
 mean-hatch-dflies
 0
 100
-40.0
+60.0
 1
 1
 NIL
@@ -1684,18 +1684,7 @@ NetLogo 6.0
     <enumeratedValueSet variable="sprout-tick">
       <value value="0"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="var-hatch-fishes">
-      <value value="1"/>
-      <value value="4"/>
-      <value value="7"/>
-      <value value="10"/>
-      <value value="13"/>
-      <value value="18"/>
-      <value value="21"/>
-      <value value="24"/>
-      <value value="27"/>
-      <value value="30"/>
-    </enumeratedValueSet>
+    <steppedValueSet variable="var-hatch-fishes" first="0" step="3" last="30"/>
     <enumeratedValueSet variable="var-hatch-dflies">
       <value value="5"/>
     </enumeratedValueSet>
@@ -1723,7 +1712,7 @@ NetLogo 6.0
       <value value="1"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="2Consumer" repetitions="10" runMetricsEveryStep="false">
+  <experiment name="2Consumer" repetitions="6" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
     <metric>n-meta-fishes</metric>
@@ -1750,11 +1739,7 @@ NetLogo 6.0
     <enumeratedValueSet variable="sprout-tick">
       <value value="0"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="var-hatch-fishes">
-      <value value="5"/>
-      <value value="15"/>
-      <value value="25"/>
-    </enumeratedValueSet>
+    <steppedValueSet variable="var-hatch-fishes" first="0" step="3" last="30"/>
     <enumeratedValueSet variable="var-hatch-dflies">
       <value value="5"/>
     </enumeratedValueSet>

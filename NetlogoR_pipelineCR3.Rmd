@@ -80,7 +80,7 @@ First, load the data. I've done a ton of different experiments in NetLogo, and n
 
 ```{r load table data}
 ## First, import the data
-data <- read.table("bs_CRnometa_19.csv",
+data <- read.table("bs_CRnometa_20.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
@@ -401,7 +401,7 @@ variable_labeller <- function(variable, value){
 ### PREPPING DATA ###
 
 # designate which synchrony level is the 'baseline' and pull out the mean values for all response vars at each asymmetry level
-mean_diffs <- subset(trt, subset = (synchrony == 1))
+mean_diffs <- subset(trt, subset = (synchrony == 0))
 mean_diffs <- mean_diffs[,2:4]
 colnames(mean_diffs)[3] <- "baseline_mean"
 
@@ -432,10 +432,10 @@ rawdata <- ggplot(data = run, aes(x = synchrony, y = abs_value,
                 fill = asymmetry, color = asymmetry, group = asymmetry, shape = asymmetry)) + 
   mytheme +
   #stat_smooth() +
-  geom_point(size = 1.5,
+  geom_point(size = 1.5, alpha = 1/2,
              position = position_dodge(width = 0.5)) +
   facet_grid(var~., scales = "free", labeller = variable_labeller) +
-  labs(title = "\nraw data", 
+  labs(title = "\nabsolute data", 
        x = "phenological synchrony", y = NULL) + 
   scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
   scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
@@ -446,13 +446,13 @@ rawdata <- ggplot(data = run, aes(x = synchrony, y = abs_value,
     plot.margin = margin(20, 20, 20, 20),
     strip.background = element_blank(),
     strip.text = element_blank()) 
-
+rawdata
 # now, the mean-differences plot
 mean_diffs <- ggplot(meandiffs_trt, aes(x = synchrony, y = umd, 
                           color = asymmetry, shape = asymmetry, fill = asymmetry, group = asymmetry)) + mytheme +
   geom_errorbar(aes(ymax = umd + umd_se, ymin = umd - umd_se), width = 0,
                 position = position_dodge(width = 0.5), size = 1) +
-  geom_point(size = 3, color = "black",
+  geom_point(size = 2, color = "black",
              position = position_dodge(width = 0.5)) +
   geom_smooth(method = "lm", formula = y ~ poly(x, 2)) +
   geom_hline(yintercept = 0, linetype = "dashed") +
@@ -466,13 +466,17 @@ mean_diffs <- ggplot(meandiffs_trt, aes(x = synchrony, y = umd,
   labs(x = "phenological synchrony", title = "proportional difference\nfrom high synchrony", y = NULL) 
 
 # put them together. can't neatly put a 
-plot_grid(rawdata, mean_diffs, ncol = 2)
+fig2 <- plot_grid(rawdata, mean_diffs, ncol = 2)
+tiff("fig2.tiff", height = 7500, width = 5200, units = "px", res = 800, compression = "lzw")
+plot(fig2)
+dev.off()
 ```
 
 
 Putting absolute and relative results in the same df to allow for facet_grid
 ```{r}
 
+# could play around with this more, but so far doesn't help at all
 run1 <- run[,1:5]
 mean_diffs1 <- meandiffs_trt %>% select(-c(abs_value_exp:baseline_mean))
 combined <- left_join(run1, mean_diffs1, by = c("synchrony", "asymmetry", "var"))

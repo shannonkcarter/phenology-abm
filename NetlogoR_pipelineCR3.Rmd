@@ -40,7 +40,7 @@ mytheme <- theme_bw(base_size = 15, base_family = "Franklin Gothic Medium") +
         legend.title = element_text(size = 11),
         text = element_text(size = 14),     
         axis.title = element_text(size = 12),
-        axis.text  = element_text(size = 10, family = "Consolas"),
+        axis.text  = element_text(size = 8, family = "Consolas"),
         panel.grid = element_blank())
 
 ```
@@ -434,18 +434,18 @@ rawdata <- ggplot(data = run, aes(x = synchrony, y = abs_value,
   #stat_smooth() +
   geom_point(size = 1.5, alpha = 1/2,
              position = position_dodge(width = 0.5)) +
-  facet_grid(var~., scales = "free", labeller = variable_labeller) +
-  labs(title = "\nabsolute data", 
+  #facet_grid(var~., scales = "free", switch = 'y',labeller = variable_labeller) +
+  facet_wrap(~var, ncol = 1, scales = "free_y", labeller = variable_labeller) +
+  labs(y = "absolute measurement", 
        x = "phenological synchrony", y = NULL) + 
   scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
   scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
   scale_shape_manual(values = c(21, 24, 23))  + 
   theme(legend.position = "none", panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    plot.title = element_text(hjust = 0.5),
-    plot.margin = margin(20, 20, 20, 20),
-    strip.background = element_blank(),
-    strip.text = element_blank()) 
+    axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0)),
+    plot.title = element_text(hjust = 0.5)) 
+    #strip.placement = 'outside') 
 rawdata
 # now, the mean-differences plot
 mean_diffs <- ggplot(meandiffs_trt, aes(x = synchrony, y = umd, 
@@ -459,14 +459,15 @@ mean_diffs <- ggplot(meandiffs_trt, aes(x = synchrony, y = umd,
   scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
   scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
   scale_shape_manual(values = c(21, 24, 23))  + 
-  facet_grid(var~., labeller = variable_labeller, scales = "free") +
+  facet_wrap(~var, ncol = 1, scales = "free_y", labeller = variable_labeller) +
   theme(legend.position = "none",
-        plot.title = element_text(hjust = 0.5),
-        plot.margin = margin(20, 20, 20, 20)) +
-  labs(x = "phenological synchrony", title = "proportional difference\nfrom high synchrony", y = NULL) 
+    axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0))) +
+  labs(x = "phenological synchrony", y = "proportional difference from appropriate asymmetry at high synchrony", y = NULL) 
 
 # put them together. can't neatly put a 
 fig2 <- plot_grid(rawdata, mean_diffs, ncol = 2)
+
+fig2
 tiff("fig2.tiff", height = 7500, width = 5200, units = "px", res = 800, compression = "lzw")
 plot(fig2)
 dev.off()

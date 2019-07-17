@@ -384,19 +384,33 @@ plot(unpaired_mean_diff, palette = "Dark2")
 # Dabestr DIY 
 ```{r dabestr DIY}
 
-# write out response variable names for facet wrap
-variable_names <- list(
-  'surv' = "survival",
-  'biom' = "biomass export",
-  'mass' = "per capita mass",
-  'grow' = "per capita growth", 
-  'emer' = "emergence date"
+
+## write out response variable names for facet wrap
+variable_names_abs <- list(
+  'surv' = "proportion survival",
+  'biom' = "biomass export (a.u.)",
+  'mass' = "per capita mass (a.u.)",
+  'grow' = "per capita growth (mass/life span)", 
+  'emer' = "emergence date (doy)"
 )
 
-# function called in plot's facet_wrap to write full label names
-variable_labeller <- function(variable, value){
-  return(variable_names[value])
+variable_labeller_abs <- function(variable, value){
+  return(variable_names_abs[value])
 }
+
+## write out response variable names for facet wrap
+variable_names_rel <- list(
+  'surv' = "survival (%Δ high sync)",
+  'biom' = "biomass export (%Δ high sync)",
+  'mass' = "per capita mass (%Δ high sync)",
+  'grow' = "per capita growth (%Δ high sync)", 
+  'emer' = "emergence date (%Δ high sync)"
+)
+
+variable_labeller_rel <- function(variable, value){
+  return(variable_names_rel[value])
+}
+
 
 ### PREPPING DATA ###
 
@@ -428,14 +442,13 @@ run$var <- factor(run$var, levels = c("surv", "biom", "mass", "grow", "emer"))
 ### BUILDING PLOT ###
 
 # first, the raw data plot
-rawdata <- ggplot(data = run, aes(x = synchrony, y = abs_value, 
+rawdata <- ggplot(data = run, aes(x = as.factor(synchrony), y = abs_value, 
                 fill = asymmetry, color = asymmetry, group = asymmetry, shape = asymmetry)) + 
   mytheme +
   #stat_smooth() +
   geom_point(size = 1.5, alpha = 1/2,
              position = position_dodge(width = 0.5)) +
-  #facet_grid(var~., scales = "free", switch = 'y',labeller = variable_labeller) +
-  facet_wrap(~var, ncol = 1, scales = "free_y", labeller = variable_labeller) +
+  facet_wrap(~var, ncol = 1, scales = "free_y", labeller = variable_labeller_abs) +
   labs(y = "absolute measurement", 
        x = "phenological synchrony", y = NULL) + 
   scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
@@ -444,11 +457,12 @@ rawdata <- ggplot(data = run, aes(x = synchrony, y = abs_value,
   theme(legend.position = "none", panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0)),
-    plot.title = element_text(hjust = 0.5)) 
-    #strip.placement = 'outside') 
+    plot.title = element_text(hjust = 0.5)) +
+   scale_x_discrete(breaks=c("0","15","30"),
+        labels=c("high", "med", "low"))
 rawdata
 # now, the mean-differences plot
-mean_diffs <- ggplot(meandiffs_trt, aes(x = synchrony, y = umd, 
+mean_diffs <- ggplot(meandiffs_trt, aes(x = as.factor(synchrony), y = umd, 
                           color = asymmetry, shape = asymmetry, fill = asymmetry, group = asymmetry)) + mytheme +
   geom_errorbar(aes(ymax = umd + umd_se, ymin = umd - umd_se), width = 0,
                 position = position_dodge(width = 0.5), size = 1) +
@@ -459,10 +473,12 @@ mean_diffs <- ggplot(meandiffs_trt, aes(x = synchrony, y = umd,
   scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
   scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
   scale_shape_manual(values = c(21, 24, 23))  + 
-  facet_wrap(~var, ncol = 1, scales = "free_y", labeller = variable_labeller) +
+  facet_wrap(~var, ncol = 1, scales = "free_y", labeller = variable_labeller_rel) +
   theme(legend.position = "none",
     axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0))) +
-  labs(x = "phenological synchrony", y = "proportional difference from appropriate asymmetry at high synchrony", y = NULL) 
+  labs(x = "phenological synchrony", y = "proportional difference from appropriate asymmetry at high synchrony", y = NULL) +
+   scale_x_discrete(breaks=c("0","15","30"),
+        labels=c("high", "med", "low"))
 
 # put them together. can't neatly put a 
 fig2 <- plot_grid(rawdata, mean_diffs, ncol = 2)

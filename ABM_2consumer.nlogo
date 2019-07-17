@@ -416,7 +416,7 @@ var-hatch-fishes
 var-hatch-fishes
 0
 30
-30.0
+5.0
 1
 1
 NIL
@@ -635,6 +635,28 @@ asym-slope-dflies
 1
 NIL
 HORIZONTAL
+
+MONITOR
+164
+213
+253
+258
+NIL
+n-meta-fishes
+0
+1
+11
+
+MONITOR
+41
+229
+127
+274
+NIL
+n-meta-dflies
+0
+1
+11
 
 @#$#@#$#@
 ;;; OVERVIEW ;;;

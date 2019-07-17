@@ -251,7 +251,7 @@ run <- ind %>%
   filter(meta == 1) %>%                              # response variables only consider survivors
   summarise(mean_biom = sum(max_size),               # check this and survival against raw output
             se_biom   = "NA",                        # 1 biom value per run, so no error
-            mean_surv = sum(meta),                   # check this an biom against raw output
+            mean_surv = sum(meta)/40,                   # check this an biom against raw output
             se_surv   = "NA",                        # 1 surv value per run; just a placeholder
             mean_mass = mean(max_size),              # should be biom/surv
             se_mass   = sd(max_size)/sqrt(sum(meta)),# error
@@ -305,17 +305,31 @@ Dabestr plot
 ```{r}
 
 ## write out response variable names for facet wrap
-variable_names <- list(
-  'surv' = "survival",
-  'biom' = "biomass export",
-  'mass' = "per capita mass",
-  'grow' = "per capita growth", 
-  'emer' = "emergence date"
+variable_names_abs <- list(
+  'surv' = "proportion survival",
+  'biom' = "biomass export (a.u.)",
+  'mass' = "per capita mass (a.u.)",
+  'grow' = "per capita growth (mass/life span)", 
+  'emer' = "emergence date (doy)"
 )
 
-variable_labeller <- function(variable, value){
-  return(variable_names[value])
+variable_labeller_abs <- function(variable, value){
+  return(variable_names_abs[value])
 }
+
+## write out response variable names for facet wrap
+variable_names_rel <- list(
+  'surv' = "survival (%Δ high sync)",
+  'biom' = "biomass export (%Δ high sync)",
+  'mass' = "per capita mass (%Δ high sync)",
+  'grow' = "per capita growth (%Δ high sync)", 
+  'emer' = "emergence date (%Δ high sync)"
+)
+
+variable_labeller_rel <- function(variable, value){
+  return(variable_names_rel[value])
+}
+
 
 ## write out response variable names for facet wrap
 baseline_means <- subset(trt, subset = (sync_fish == 0))
@@ -334,34 +348,32 @@ trt_dabest <- left_join(trt_dabest, baseline_means, by = c("var", "mean_fish"))
 meandiffs_trt <- trt_dabest %>% 
   mutate(umd = (mean - baseline_mean)/baseline_mean,
          umd_se = (se/baseline_mean))
-meandiffs_trt <- subset(meandiffs_trt, subset = (sync_fish != 0))
+#meandiffs_trt <- subset(meandiffs_trt, subset = (sync_fish != 0))
 #meandiffs_trt$sync_fish <- factor(meandiffs_trt$sync_fish, levels = c("med", "high"))
 
 meandiffs_trt$var <- factor(meandiffs_trt$var, levels = c("surv", "biom", "mass", "grow", "emer"))
 run$var <- factor(run$var, levels = c("surv", "biom", "mass", "grow", "emer"))
 
 ## first, the raw data
-rawdata <- ggplot(data = run, aes(x = sync_fish, y = mean, 
+rawdata <- ggplot(data = subset(run, subset = (sp == "f")), aes(x = as.factor(sync_fish), y = mean, 
                 fill = mean_fish, color = mean_fish, group = mean_fish, shape = mean_fish)) + 
   mytheme +
   #stat_smooth() +
   geom_point(size = 1.5, alpha = 0.5,
              position = position_dodge(width = 0.5)) +
-  facet_grid(var~., scales = "free", labeller = variable_labeller) +
-  labs(title = "\nabsolute data", 
+  facet_wrap(~var, ncol = 1, scales = "free_y", labeller = variable_labeller_abs) +
+  labs(y = "absolute measurement", 
        x = "phenological synchrony", y = NULL) + 
   scale_color_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
   scale_fill_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
   scale_shape_manual(values = c(21, 24, 23))  + 
   theme(legend.position = "none", panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    plot.title = element_text(hjust = 0.5),
-    plot.margin = margin(20, 20, 20, 20),
-    strip.background = element_blank(),
-    strip.text = element_blank()) 
+    axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0))) +
+  scale_x_discrete(breaks = c("0", "15", "30"), labels = c("high", "med", "low"))
 
 ## Now, making the mean_diffs df
-mean_diffs <- ggplot(meandiffs_trt, aes(x = sync_fish, y = umd, 
+mean_diffs <- ggplot(meandiffs_trt, aes(x = as.factor(sync_fish), y = umd, 
                           color = mean_fish, shape = mean_fish, fill = mean_fish, group = mean_fish)) + mytheme +
   geom_errorbar(aes(ymax = umd + umd_se, ymin = umd - umd_se), width = 0,
                 position = position_dodge(width = 0.5), size = 1) +
@@ -372,18 +384,20 @@ mean_diffs <- ggplot(meandiffs_trt, aes(x = sync_fish, y = umd,
   scale_color_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
   scale_fill_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
   scale_shape_manual(values = c(21, 24, 23))  + 
-  facet_grid(var~., scales = "free", labeller = variable_labeller) +
+  facet_wrap(~var, ncol = 1, scales = "free_y", labeller = variable_labeller_rel) +
   theme(legend.position = "none",
-        plot.title = element_text(hjust = 0.5),
-        plot.margin = margin(20, 20, 20, 20)) +
-  labs(x = "phenological synchrony", y = NULL,
-       title = "proportional difference\nfrom low synchrony", 
+        axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0))) +
+  labs(x = "phenological synchrony",
+       y = "proportional difference from low synchrony", 
        color = "relative mean arrival of focal species",
        shape = "relative mean arrival of focal species",
-       fill = "relative mean arrival of focal species") 
-mean_diffs
+       fill = "relative mean arrival of focal species") +
+  scale_x_discrete(breaks = c("0", "15" ,"30"), labels = c("high", "med", "low"))
 
-plot_grid(rawdata, mean_diffs, ncol = 2)
+fig4 <- plot_grid(rawdata, mean_diffs, ncol = 2)
+tiff("fig4.tiff", height = 7500, width = 5200, units = "px", res = 800, compression = "lzw")
+plot(fig4)
+dev.off()
 ```
 
 

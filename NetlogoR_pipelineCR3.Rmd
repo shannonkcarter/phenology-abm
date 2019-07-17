@@ -40,7 +40,7 @@ mytheme <- theme_bw(base_size = 15, base_family = "Franklin Gothic Medium") +
         legend.title = element_text(size = 11),
         text = element_text(size = 14),     
         axis.title = element_text(size = 12),
-        axis.text  = element_text(size = 8, family = "Consolas"),
+        axis.text  = element_text(size = 10, family = "Consolas"),
         panel.grid = element_blank())
 
 ```
@@ -209,7 +209,7 @@ ind_time$size <- as.numeric(ind_time$size)
 
 # this csv takes a while to write and overwrites the version already in the folder
 # so only run this line when I've made major changes, and this version becomes the new 'default'
-#write.csv(ind_time, "ind_time1sp.csv")
+write.csv(ind_time, "ind_time1sp.csv")
 ```
 
 # Summarize by Individual
@@ -230,7 +230,7 @@ ind <- ind_time %>%
             growth_rate = max(size)/growth_time) 
 
 # again, only overwrite the existing csv when big changes have been made that I'm happy with
-#write.csv(ind, "ind1sp.csv")
+write.csv(ind, "ind1sp.csv")
 
 ```
 
@@ -244,7 +244,7 @@ run <- ind %>%
   filter(meta == 1) %>%                                # response variables only consider survivors
   summarise(mean_biom = sum(final_size),               # check this and survival against raw output
             se_biom   = "NA",                          # 1 biom value per run, so no error
-            mean_surv = sum(meta),                     # check this an biom against raw output
+            mean_surv = sum(meta)/80,                     # check this an biom against raw output
             se_surv   = "NA",                          # 1 surv value per run; just a placeholder
             mean_mass = mean(final_size),              # should be biom/surv
             se_mass   = sd(final_size)/sqrt(sum(meta)),# error
@@ -274,7 +274,7 @@ trt <- run %>%
             se_exp    = sd(abs_value)/sqrt(6))
 
 baseline_means <- trt %>% 
-  subset(synchrony == 1 & asymmetry == 'none') 
+  subset(synchrony == 0 & asymmetry == 'none') 
 baseline_means <- baseline_means[,3:5] 
 colnames(baseline_means)[2] <- "baseline_value"
 
@@ -287,8 +287,8 @@ run <- run %>%
 
 trt <- trt %>% 
   mutate(baseline_adj = (abs_value_exp - baseline_value)/baseline_value)
-#write.csv(trt, "trt1sp.csv")
-#write.csv(run, "run1sp.csv")
+write.csv(trt, "trt1sp.csv")
+write.csv(run, "run1sp.csv")
 
 ```
 

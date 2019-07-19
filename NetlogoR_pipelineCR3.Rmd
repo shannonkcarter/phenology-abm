@@ -33,8 +33,8 @@ library(dabestr)
 library(cowplot)
 #extrafont::loadfonts(device = "win")
 
-
 ## Load universal plotting elements
+## Fonts won't work on another system, unless you load library to R
 mytheme <- theme_bw(base_size = 15, base_family = "Franklin Gothic Medium") +
   theme(legend.text = element_text(size = 10),
         legend.title = element_text(size = 11),
@@ -58,29 +58,30 @@ run <- read.csv("run1sp.csv", header = T)
 trt <- read.csv("trt1sp.csv", header = T)
 
 # Get factors in line
-ind_time$asymmetry <- factor(ind_time$asymmetry, levels = c("none", "mild", "strong"))
-ind_time$synchrony <- factor(ind_time$synchrony, levels = c("low", "med", "high"))
+# Removed synchrony levels bc ended up with regression style numeric values for that
+ind_time$asymmetry <- factor(ind_time$asymmetry, levels = c("none", "weak", "strong"))
+#ind_time$synchrony <- factor(ind_time$synchrony, levels = c("low", "med", "high"))
 
-ind$asymmetry <- factor(ind$asymmetry, levels = c("none", "mild", "strong"))
-ind$synchrony <- factor(ind$synchrony, levels = c("low", "med", "high"))
+ind$asymmetry <- factor(ind$asymmetry, levels = c("none", "weak", "strong"))
+#ind$synchrony <- factor(ind$synchrony, levels = c("low", "med", "high"))
 
-run$asymmetry <- factor(run$asymmetry, levels = c("none", "mild", "strong"))
-run$synchrony <- factor(run$synchrony, levels = c("low", "med", "high"))
+run$asymmetry <- factor(run$asymmetry, levels = c("none", "weak", "strong"))
+#run$synchrony <- factor(run$synchrony, levels = c("low", "med", "high"))
 
-trt$asymmetry <- factor(trt$asymmetry, levels = c("none", "mild", "strong"))
-trt$synchrony <- factor(trt$synchrony, levels = c("low", "med", "high"))
+trt$asymmetry <- factor(trt$asymmetry, levels = c("none", "weak", "strong"))
+#trt$synchrony <- factor(trt$synchrony, levels = c("low", "med", "high"))
 
 ```
 
 # Import Data 
 
-First, be sure you export behavior space data from Netlogo in "table" format. When the raw data is exported as a spreadsheet, it comes in a really gnarly format. I haven't figured out a way for R to read it because it's not even close to rectangular, big header, mix of space delimited and bracket delimited, etc.. It's a mess. The table is still a bit messy, but much easier to wrangle.
+First key step happens before R. Be sure you export behavior space data from Netlogo in "table" format. When the raw data is exported as a spreadsheet, it comes in a really gnarly format. I haven't figured out a way for R to read it because it's not even close to rectangular, big header, mix of space delimited and bracket delimited, etc.. It's a mess. The table is still a bit messy, but much easier to wrangle.
 
 First, load the data. I've done a ton of different experiments in NetLogo, and not always certain each new one will be an improvement over the old or even work at all. So I keep most of the runs and number the files sequentially.
 
 ```{r load table data}
 ## First, import the data
-data <- read.table("bs_CRnometa_20.csv",
+data <- read.table("bs_CRnometa_21.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
@@ -92,22 +93,22 @@ data <- read.table("bs_CRnometa_20.csv",
 
 Next, let's rename columns and drop some that we don't need. I keep some columns that are the same across all model runs because it will be useful to call them later, especially since different future experiments might have different values. Some columns will always be the same, or are irrelevant. These I drop. 
 
-For this model, I have one turtle type (fishes), and varied the timing of hatching and per capita growth rates individuals. The Netlogo output includes parameter values and a vector of sizes over time for each turtle
+For this model, I have one turtle type ("fish"), and varied the timing of hatching and per capita growth rates of individuals. The Netlogo output includes parameter values and a vector of size over time for each fish.
 
 ```{r rename and select}
 # renaming everything I keep, so can rename with select. new_name = old name. 
 test <- data %>%                              # rename the df here bc the raw data takes a long time to load
   select(run_num = X.run.number.,             # each run number is an experimental unit (i.e, a mesocom)
          #total_time = X.step.,               # length of time the experiment ran
-         density = n.fishes,                  # initial number of turtles
-         sync = var.hatch.fishes,             # trt var: amount of variation in individual hatching timing
-         asym = asym.slope.fishes,            # trt var: size dependent per capita growth rates
-         n_surv = n.meta.fishes,              # number of individuals that 'metamorphed' that run
-         n_dead = n.dead.fishes,              # number of individuals that did not metamorphose
-         biomass = biom.fishes,               # sum mass of all survivors of a run
-         mean_size = mean.size.fishes,        # mean size of individuals that metamorphosed
-         meta_list = X.meta.fish...of.fishes, # list holding the survival outcome (0/1) for each individual
-         sizes = X.size.list.fish..of.fishes) # list of size for each ind for each time
+         density = n.fishes,                  # fixed param: initial number of fish
+         sync = var.hatch.fishes,             # trt param: amount of variation in individual hatching timing
+         asym = asym.slope.fishes,            # trt param: size dependent per capita growth rates
+         n_surv = n.meta.fishes,              # pop resp: number of individuals that 'metamorphed' that run
+         n_dead = n.dead.fishes,              # pop resp: number of individuals that did not metamorphose
+         biomass = biom.fishes,               # pop resp: sum mass of all survivors of a run
+         mean_size = mean.size.fishes,        # pop resp: mean size of individuals that metamorphosed
+         meta_list = X.meta.fish...of.fishes, # ind resp: list of survival outcome (0/1) for each individual
+         sizes = X.size.list.fish..of.fishes) # ind resp: list of size for each ind for each time (big list)
          
 ```
 
@@ -129,7 +130,7 @@ levels(params$asymmetry) <- list("none" = 0, "weak" = 0.5, "strong" = 1)
 
 # Parse Individuals
 
-The 'sizes' columns have a time series of size for each individual (so each 'sizes_fish' column has X individuals x Y time steps values). We ultimately want one row per individual per time step. Let's first separate by individual. 
+The 'sizes' columns have a time series of size for each individual. So each 'sizes_fish' column has X individuals x Y time steps values, formatted like this [0 0 0 1 1 2 ...][0 0 1 2 3 3 ...]... Similarly, the meta data is a list with one value per individual, 0 for died, 1 for survives. We ultimately want one row per individual per time step. Let's first separate by individual. 
 
 ```{r parse individuals}
 # First, separate so that each individual has it's own column
@@ -141,14 +142,14 @@ test <- test %>%
            into = paste("meta_", c(1:max(test$density)), sep = ""), # new name is meta_1, meta_2, etc.
            sep = " ")
 
-# some cells are left blank and not NA (because of "]]" ending), so fill those with NA
+# some cells are left blank because each ind in each run ends with "]]". Make these NA
 test[test==""] <- NA
 
 # Next, I'll gather individuals so that they appear in rows
 # For now, need to hardcode max number of fish
 test <- test %>%
-  select(run_num, meta_1: meta_80, size_1:size_80) %>% #, growth_1:growth_80) %>% 
-  gather(key, value, -run_num) %>%  
+  select(run_num, meta_1:meta_80, size_1:size_80) %>% # gather meta and size at the same time!  
+  gather(key, value, -run_num) %>%                    # gathering by everything except run number
   separate(key, into = c("ms", "fish_id"), sep = "_") %>%  # 'ms' indicates 'meta' or 'size', just a placeholder
   spread(ms, value) %>% 
   arrange(run_num, fish_id)
@@ -162,14 +163,14 @@ test$meta <- gsub("]", "", test$meta, fixed = T)
 
 # Parse Time Series
 
-Now, do the same separate and gather operations to parse the time vector and put in long format.
+Now, do the same separate and gather operations to parse the time series vector for each individual and put in long format.
 
 ```{r parse time series}
 
 # Separate the size time series- each space represents a new time point
 test <- test %>% 
   separate(size, 
-           into = paste("size_", c(0:250), sep =  ""),
+           into = paste("size_", c(0:250), sep =  ""),  # new cols will be size_1, size_2... size_250
            sep = " ") %>% 
   select(-c(size_0))       # I drop this because there's only a value for ind 1, everyone else has "["
 
@@ -177,6 +178,7 @@ test <- test %>%
 test[,-c(1:3)] <- round(as.numeric(unlist(test[,-c(1:3)])), 3)
 
 # Gather to long format, so we now have one line per fish per time step
+# Very helpful to run these pipes piecewise to understand what's happening
 test <- test %>%
   #select(run_num, total_time, size_1:size_80, growth_1:growth_80) %>% 
   gather(key, value, -run_num, -fish_id, -meta) %>%  
@@ -192,7 +194,7 @@ test <- test %>%
 
 # Compile & Tidy
 
-Now, rejoin with the treatment information, and write a csv. This csv has one line per individual per time step. So nrow should be max(run_num) x (ndfly + nfish) x total_time
+Now, rejoin with the treatment information, and write a csv. This csv has one line per individual per time step. So nrow should be max(run_num) x nfish x total_time
 ```{r individual time}
 
 # Rejoin with treatment identifiers for each run number
@@ -201,7 +203,6 @@ ind_time <- test %>%
   select(run_num, density, sync, asym, synchrony, asymmetry,
          time, n_surv, n_dead, biomass, mean_size, fish_id, meta, size) %>% 
   rename(id = fish_id)
-ind_time$size <- as.numeric(ind_time$size)
 
 #ind_time$synchrony <- ordered(ind_time$synchrony, levels = c("low", "med", "high"))
 ind_time$asymmetry <- ordered(ind_time$asymmetry, levels = c("none", "weak", "strong"))
@@ -209,7 +210,7 @@ ind_time$size <- as.numeric(ind_time$size)
 
 # this csv takes a while to write and overwrites the version already in the folder
 # so only run this line when I've made major changes, and this version becomes the new 'default'
-write.csv(ind_time, "ind_time1sp.csv")
+#write.csv(ind_time, "ind_time1sp.csv")
 ```
 
 # Summarize by Individual
@@ -218,23 +219,23 @@ Now, I want to make some summarised datasets. First with one row per individual,
 
 ```{r individual summary}
 
-# Here, set a minimum threshold for metamorphosis. Future runs will have this modeled implicitly
+# Simplify "ind_time" to "ind" by making 1 row per individual
 ind <- ind_time %>% 
   # group by everything but time- this puts us at the individual level
   group_by(run_num, id, sync, asym, synchrony, asymmetry, n_surv, n_dead, biomass, mean_size, meta) %>%
   # calculate some metrics for each individual
   summarise(final_size = max(size),
-            hatch_date = min(time[size > 0]),
-            end_date = min(time[size == max(size)]),
-            growth_time = end_date - hatch_date,
+            hatch_date = min(time[size > 0]),        # first time at which size is > 0 
+            end_date = min(time[size == max(size)]), # first time at which size is max size = metam OR death time
+            growth_time = end_date - hatch_date,     # basically life span
             growth_rate = max(size)/growth_time) 
 
 # again, only overwrite the existing csv when big changes have been made that I'm happy with
-write.csv(ind, "ind1sp.csv")
+#write.csv(ind, "ind1sp.csv")
 
 ```
 
-## Summarize by run, then treatment 
+# Summarize by Run, then Treatment 
 
 ```{r treatment summary}
 # first, by run number
@@ -242,15 +243,15 @@ run <- ind %>%
   group_by(run_num) %>%
   # only survivors get factored into these metrics-- we don't care how long it took someone to die
   filter(meta == 1) %>%                                # response variables only consider survivors
-  summarise(mean_biom = sum(final_size),               # check this and survival against raw output
-            se_biom   = "NA",                          # 1 biom value per run, so no error
-            mean_surv = sum(meta)/80,                     # check this an biom against raw output
-            se_surv   = "NA",                          # 1 surv value per run; just a placeholder
+  summarise(mean_biom = sum(final_size),               # check this against value in "params"
+            se_biom   = "NA",                          # 1 biom value per run, so no error; just a placeholder
+            mean_surv = sum(meta)/80,                  # check this against value in "params"
+            se_surv   = "NA",                          # 1 surv value per run, so no error; just a placeholder
             mean_mass = mean(final_size),              # should be biom/surv
             se_mass   = sd(final_size)/sqrt(sum(meta)),# error
             mean_emer = mean(end_date),                # emer is emergence date-- phenology of emergence
             se_emer   = sd(end_date)/sqrt(sum(meta)),  # error
-            mean_grow = mean(growth_rate),             # grow is individual time to development. size/time
+            mean_grow = mean(growth_rate),             # grow is individual time to development, maxsize/time
             se_grow   = sd(growth_rate)/sqrt(sum(meta))) %>% 
   gather(mean_mass, se_mass, mean_emer, se_emer,       # gather all response variables
          mean_grow, se_grow, 
@@ -273,9 +274,10 @@ trt <- run %>%
   summarise(abs_value_exp = mean(abs_value),
             se_exp    = sd(abs_value)/sqrt(6))
 
+# now, pull out baseline 'controls' for relative comparisons
 baseline_means <- trt %>% 
-  subset(synchrony == 0 & asymmetry == 'none') 
-baseline_means <- baseline_means[,3:5] 
+  subset(synchrony == 0 & asymmetry == 'none')  # high synchrony and competitive symmetry is designated baseline 
+baseline_means <- baseline_means[,3:4]          # just need to pull out variable, mean, and se
 colnames(baseline_means)[2] <- "baseline_value"
 
 # now, add in baseline averages (conditions at med sync and symmetic comp) to run data
@@ -287,17 +289,16 @@ run <- run %>%
 
 trt <- trt %>% 
   mutate(baseline_adj = (abs_value_exp - baseline_value)/baseline_value)
-write.csv(trt, "trt1sp.csv")
-write.csv(run, "run1sp.csv")
+#write.csv(trt, "trt1sp.csv")
+#write.csv(run, "run1sp.csv")
 
 ```
 
 # Plots
 
-# Lollipop
+## Lollipop
 
 ```{r lollipop}
-## LOLIPOP PLOT
 
 trt_nobaseline <- subset(trt, subset = asymmetry != "none" & synchrony != "med" & synchrony != "lm" & synchrony != "mh")
 run_nobaseline <- subset(run, subset = asymmetry != "none" & synchrony != "med" & synchrony != "lm" & synchrony != "mh")
@@ -382,58 +383,33 @@ plot(unpaired_mean_diff, palette = "Dark2")
 ```
 
 # Dabestr DIY 
+
+Here, I recreate the dabestr plot conceptually, but add more parameter space
 ```{r dabestr DIY}
-
-
-## write out response variable names for facet wrap
-variable_names_abs <- list(
-  'surv' = "proportion survival",
-  'biom' = "biomass export (a.u.)",
-  'mass' = "per capita mass (a.u.)",
-  'grow' = "per capita growth (mass/life span)", 
-  'emer' = "emergence date (doy)"
-)
-
-variable_labeller_abs <- function(variable, value){
-  return(variable_names_abs[value])
-}
-
-## write out response variable names for facet wrap
-variable_names_rel <- list(
-  'surv' = "survival (%Δ high sync)",
-  'biom' = "biomass export (%Δ high sync)",
-  'mass' = "per capita mass (%Δ high sync)",
-  'grow' = "per capita growth (%Δ high sync)", 
-  'emer' = "emergence date (%Δ high sync)"
-)
-
-variable_labeller_rel <- function(variable, value){
-  return(variable_names_rel[value])
-}
-
 
 ### PREPPING DATA ###
 
 # designate which synchrony level is the 'baseline' and pull out the mean values for all response vars at each asymmetry level
 mean_diffs <- subset(trt, subset = (synchrony == 0))
-mean_diffs <- mean_diffs[,2:4]
+mean_diffs <- mean_diffs[,2:4]              # pull only var and the mean
 colnames(mean_diffs)[3] <- "baseline_mean"
 
-# now, add those baseline averages to the run data
+# now, add those baseline averages to the run & trt data
 run_dabest <- run[,1:5]
 run_dabest <- left_join(run_dabest, mean_diffs, by = c("var", "asymmetry"))  
 trt_dabest <- trt[,1:5]
 trt_dabest <- left_join(trt_dabest, mean_diffs, by = c("var", "asymmetry"))
-   
+
+# and calculate the proportional deviation between trt and baseline value
 meandiffs_run <- run_dabest %>% 
   mutate(umd = (abs_value - baseline_mean)/baseline_mean)
-meandiffs_run <- subset(meandiffs_run, subset = (synchrony != "low"))
+#meandiffs_run <- subset(meandiffs_run, subset = (synchrony != "low"))
 
 # ...and to the treatment data too
 meandiffs_trt <- trt_dabest %>% 
   mutate(umd = (abs_value_exp - baseline_mean)/baseline_mean,
-         umd_se = (se_exp.x/baseline_mean))
-meandiffs_trt <- subset(meandiffs_trt, subset = (synchrony != "low"))
+         umd_se = (se_exp/baseline_mean))
+#meandiffs_trt <- subset(meandiffs_trt, subset = (synchrony != "low"))
 
 # put factor levels of response variables in an intuitive order
 meandiffs_trt$var <- factor(meandiffs_trt$var, levels = c("surv", "biom", "mass", "grow", "emer"))
@@ -441,52 +417,79 @@ run$var <- factor(run$var, levels = c("surv", "biom", "mass", "grow", "emer"))
 
 ### BUILDING PLOT ###
 
-# first, the raw data plot
+## FIRST, ABSOLUTE DATA PLOT
+
+# write out response variable names for facet wrap
+variable_names_abs <- list(
+  'surv' = "proportion survival",
+  'biom' = "biomass export (a.u.)",
+  'mass' = "per capita mass (a.u.)",
+  'grow' = "per capita growth (mass/life span)", 
+  'emer' = "advancement date (doy)"
+)
+
+variable_labeller_abs <- function(variable, value){
+  return(variable_names_abs[value])
+}
+
+# build absolute data plot
 rawdata <- ggplot(data = run, aes(x = as.factor(synchrony), y = abs_value, 
                 fill = asymmetry, color = asymmetry, group = asymmetry, shape = asymmetry)) + 
   mytheme +
-  #stat_smooth() +
   geom_point(size = 1.5, alpha = 1/2,
              position = position_dodge(width = 0.5)) +
   facet_wrap(~var, ncol = 1, scales = "free_y", labeller = variable_labeller_abs) +
   labs(y = "absolute measurement", 
-       x = "phenological synchrony", y = NULL) + 
+       x = "phenological synchrony") + 
   scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
   scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
   scale_shape_manual(values = c(21, 24, 23))  + 
-  theme(legend.position = "none", panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0)),
-    plot.title = element_text(hjust = 0.5)) +
-   scale_x_discrete(breaks=c("0","15","30"),
-        labels=c("high", "med", "low"))
-rawdata
-# now, the mean-differences plot
-mean_diffs <- ggplot(meandiffs_trt, aes(x = as.factor(synchrony), y = umd, 
-                          color = asymmetry, shape = asymmetry, fill = asymmetry, group = asymmetry)) + mytheme +
-  geom_errorbar(aes(ymax = umd + umd_se, ymin = umd - umd_se), width = 0,
-                position = position_dodge(width = 0.5), size = 1) +
-  geom_point(size = 2, color = "black",
-             position = position_dodge(width = 0.5)) +
-  geom_smooth(method = "lm", formula = y ~ poly(x, 2)) +
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
-  scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
-  scale_shape_manual(values = c(21, 24, 23))  + 
-  facet_wrap(~var, ncol = 1, scales = "free_y", labeller = variable_labeller_rel) +
   theme(legend.position = "none",
-    axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0))) +
-  labs(x = "phenological synchrony", y = "proportional difference from appropriate asymmetry at high synchrony", y = NULL) +
-   scale_x_discrete(breaks=c("0","15","30"),
-        labels=c("high", "med", "low"))
+        axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0))) +
+  scale_x_discrete(breaks = c("0", "15", "30"), labels = c("high", "med", "low"))
 
-# put them together. can't neatly put a 
+## NOW, MEAN DIFFERENCES PLOT
+
+# write out response variable names for facet wrap
+variable_names_rel <- list(
+  'surv' = "survival (%Δ high sync)",
+  'biom' = "biomass export (%Δ high sync)",
+  'mass' = "per capita mass (%Δ high sync)",
+  'grow' = "per capita growth (%Δ high sync)", 
+  'emer' = "advancement date (%Δ high sync)"
+)
+
+variable_labeller_rel <- function(variable, value){
+  return(variable_names_rel[value])
+}
+
+# build mean differences plot
+mean_diffs <- ggplot(meandiffs_trt, aes(x = as.factor(synchrony), y = umd, 
+                          color = asymmetry, shape = asymmetry, fill = asymmetry, group = asymmetry)) +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2)) +
+  geom_errorbar(width = 0, position = position_dodge(width = 0.5), size = 1,
+                aes(ymax = umd + umd_se, ymin = umd - umd_se)) +
+  geom_point(size = 2.5, color = "black", position = position_dodge(width = 0.5)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  facet_wrap(~var, ncol = 1, scales = "free_y", labeller = variable_labeller_rel) +
+  scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_shape_manual(values = c(21, 24, 23))  + 
+  mytheme +
+  theme(legend.position = "none",
+        axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0))) +
+  labs(x = "phenological synchrony", 
+       y = "proportional difference from corresponding asymmetry at high synchrony") +
+  scale_x_discrete(breaks = c("0", "15", "30"), labels = c("high", "med", "low"))
+
+# put them together. can't neatly put a legend in, so do some janky pasting
 fig2 <- plot_grid(rawdata, mean_diffs, ncol = 2)
 
 fig2
-tiff("fig2.tiff", height = 7500, width = 5200, units = "px", res = 800, compression = "lzw")
-plot(fig2)
-dev.off()
+ggsave("fig2x.tiff")
+ #tiff("fig2.tiff", height = 7500, width = 5200, units = "px", res = 800, compression = "lzw")
+#plot(fig2)
+#dev.off()
 ```
 
 
@@ -528,15 +531,16 @@ ggplot(ind, aes(x = final_size, fill = as.factor(meta))) + mytheme +
        x = "size",
        y = "density of individuals")
 
-ggplot(subset(ind, subset = (meta == 1)), aes(x = end_date, fill = asymmetry)) + mytheme +
-  geom_vline(data = subset(trt, subset = (var == "emer")), 
-             aes(xintercept = abs_value_exp, color = asymmetry), 
-             linetype = 'dashed', size = 1.2) + 
+ggplot(subset(ind, subset = (meta == 1 & synchrony == c(3, 15, 27))), aes(x = end_date, fill = asymmetry)) + mytheme +
+  #geom_vline(data = subset(trt, subset = (var == "emer")), 
+  #           aes(xintercept = abs_value_exp, color = asymmetry), 
+  
+  #           linetype = 'dashed', size = 1.2) + 
   geom_density(alpha = 0.5, size = 0.8) +
   facet_grid(. ~ synchrony) +
   scale_x_continuous(limits = c(0, 250), breaks = seq(0, 250, by = 50)) +
-  scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
-  scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  #scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  #scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
   labs(title = "Phenology at emergence",
        x = "day of emergence",
        y = "density of individuals")
@@ -558,9 +562,11 @@ growthrates
 
 
 ```{r, echo = F}
+ind_fewsync <- subset(ind, subset = synchrony == c(3, 15, 27))
+levels(ind_fewsync$synchrony) <- c("high", "med", "low")
 
 # size by hatch date
-ggplot(ind, aes(x = hatch_date, y = final_size, color = as.factor(meta))) +
+ggplot(ind_fewsync, aes(x = hatch_date, y = final_size, color = as.factor(meta))) +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
   stat_smooth(se = F) +
   facet_grid(asymmetry ~ synchrony) + mytheme +
@@ -571,7 +577,7 @@ ggplot(ind, aes(x = hatch_date, y = final_size, color = as.factor(meta))) +
   scale_color_uchicago()
 
 # development time by hatch date
-ggplot(ind, aes(x = hatch_date, y = (end_date - hatch_date), color = as.factor(meta))) +
+ggplot(ind_fewsync, aes(x = hatch_date, y = (end_date - hatch_date), color = as.factor(meta))) +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
   #stat_smooth(se = F) +
   facet_grid(asymmetry ~ synchrony) + mytheme +
@@ -581,16 +587,16 @@ ggplot(ind, aes(x = hatch_date, y = (end_date - hatch_date), color = as.factor(m
   theme(legend.position = "none") +
   scale_color_uchicago()
 
+
 # growth rate by hatch date
-ggplot(ind, aes(x = hatch_date, y = growth_rate, color = as.factor(meta))) +
+ggplot(ind_fewsync, aes(x = hatch_date, y = growth_rate, color = as.factor(meta))) +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
   stat_smooth(se = F) +
   geom_hline(yintercept = c(0.05, 0.15), linetype = 'dashed', alpha = 0.5) +
   facet_grid(asymmetry ~ synchrony) + mytheme +
   scale_x_continuous(limits = c(0, 140), breaks = seq(0, 120, by = 30)) +
   ylim(0,0.25) +
-  labs(title = "Growth rate by hatching date",
-       x = "hatching date",
+  labs(x = "hatching date",
        y = "growth rate (final size - initial size) / time") +
   theme(legend.position = "none") +
   scale_color_uchicago()
@@ -613,7 +619,7 @@ Probability of individuals surviving based on hatching date for each treatment
 
 ```{r, echo = F}
 # Looks like in several cases, there are some individuals hatching on the last day, way later than the others. Check.
-ggplot(ind, aes(x = hatch_date, y = meta, color = asymmetry)) + mytheme +
+ggplot(ind_fewsync, aes(x = hatch_date, y = meta, color = asymmetry)) + mytheme +
   geom_point(alpha = 0.05) + 
   stat_smooth(size = 1.5, method = 'glm', method.args = 'binomial', se = F) +
   facet_grid(synchrony ~ .) + 

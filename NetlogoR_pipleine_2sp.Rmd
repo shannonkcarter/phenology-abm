@@ -81,7 +81,7 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 First, load the data. I've done a ton of different experiments in NetLogo, and not always certain each new one will be an improvement over the old or even work at all. So I keep most of the runs and number the files sequentially.
 
 ```{r load table data}
-data <- read.table("ABM_2Consumer_6.csv",
+data <- read.table("ABM_2Consumer_8.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
@@ -126,7 +126,7 @@ params <- test[,1:15]
 #params$sync_fish <- as.factor(params$sync_fish)
 params$mean_fish <- as.factor(params$mean_fish)
 #levels(params$sync_fish) <- c("high", "med", "low")
-levels(params$mean_fish) <- c("early", "same", "late")
+#levels(params$mean_fish) <- c("early", "same", "late")
 
 #params$sync_dfly <- as.factor(params$sync_dfly)
 #params$mean_dfly <- as.factor(params$mean_dfly)
@@ -310,7 +310,7 @@ variable_names_abs <- list(
   'biom' = "biomass export (a.u.)",
   'mass' = "per capita mass (a.u.)",
   'grow' = "per capita growth (mass/life span)", 
-  'emer' = "emergence date (doy)"
+  'emer' = "advancement date (doy)"
 )
 
 variable_labeller_abs <- function(variable, value){
@@ -323,7 +323,7 @@ variable_names_rel <- list(
   'biom' = "biomass export (%Δ high sync)",
   'mass' = "per capita mass (%Δ high sync)",
   'grow' = "per capita growth (%Δ high sync)", 
-  'emer' = "emergence date (%Δ high sync)"
+  'emer' = "advancement date (%Δ high sync)"
 )
 
 variable_labeller_rel <- function(variable, value){
@@ -353,12 +353,13 @@ meandiffs_trt <- trt_dabest %>%
 
 meandiffs_trt$var <- factor(meandiffs_trt$var, levels = c("surv", "biom", "mass", "grow", "emer"))
 run$var <- factor(run$var, levels = c("surv", "biom", "mass", "grow", "emer"))
+run1 <- subset(run, subset = (mean_fish != 50 & mean_fish != 70))
 
 ## first, the raw data
 rawdata <- ggplot(data = subset(run, subset = (sp == "f")), aes(x = as.factor(sync_fish), y = mean, 
                 fill = mean_fish, color = mean_fish, group = mean_fish, shape = mean_fish)) + 
   mytheme +
-  #stat_smooth() +
+  #geom_smooth(method = "lm", formula = y ~ poly(x, 2)) +
   geom_point(size = 1.5, alpha = 0.5,
              position = position_dodge(width = 0.5)) +
   facet_wrap(~var, ncol = 1, scales = "free_y", labeller = variable_labeller_abs) +
@@ -371,15 +372,15 @@ rawdata <- ggplot(data = subset(run, subset = (sp == "f")), aes(x = as.factor(sy
     panel.grid.minor = element_blank(),
     axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0))) +
   scale_x_discrete(breaks = c("0", "15", "30"), labels = c("high", "med", "low"))
-
+rawdata
 ## Now, making the mean_diffs df
 mean_diffs <- ggplot(meandiffs_trt, aes(x = as.factor(sync_fish), y = umd, 
                           color = mean_fish, shape = mean_fish, fill = mean_fish, group = mean_fish)) + mytheme +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2)) +
   geom_errorbar(aes(ymax = umd + umd_se, ymin = umd - umd_se), width = 0,
                 position = position_dodge(width = 0.5), size = 1) +
-  geom_point(size = 3, color = "black",
+  geom_point(size = 2.5, color = "black",
              position = position_dodge(width = 0.5)) +
-  geom_smooth(method = "lm", formula = y ~ poly(x, 2)) +
   geom_hline(yintercept = 0, linetype = "dashed") +
   scale_color_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
   scale_fill_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
@@ -388,16 +389,17 @@ mean_diffs <- ggplot(meandiffs_trt, aes(x = as.factor(sync_fish), y = umd,
   theme(legend.position = "none",
         axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0))) +
   labs(x = "phenological synchrony",
-       y = "proportional difference from low synchrony", 
+       y = "proportional difference from corresponding asymmetry at high synchrony", 
        color = "relative mean arrival of focal species",
        shape = "relative mean arrival of focal species",
        fill = "relative mean arrival of focal species") +
   scale_x_discrete(breaks = c("0", "15" ,"30"), labels = c("high", "med", "low"))
-
+mean_diffs
 fig4 <- plot_grid(rawdata, mean_diffs, ncol = 2)
-tiff("fig4.tiff", height = 7500, width = 5200, units = "px", res = 800, compression = "lzw")
-plot(fig4)
-dev.off()
+fig4
+#tiff("fig4.tiff", height = 7500, width = 5200, units = "px", res = 800, compression = "lzw")
+#plot(fig4)
+#dev.off()
 ```
 
 

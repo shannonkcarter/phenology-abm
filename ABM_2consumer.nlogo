@@ -416,7 +416,7 @@ var-hatch-fishes
 var-hatch-fishes
 0
 30
-5.0
+30.0
 1
 1
 NIL
@@ -1734,7 +1734,7 @@ NetLogo 6.0
       <value value="1"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="2Consumer" repetitions="6" runMetricsEveryStep="false">
+  <experiment name="2Consumer" repetitions="10" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
     <metric>n-meta-fishes</metric>

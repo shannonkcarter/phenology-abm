@@ -230,7 +230,7 @@ to eat-grass
   if breed = dflies
   [
   let max-meal                                                 ; max-meal is the maximum number of patches an individual *could* eat. not always realized.
-  (3 + 1.5 * size * asym-slope-dflies)
+  (4 + size * asym-slope-dflies)
   ;(
   ;  min                                                        ; minimum between max they could eat and number of patches available
   ;  (
@@ -1734,7 +1734,7 @@ NetLogo 6.0
       <value value="1"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="2Consumer" repetitions="10" runMetricsEveryStep="false">
+  <experiment name="2Consumer" repetitions="5" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
     <metric>n-meta-fishes</metric>

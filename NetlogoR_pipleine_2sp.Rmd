@@ -50,7 +50,7 @@ When revisiting the same behavior space multiple times, skip the data processing
 ```{r load data, echo = F, include = F}
 
 # Processing to creat these dfs is done below, but can load these if working w same BS
-ind_time <- read.csv("ind_time2sp.csv", header = T)
+#ind_time <- read.csv("ind_time2sp.csv", header = T)
 ind <- read.csv("ind2sp.csv", header = T)
 run <- read.csv("run2sp.csv", header = T)
 trt <- read.csv("trt2sp.csv", header = T)
@@ -81,7 +81,7 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 First, load the data. I've done a ton of different experiments in NetLogo, and not always certain each new one will be an improvement over the old or even work at all. So I keep most of the runs and number the files sequentially.
 
 ```{r load table data}
-data <- read.table("ABM_2Consumer_8.csv",
+data <- read.table("ABM_2Consumer_9.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need

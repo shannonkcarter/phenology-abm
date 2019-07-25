@@ -52,7 +52,7 @@ When revisiting the same behavior space multiple times, skip the data processing
 ```{r load data, echo = F, include = F}
 
 # Processing to creat these dfs is done below, but can load these if working w same BS
-ind_time <- read.csv("ind_time1sp.csv", header = T)
+#ind_time <- read.csv("ind_time1sp.csv", header = T)
 ind <- read.csv("ind1sp.csv", header = T)
 run <- read.csv("run1sp.csv", header = T)
 trt <- read.csv("trt1sp.csv", header = T)
@@ -81,7 +81,7 @@ First, load the data. I've done a ton of different experiments in NetLogo, and n
 
 ```{r load table data}
 ## First, import the data
-data <- read.table("bs_CRnometa_21.csv",
+data <- read.table("bs_CRnometa_22.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
@@ -486,7 +486,7 @@ mean_diffs <- ggplot(meandiffs_trt, aes(x = as.factor(synchrony), y = umd,
 fig2 <- plot_grid(rawdata, mean_diffs, ncol = 2)
 
 fig2
-ggsave("fig2x.tiff")
+#ggsave("fig2x.tiff")
  #tiff("fig2.tiff", height = 7500, width = 5200, units = "px", res = 800, compression = "lzw")
 #plot(fig2)
 #dev.off()

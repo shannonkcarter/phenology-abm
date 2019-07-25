@@ -36,6 +36,7 @@ fishes-own
   consump-list-fish  ; a list of how many patches the turtle has eaten recently-- used to determine starvation. Separated by breeds bc size-list is.
   meta-fish?         ; 0/1 reporter of whether the turtle survived. saves as a list in BS, i.e., [0 0 0 1 1 1 0 0 1...]
   recent-sizes-fish  ; sublist of size-list used to calculate recent growth rate. Separated by breeds bc size-list is.
+  maintenance-cost
 ]
 
 dflies-own           ; unclear if each of these has to have a -dfly -fish tag. will find out
@@ -101,6 +102,9 @@ to go
 ask fishes
 [
   set size-list-fish lput (size) size-list-fish   ; each tick, they add their size to the list. fish and dflies need separate lists so we can id in R
+    ifelse asym-slope-fishes = 0
+    [set maintenance-cost 2]
+    [set maintenance-cost  0.5 * size ^ 0.75 ]
 ]
 
 ask dflies
@@ -113,7 +117,7 @@ ask dflies
       if ticks = hatch-tick [set size 1]                           ; first time where size = 1 is hatch tick in BS output data
       if ticks > hatch-tick and color != red and color != yellow   ; once you're hatched but before you're dead (red) or metamorphed (yellow), you start doing stuff
       [                                                            ; if you've eaten enough to not starve, keep going. else, die.
-        ifelse (item 0 meals + item 1 meals + item 2 meals + item 3 meals + item 4 meals + item 5 meals + item 6 meals + item 7 meals + item 8 meals) >  0.5 * size ^ 0.75  ; 0.75 scaling from BMR literature
+        ifelse (item 0 meals + item 1 meals + item 2 meals + item 3 meals + item 4 meals + item 5 meals + item 6 meals + item 7 meals + item 8 meals) >  maintenance-cost;0.5 * size ^ 0.75  ; 0.75 scaling from BMR literature
         [
           if breed = fishes [set color green]
           if breed = dflies [set color blue]   ; blue = alive and kicking
@@ -130,6 +134,7 @@ ask dflies
         ]
       ]
      ]
+
 
     tick                                                       ; all of the above happens each time step. 'tick' = new time step started
     if ticks = 250 [stop]                                      ; this end point comes after all action-- just makes it easier to work with data in R if each run is the same length
@@ -401,7 +406,7 @@ n-fishes
 n-fishes
 0
 200
-40.0
+80.0
 1
 1
 NIL
@@ -536,7 +541,7 @@ mean-hatch-fishes
 mean-hatch-fishes
 0
 100
-80.0
+40.0
 1
 1
 NIL
@@ -551,7 +556,7 @@ asym-slope-fishes
 asym-slope-fishes
 0
 1
-0.5
+1.0
 0.1
 1
 NIL
@@ -585,7 +590,7 @@ n-dflies
 n-dflies
 0
 200
-40.0
+0.0
 1
 1
 NIL
@@ -600,7 +605,7 @@ mean-hatch-dflies
 mean-hatch-dflies
 0
 100
-60.0
+40.0
 1
 1
 NIL
@@ -1685,7 +1690,7 @@ NetLogo 6.0
       <value value="1"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="1Consumer" repetitions="6" runMetricsEveryStep="false">
+  <experiment name="1Consumer" repetitions="10" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
     <metric>n-meta-fishes</metric>
@@ -1734,7 +1739,7 @@ NetLogo 6.0
       <value value="1"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="2Consumer" repetitions="5" runMetricsEveryStep="false">
+  <experiment name="2Consumer" repetitions="10" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
     <metric>n-meta-fishes</metric>
@@ -1766,9 +1771,9 @@ NetLogo 6.0
       <value value="5"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="mean-hatch-fishes">
-      <value value="40"/>
+      <value value="45"/>
       <value value="60"/>
-      <value value="80"/>
+      <value value="75"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="mean-hatch-dflies">
       <value value="60"/>

@@ -53,22 +53,22 @@ When revisiting the same behavior space multiple times, skip the data processing
 
 # Processing to creat these dfs is done below, but can load these if working w same BS
 #ind_time <- read.csv("ind_time1sp.csv", header = T)
-ind <- read.csv("ind1sp.csv", header = T)
-run <- read.csv("run1sp.csv", header = T)
-trt <- read.csv("trt1sp.csv", header = T)
+#ind <- read.csv("ind1sp.csv", header = T)
+#run_abs <- read.csv("run1sp.csv", header = T)
+#trt <- read.csv("trt1sp.csv", header = T)
 
 # Get factors in line
 # Removed synchrony levels bc ended up with regression style numeric values for that
-ind_time$asymmetry <- factor(ind_time$asymmetry, levels = c("none", "weak", "strong"))
+#ind_time$asymmetry <- factor(ind_time$asymmetry, levels = c("none", "weak", "strong"))
 #ind_time$synchrony <- factor(ind_time$synchrony, levels = c("low", "med", "high"))
 
-ind$asymmetry <- factor(ind$asymmetry, levels = c("none", "weak", "strong"))
+#ind$asymmetry <- factor(ind$asymmetry, levels = c("none", "weak", "strong"))
 #ind$synchrony <- factor(ind$synchrony, levels = c("low", "med", "high"))
 
-run$asymmetry <- factor(run$asymmetry, levels = c("none", "weak", "strong"))
+#run_abs$asymmetry <- factor(run_abs$asymmetry, levels = c("none", "weak", "strong"))
 #run$synchrony <- factor(run$synchrony, levels = c("low", "med", "high"))
 
-trt$asymmetry <- factor(trt$asymmetry, levels = c("none", "weak", "strong"))
+#trt$asymmetry <- factor(trt$asymmetry, levels = c("none", "weak", "strong"))
 #trt$synchrony <- factor(trt$synchrony, levels = c("low", "med", "high"))
 
 ```
@@ -81,7 +81,7 @@ First, load the data. I've done a ton of different experiments in NetLogo, and n
 
 ```{r load table data}
 ## First, import the data
-data <- read.table("bs_CRnometa_22.csv",
+data <- read.table("sens1sp_w+.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
@@ -295,6 +295,45 @@ trt <- trt %>%
 ```
 
 # Plots
+
+```{r sensitivity plot}
+abs <- ggplot(data = run_abs, aes(x = as.factor(synchrony), y = abs_value, 
+                fill = asymmetry, color = asymmetry, group = asymmetry, shape = asymmetry)) + 
+  mytheme +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2)) +
+  geom_point(size = 1.5, alpha = 1/2,
+             position = position_dodge(width = 0.5)) +
+  facet_wrap(~var, ncol = 1, scales = "free_y") +
+  labs(y = "measurement", 
+       x = "phenological synchrony") + 
+  scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_shape_manual(values = c(21, 24, 23))  + 
+  theme(legend.position = "none") +
+  scale_x_discrete(breaks = c("0", "15", "30"), labels = c("high", "med", "low"))
+#abs
+#ggsave("1sp_sens_baseline.tiff")
+
+sens <- ggplot(data = run, aes(x = as.factor(synchrony), y = abs_value, 
+                fill = asymmetry, color = asymmetry, group = asymmetry, shape = asymmetry)) + 
+  mytheme +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2)) +
+  geom_point(size = 1.5, alpha = 1/2,
+             position = position_dodge(width = 0.5)) +
+  facet_wrap(~var, ncol = 1, scales = "free_y") +
+  labs(y = NULL, 
+       x = "phenological synchrony") + 
+  scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_shape_manual(values = c(21, 24, 23))  + 
+  theme(legend.position = "none") +
+  scale_x_discrete(breaks = c("0", "15", "30"), labels = c("high", "med", "low"))
+sens
+ggsave("1sp_sens_perturb.tiff")
+
+
+```
+
 
 ## Lollipop
 

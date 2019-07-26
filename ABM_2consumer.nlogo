@@ -1690,7 +1690,7 @@ NetLogo 6.0
       <value value="1"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="1Consumer" repetitions="10" runMetricsEveryStep="false">
+  <experiment name="1Consumer" repetitions="5" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
     <metric>n-meta-fishes</metric>
@@ -1739,7 +1739,7 @@ NetLogo 6.0
       <value value="1"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="2Consumer" repetitions="10" runMetricsEveryStep="false">
+  <experiment name="2Consumer" repetitions="5" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
     <metric>n-meta-fishes</metric>

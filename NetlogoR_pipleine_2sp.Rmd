@@ -51,26 +51,26 @@ When revisiting the same behavior space multiple times, skip the data processing
 
 # Processing to creat these dfs is done below, but can load these if working w same BS
 #ind_time <- read.csv("ind_time2sp.csv", header = T)
-ind <- read.csv("ind2sp.csv", header = T)
-run <- read.csv("run2sp.csv", header = T)
-trt <- read.csv("trt2sp.csv", header = T)
+#ind <- read.csv("ind2sp.csv", header = T)
+#run <- read.csv("run2sp.csv", header = T)
+#trt <- read.csv("trt2sp.csv", header = T)
 
 # Get factors in line
 #ind_time$asym_fish <- factor(ind_time$asym_fish, levels = c("none", "mild", "strong"))
-ind_time$mean_fish <- factor(ind_time$mean_fish, levels = c("early", "same", "late"))
-ind_time$sync_fish <- factor(ind_time$sync_fish, levels = c("low", "med", "high"))
+#ind_time$mean_fish <- factor(ind_time$mean_fish, levels = c("early", "same", "late"))
+#ind_time$sync_fish <- factor(ind_time$sync_fish, levels = c("low", "med", "high"))
 
 #ind$asym_fish <- factor(ind$asym_fish, levels = c("none", "mild", "strong"))
-ind$mean_fish <- factor(ind$mean_fish, levels = c("early", "same", "late"))
-ind$sync_fish <- factor(ind$sync_fish, levels = c("low", "med", "high"))
+#ind$mean_fish <- factor(ind$mean_fish, levels = c("early", "same", "late"))
+#ind$sync_fish <- factor(ind$sync_fish, levels = c("low", "med", "high"))
 
 #run$asym_fish <- factor(run$asym_fish, levels = c("none", "mild", "strong"))
-run$mean_fish <- factor(run$mean_fish, levels = c("early", "same", "late"))
-run$sync_fish <- factor(run$sync_fish, levels = c("low", "med", "high"))
+#run$mean_fish <- factor(run$mean_fish, levels = c("early", "same", "late"))
+#run$sync_fish <- factor(run$sync_fish, levels = c("low", "med", "high"))
 
 #trt$asym_fish <- factor(trt$asym_fish, levels = c("none", "mild", "strong"))
-trt$mean_fish <- factor(trt$mean_fish, levels = c("early", "same", "late"))
-trt$sync_fish <- factor(trt$sync_fish, levels = c("low", "med", "high"))
+#trt$mean_fish <- factor(trt$mean_fish, levels = c("early", "same", "late"))
+#trt$sync_fish <- factor(trt$sync_fish, levels = c("low", "med", "high"))
 
 ```
 
@@ -81,7 +81,7 @@ First, be sure you export behavior space data from Netlogo in "table" format. Wh
 First, load the data. I've done a ton of different experiments in NetLogo, and not always certain each new one will be an improvement over the old or even work at all. So I keep most of the runs and number the files sequentially.
 
 ```{r load table data}
-data <- read.table("ABM_2Consumer_9.csv",
+data <- read.table("sens2sp_g+.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
@@ -202,7 +202,7 @@ ind_time <- ind_time %>%
          surv_fish, surv_dfly, biom_fish, biom_dfly, biom_tot, # run-level output
          time, sp, id, meta, size)                             # ind/time output
 
-write.csv(ind_time, "ind_time2sp.csv")
+#write.csv(ind_time, "ind_time2sp.csv")
 
 ```
 
@@ -227,18 +227,8 @@ ind <- ind %>%
          surv_fish, surv_dfly, biom_fish, biom_dfly, biom_tot, # run-level output
          sp, id, meta, hatch_date,       
          end_date, growth_time, growth_rate, max_size)
-write.csv(ind, "ind2sp.csv")
+#write.csv(ind, "ind2sp.csv")
 
-# This is a good way to verify that the calculations worked
-# N_survivors from netlogo should = sum or metamorphs
-ind$meta <- as.numeric(ind$meta)
-check <- ind %>% 
-  group_by(run_num, surv_dfly, surv_fish) %>%
-  summarize(meta_check = sum(meta)) %>% 
-  ggplot(aes(x = surv_fish + surv_dfly, y = meta_check)) +
-  geom_point(alpha = 1/5) + theme_bw() + mytheme +
-  geom_abline(slope = 1, intercept = 0)
-check
 ```
 
 # Summarize by Treatment
@@ -246,6 +236,7 @@ check
 Now, I want to summarize to get means and error for each run and each treatment. 
 ```{r treatment summary}
 # first, by run number
+ind$meta <- as.numeric(ind$meta)
 run <- ind %>% 
   group_by(run_num, sp) %>%
   filter(meta == 1) %>%                              # response variables only consider survivors
@@ -272,7 +263,7 @@ run <- left_join(run, params, by = c("run_num"))
 run$mean <- round(as.numeric(run$mean), 2)
 run$se <- round(as.numeric(run$se), 2)
 run <- run %>% select(-c(surv_fish, surv_dfly, biom_fish, biom_dfly)) # these are redundant w calcs above
-write.csv(run, "run2sp.csv")
+#write.csv(run, "run2sp.csv")
 
 # Now by treatment
 trt <- run %>% 
@@ -292,13 +283,54 @@ trt <- trt %>%
 
 trt$mean <- round(as.numeric(trt$mean), 2)
 trt$se <- round(as.numeric(trt$se), 2)
-write.csv(trt, "trt2sp.csv")
+#write.csv(trt, "trt2sp.csv")
 
 ```
 
 # Plots
 
 Here are some diagnostic plots to get a quick look at the data. These will give an idea of what parameter space is reasonable and interesting to explore in future behavior space runs.
+
+
+```{r sensitivity analyses}
+
+abs <-  ggplot(data = subset(run, subset = (sp == "f")), aes(x = as.factor(sync_fish), y = mean, 
+                fill = mean_fish, color = mean_fish, group = mean_fish, shape = mean_fish)) + 
+  mytheme +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2)) +
+  geom_point(size = 1.5, alpha = 1/2,
+             position = position_dodge(width = 0.5)) +
+  facet_wrap(~var, ncol = 1, scales = "free_y") +
+  labs(y = "measurement", 
+       x = "phenological synchrony") + 
+  scale_color_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
+  scale_fill_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
+  scale_shape_manual(values = c(21, 24, 23))  +  
+  theme(legend.position = "none") +
+  scale_x_discrete(breaks = c("0", "15", "30"), labels = c("high", "med", "low"))
+#abs
+#ggsave("2sp_sens_baseline.tiff")
+
+sens <- ggplot(data = subset(run, subset = (sp == "f")), aes(x = as.factor(sync_fish), y = mean, 
+                fill = mean_fish, color = mean_fish, group = mean_fish, shape = mean_fish)) + 
+  mytheme +
+  geom_smooth(method = "lm", formula = y ~ poly(x, 2)) +
+  geom_point(size = 1.5, alpha = 1/2,
+             position = position_dodge(width = 0.5)) +
+  facet_wrap(~var, ncol = 1, scales = "free_y") +
+  labs(y = NULL, 
+       x = "phenological synchrony") + 
+  scale_color_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
+  scale_fill_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
+  scale_shape_manual(values = c(21, 24, 23))  + 
+  theme(legend.position = "none") +
+  scale_x_discrete(breaks = c("0", "15", "30"), labels = c("high", "med", "low"))
+sens
+ggsave("2sp_sens_perturb.tiff")
+
+
+```
+
 
 Dabestr plot
 

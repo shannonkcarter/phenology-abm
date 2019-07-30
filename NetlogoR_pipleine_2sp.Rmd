@@ -50,10 +50,10 @@ When revisiting the same behavior space multiple times, skip the data processing
 ```{r load data, echo = F, include = F}
 
 # Processing to creat these dfs is done below, but can load these if working w same BS
-#ind_time <- read.csv("ind_time2sp.csv", header = T)
-#ind <- read.csv("ind2sp.csv", header = T)
-#run <- read.csv("run2sp.csv", header = T)
-#trt <- read.csv("trt2sp.csv", header = T)
+ind_time <- read.csv("ind_time2sp.csv", header = T)
+ind <- read.csv("ind2sp.csv", header = T)
+run <- read.csv("run2sp.csv", header = T)
+trt <- read.csv("trt2sp.csv", header = T)
 
 # Get factors in line
 #ind_time$asym_fish <- factor(ind_time$asym_fish, levels = c("none", "mild", "strong"))

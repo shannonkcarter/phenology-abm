@@ -52,23 +52,23 @@ When revisiting the same behavior space multiple times, skip the data processing
 ```{r load data, echo = F, include = F}
 
 # Processing to creat these dfs is done below, but can load these if working w same BS
-#ind_time <- read.csv("ind_time1sp.csv", header = T)
-#ind <- read.csv("ind1sp.csv", header = T)
-#run_abs <- read.csv("run1sp.csv", header = T)
-#trt <- read.csv("trt1sp.csv", header = T)
+ind_time <- read.csv("ind_time1sp.csv", header = T)
+ind <- read.csv("ind1sp.csv", header = T)
+run_abs <- read.csv("run1sp.csv", header = T)
+trt <- read.csv("trt1sp.csv", header = T)
 
 # Get factors in line
 # Removed synchrony levels bc ended up with regression style numeric values for that
-#ind_time$asymmetry <- factor(ind_time$asymmetry, levels = c("none", "weak", "strong"))
+ind_time$asymmetry <- factor(ind_time$asymmetry, levels = c("none", "weak", "strong"))
 #ind_time$synchrony <- factor(ind_time$synchrony, levels = c("low", "med", "high"))
 
-#ind$asymmetry <- factor(ind$asymmetry, levels = c("none", "weak", "strong"))
+ind$asymmetry <- factor(ind$asymmetry, levels = c("none", "weak", "strong"))
 #ind$synchrony <- factor(ind$synchrony, levels = c("low", "med", "high"))
 
-#run_abs$asymmetry <- factor(run_abs$asymmetry, levels = c("none", "weak", "strong"))
+run_abs$asymmetry <- factor(run_abs$asymmetry, levels = c("none", "weak", "strong"))
 #run$synchrony <- factor(run$synchrony, levels = c("low", "med", "high"))
 
-#trt$asymmetry <- factor(trt$asymmetry, levels = c("none", "weak", "strong"))
+trt$asymmetry <- factor(trt$asymmetry, levels = c("none", "weak", "strong"))
 #trt$synchrony <- factor(trt$synchrony, levels = c("low", "med", "high"))
 
 ```
@@ -560,7 +560,8 @@ attempt
 Now, distributions of sizes of individuals at the end of the experiment, grouped by treatment. The vertical lines represent different size thresholds I considered for metamorphosis. Since these distributions of sizes for each treatment are so different, it doesn't make sense to set a size threshold for survival. Results are pretty sensitive to it. Instead, model optimal timing of metamorphosis so that both size and age at metamorphosis are plastic and can be captured.
 
 ```{r, echo = F}
-ggplot(ind, aes(x = final_size, fill = as.factor(meta))) + mytheme +
+ggplot(subset(ind, subset = (synchrony == c(3, 15, 27))), 
+       aes(x = final_size, fill = as.factor(meta))) + mytheme +
   geom_density(alpha = 0.5, size = 0.8) +
   facet_grid(asymmetry ~ synchrony) +
   scale_fill_uchicago() +
@@ -602,7 +603,8 @@ growthrates
 
 ```{r, echo = F}
 ind_fewsync <- subset(ind, subset = synchrony == c(3, 15, 27))
-levels(ind_fewsync$synchrony) <- c("high", "med", "low")
+ind_fewsync$synchorny <- as.character(ind_fewsync$synchrony)
+ind_fewsync$synchrony <- factor(ind_fewsync$synchrony, levels = c("high", "med", "low"))
 
 # size by hatch date
 ggplot(ind_fewsync, aes(x = hatch_date, y = final_size, color = as.factor(meta))) +
@@ -626,7 +628,6 @@ ggplot(ind_fewsync, aes(x = hatch_date, y = (end_date - hatch_date), color = as.
   theme(legend.position = "none") +
   scale_color_uchicago()
 
-
 # growth rate by hatch date
 ggplot(ind_fewsync, aes(x = hatch_date, y = growth_rate, color = as.factor(meta))) +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
@@ -636,7 +637,7 @@ ggplot(ind_fewsync, aes(x = hatch_date, y = growth_rate, color = as.factor(meta)
   scale_x_continuous(limits = c(0, 140), breaks = seq(0, 120, by = 30)) +
   ylim(0,0.25) +
   labs(x = "hatching date",
-       y = "growth rate (final size - initial size) / time") +
+       y = "growth rate (final size / life span)") +
   theme(legend.position = "none") +
   scale_color_uchicago()
 

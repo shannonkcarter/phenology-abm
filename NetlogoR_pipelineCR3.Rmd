@@ -604,7 +604,7 @@ growthrates
 ```{r, echo = F}
 ind_fewsync <- subset(ind, subset = synchrony == c(3, 15, 27))
 ind_fewsync$synchorny <- as.character(ind_fewsync$synchrony)
-ind_fewsync$synchrony <- factor(ind_fewsync$synchrony, levels = c("high", "med", "low"))
+#ind_fewsync$synchrony <- factor(ind_fewsync$synchrony, levels = c("high", "med", "low"))
 
 # size by hatch date
 ggplot(ind_fewsync, aes(x = hatch_date, y = final_size, color = as.factor(meta))) +
@@ -630,15 +630,16 @@ ggplot(ind_fewsync, aes(x = hatch_date, y = (end_date - hatch_date), color = as.
 
 # growth rate by hatch date
 ggplot(ind_fewsync, aes(x = hatch_date, y = growth_rate, color = as.factor(meta))) +
-  geom_point(size = 1, alpha = 0.2, position = 'jitter') +
-  stat_smooth(se = F) +
-  geom_hline(yintercept = c(0.05, 0.15), linetype = 'dashed', alpha = 0.5) +
+  geom_point(size = 1, alpha = 0.4, position = 'jitter') +
+  #stat_smooth(se = F) +
+  #geom_hline(yintercept = c(0.05, 0.15), linetype = 'dashed', alpha = 0.5) +
   facet_grid(asymmetry ~ synchrony) + mytheme +
   scale_x_continuous(limits = c(0, 140), breaks = seq(0, 120, by = 30)) +
   ylim(0,0.25) +
   labs(x = "hatching date",
        y = "growth rate (final size / life span)") +
-  theme(legend.position = "none") +
+  theme(legend.position = "none", 
+        panel.grid.major = element_line(color = 'gray')) +
   scale_color_uchicago()
 
 ```

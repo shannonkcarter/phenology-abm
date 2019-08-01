@@ -449,6 +449,8 @@ ggplot(ind, aes(x = hatch_date, color = sp, fill = sp)) + mytheme +
 
 
 ```{r, echo = F}
+
+ind_fewsync <- subset(ind, subset = sync_fish == c(3, 15, 27))
 #ggplot(subset(ind, subset = (meta ==1)),
 ggplot(ind, aes(x = hatch_date, y = max_size, color = sp)) + mytheme +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
@@ -459,6 +461,17 @@ ggplot(ind, aes(x = hatch_date, y = max_size, color = sp)) + mytheme +
   labs(title = "Final size by hatching date",
        x = "hatching date",
        y = "final size")
+
+ggplot(subset(ind_fewsync, subset = (meta == 1)),
+       aes(x = hatch_date, y = growth_rate, color = sp)) + mytheme +
+  geom_point(size = 1, alpha = 0.2, position = 'jitter') +
+  stat_smooth(se = F) +
+  facet_grid(mean_fish ~ sync_fish) + 
+  scale_color_manual(values = c("#F28335", "#489C92")) +
+  scale_x_continuous(limits = c(0, 140), breaks = seq(0, 120, by = 30)) +
+  labs(x = "hatching date",
+       y = "growth rate (final size / lifespan)") +
+  theme(panel.grid.major = element_line(color = 'gray'))
 
 ```
 

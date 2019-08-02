@@ -52,7 +52,7 @@ When revisiting the same behavior space multiple times, skip the data processing
 ```{r load data, echo = F, include = F}
 
 # Processing to creat these dfs is done below, but can load these if working w same BS
-ind_time <- read.csv("ind_time1sp.csv", header = T)
+#ind_time <- read.csv("ind_time1sp.csv", header = T)
 ind <- read.csv("ind1sp.csv", header = T)
 run_abs <- read.csv("run1sp.csv", header = T)
 trt <- read.csv("trt1sp.csv", header = T)
@@ -603,8 +603,16 @@ growthrates
 
 ```{r, echo = F}
 ind_fewsync <- subset(ind, subset = synchrony == c(3, 15, 27))
-ind_fewsync$synchorny <- as.character(ind_fewsync$synchrony)
-#ind_fewsync$synchrony <- factor(ind_fewsync$synchrony, levels = c("high", "med", "low"))
+ind_fewsync$synchrony1 <- as.character(ind_fewsync$synchrony)
+ind_fewsync$synchrony1 <- fct_recode(ind_fewsync$synchrony1, "high synchrony (σ = 3)" = "3", "medium synchrony (σ = 15)" = "15", "low synchrony (σ = 27)" = "27")
+
+ind_fewsync$synchrony1 <- factor(ind_fewsync$synchrony1, levels = c("high synchrony (σ = 3)", "medium synchrony (σ = 15)", "low synchrony (σ = 27)"))
+
+ind_fewsync$asymmetry1 <- fct_recode(ind_fewsync$asymmetry, "competitive symmetry" = "none", "weak asymmetry" = "weak", "strong asymmetry" = "strong")
+
+ind_fewsync$outcome <- as.character(ind_fewsync$meta)
+ind_fewsync$outcome <- fct_recode(ind_fewsync$outcome, "survived" = "1", "died" = "0")
+
 
 # size by hatch date
 ggplot(ind_fewsync, aes(x = hatch_date, y = final_size, color = as.factor(meta))) +
@@ -629,18 +637,24 @@ ggplot(ind_fewsync, aes(x = hatch_date, y = (end_date - hatch_date), color = as.
   scale_color_uchicago()
 
 # growth rate by hatch date
-ggplot(ind_fewsync, aes(x = hatch_date, y = growth_rate, color = as.factor(meta))) +
-  geom_point(size = 1, alpha = 0.4, position = 'jitter') +
+fig4 <- ggplot(ind_fewsync, aes(x = hatch_date, y = growth_rate, color = outcome)) +
+  geom_point(size = 1.5, alpha = 0.8, position = 'jitter') +
   #stat_smooth(se = F) +
   #geom_hline(yintercept = c(0.05, 0.15), linetype = 'dashed', alpha = 0.5) +
-  facet_grid(asymmetry ~ synchrony) + mytheme +
+  facet_grid(asymmetry1 ~ synchrony1) + mytheme +
   scale_x_continuous(limits = c(0, 140), breaks = seq(0, 120, by = 30)) +
   ylim(0,0.25) +
-  labs(x = "hatching date",
+  labs(x = "arrival date",
        y = "growth rate (final size / life span)") +
-  theme(legend.position = "none", 
-        panel.grid.major = element_line(color = 'gray')) +
-  scale_color_uchicago()
+theme_bw(base_size = 15, base_family = "Franklin Gothic Medium") +
+  theme(legend.text = element_text(size = 10),
+        legend.title = element_text(size = 11),
+        text = element_text(size = 14),     
+        axis.title = element_text(size = 12),
+        axis.text  = element_text(size = 10, family = "Consolas")) +
+  scale_color_manual(values = c("black", "#5DBCD2")) 
+fig4
+ggsave("fig4b.tiff")
 
 ```
 

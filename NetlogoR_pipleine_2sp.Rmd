@@ -50,7 +50,7 @@ When revisiting the same behavior space multiple times, skip the data processing
 ```{r load data, echo = F, include = F}
 
 # Processing to creat these dfs is done below, but can load these if working w same BS
-ind_time <- read.csv("ind_time2sp.csv", header = T)
+#ind_time <- read.csv("ind_time2sp.csv", header = T)
 ind <- read.csv("ind2sp.csv", header = T)
 run <- read.csv("run2sp.csv", header = T)
 trt <- read.csv("trt2sp.csv", header = T)
@@ -451,6 +451,18 @@ ggplot(ind, aes(x = hatch_date, color = sp, fill = sp)) + mytheme +
 ```{r, echo = F}
 
 ind_fewsync <- subset(ind, subset = sync_fish == c(3, 15, 27))
+ind_fewsync$sync_fish1 <- as.character(ind_fewsync$sync_fish)
+ind_fewsync$sync_fish1 <- fct_recode(ind_fewsync$sync_fish1, "high synchrony (σ = 3)" = "3", "medium synchrony (σ = 15)" = "15", "low synchrony (σ = 27)" = "27")
+
+ind_fewsync$sync_fish1 <- factor(ind_fewsync$sync_fish1, levels = c("high synchrony (σ = 3)", "medium synchrony (σ = 15)", "low synchrony (σ = 27)"))
+
+ind_fewsync$mean_fish1 <- as.character((ind_fewsync$mean_fish))
+ind_fewsync$mean_fish1 <- fct_recode(ind_fewsync$mean_fish1, "focal species first" = "45", "same mean timing" = "60", "focal species second" = "75")
+
+ind_fewsync$species <- as.character(ind_fewsync$sp)
+ind_fewsync$species <- fct_recode(ind_fewsync$species, "secondary" = "d", "focal" = "f")
+ind_fewsync$species <- factor(ind_fewsync$species, levels = c("focal", "secondary"))
+
 #ggplot(subset(ind, subset = (meta ==1)),
 ggplot(ind, aes(x = hatch_date, y = max_size, color = sp)) + mytheme +
   geom_point(size = 1, alpha = 0.2, position = 'jitter') +
@@ -462,17 +474,25 @@ ggplot(ind, aes(x = hatch_date, y = max_size, color = sp)) + mytheme +
        x = "hatching date",
        y = "final size")
 
-ggplot(subset(ind_fewsync, subset = (meta == 1)),
-       aes(x = hatch_date, y = growth_rate, color = sp)) + mytheme +
-  geom_point(size = 1, alpha = 0.2, position = 'jitter') +
-  stat_smooth(se = F) +
-  facet_grid(mean_fish ~ sync_fish) + 
-  scale_color_manual(values = c("#F28335", "#489C92")) +
+fig6 <- ggplot(subset(ind_fewsync, subset = (meta == 1)),
+       aes(x = hatch_date, y = growth_rate, color = species)) + mytheme +
+  geom_point(size = 1.5, alpha = 0.8, position = 'jitter') +
+  #stat_smooth(se = F) +
+  facet_grid(mean_fish1 ~ sync_fish1) + 
   scale_x_continuous(limits = c(0, 140), breaks = seq(0, 120, by = 30)) +
-  labs(x = "hatching date",
+  scale_y_continuous(limits = c(0, 0.3), breaks = seq(0, 0.3, by = 0.05)) +
+  labs(x = "arrival date",
        y = "growth rate (final size / lifespan)") +
-  theme(panel.grid.major = element_line(color = 'gray'))
-
+  theme(panel.grid.major = element_line(color = 'gray')) + 
+  scale_color_manual(values = c("#5DBCD2", "#FFB986")) + 
+  theme_bw(base_size = 15, base_family = "Franklin Gothic Medium") +
+  theme(legend.text = element_text(size = 10),
+        legend.title = element_text(size = 11),
+        text = element_text(size = 14),     
+        axis.title = element_text(size = 12),
+        axis.text  = element_text(size = 10, family = "Consolas"))
+fig6
+ggsave("fig6.tiff")
 ```
 
 ```{r, echo = F}

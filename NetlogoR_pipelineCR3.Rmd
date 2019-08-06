@@ -661,14 +661,34 @@ ggsave("fig4b.tiff")
 A visual of the synchrony treatments.
 
 ```{r, echo = F}
-ggplot(ind, aes(x = hatch_date)) + mytheme +
-  geom_density(alpha = 0.5, size = 1.2) +
-  facet_grid(. ~ synchrony) +
-  scale_x_continuous(limits = c(0, 140), breaks = seq(0, 120, by = 30)) +
-  labs(title = "Hatching timing treatments",
-       x = "hatching date",
-       y = "density of individuals")
+ind_fewsync <- subset(ind, subset = (synchrony == c(9, 21)))
+ind_fewsync$synchrony <- as.factor(ind_fewsync$synchrony)
+ggplot(ind_fewsync, aes(x = hatch_date,  fill = synchrony)) + mytheme +
+  geom_density(alpha = 0.75, size = 1) +
+  #facet_grid(. ~ synchrony) +
+  scale_x_continuous(limits = c(0, 120), breaks = seq(0, 120, by = 20)) +
+  labs(x = "arrival date",
+       y = "density of individuals") +
+  #scale_colour_manual(values = c("#f03b20", "#feb24c")) +
+  scale_fill_manual(values = c("#f03b20", "#feb24c"))#+
+  #theme(legend.position = "none")
+ggsave("trt.tiff")
 ```
+
+```{r}
+
+ind$synchrony <- as.factor(ind$synchrony)
+ggplot(ind, aes(x = id, y = biomass, color = asymmetry)) + mytheme +
+  geom_line(size = 2) +
+  #facet_grid(. ~ synchrony) +
+  #scale_x_continuous(limits = c(0, 120), breaks = seq(0, 120, by = 20)) +
+  labs(x = "size, s",
+       y = "max meal size") +
+  ylim(0, 13) + xlim(0, 10) +
+  scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+ggsave("asy.tiff")
+```
+
 
 Probability of individuals surviving based on hatching date for each treatment
 

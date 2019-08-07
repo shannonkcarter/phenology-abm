@@ -406,7 +406,7 @@ n-fishes
 n-fishes
 0
 200
-40.0
+80.0
 1
 1
 NIL
@@ -541,7 +541,7 @@ mean-hatch-fishes
 mean-hatch-fishes
 0
 100
-75.0
+40.0
 1
 1
 NIL
@@ -556,7 +556,7 @@ asym-slope-fishes
 asym-slope-fishes
 0
 1
-0.5
+1.0
 0.1
 1
 NIL
@@ -590,7 +590,7 @@ n-dflies
 n-dflies
 0
 200
-40.0
+0.0
 1
 1
 NIL
@@ -605,7 +605,7 @@ mean-hatch-dflies
 mean-hatch-dflies
 0
 100
-60.0
+40.0
 1
 1
 NIL
@@ -1690,7 +1690,7 @@ NetLogo 6.0
       <value value="1"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="1Consumer" repetitions="5" runMetricsEveryStep="false">
+  <experiment name="1Consumer" repetitions="10" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go</go>
     <metric>n-meta-fishes</metric>

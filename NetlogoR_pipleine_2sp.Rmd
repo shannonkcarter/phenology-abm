@@ -408,7 +408,7 @@ rawdata
 ## Now, making the mean_diffs df
 mean_diffs <- ggplot(meandiffs_trt, aes(x = as.factor(sync_fish), y = umd, 
                           color = mean_fish, shape = mean_fish, fill = mean_fish, group = mean_fish)) + mytheme +
-  geom_smooth(method = "lm", formula = y ~ poly(x, 2)) +
+  geom_smooth(span = 5) +
   geom_errorbar(aes(ymax = umd + umd_se, ymin = umd - umd_se), width = 0,
                 position = position_dodge(width = 0.5), size = 1) +
   geom_point(size = 2.5, color = "black",
@@ -429,9 +429,9 @@ mean_diffs <- ggplot(meandiffs_trt, aes(x = as.factor(sync_fish), y = umd,
 mean_diffs
 fig4 <- plot_grid(rawdata, mean_diffs, ncol = 2)
 fig4
-#tiff("fig4.tiff", height = 7500, width = 5200, units = "px", res = 800, compression = "lzw")
-#plot(fig4)
-#dev.off()
+tiff("fig4.tiff", height = 7500, width = 5200, units = "px", res = 800, compression = "lzw")
+plot(fig4)
+dev.off()
 ```
 
 
@@ -462,6 +462,7 @@ ind_fewsync$mean_fish1 <- fct_recode(ind_fewsync$mean_fish1, "focal species firs
 ind_fewsync$species <- as.character(ind_fewsync$sp)
 ind_fewsync$species <- fct_recode(ind_fewsync$species, "secondary" = "d", "focal" = "f")
 ind_fewsync$species <- factor(ind_fewsync$species, levels = c("focal", "secondary"))
+ind_fewsync <- subset(ind_fewsync, subset = (meta == 1 | meta == 0))
 
 #ggplot(subset(ind, subset = (meta ==1)),
 ggplot(ind, aes(x = hatch_date, y = max_size, color = sp)) + mytheme +
@@ -474,13 +475,14 @@ ggplot(ind, aes(x = hatch_date, y = max_size, color = sp)) + mytheme +
        x = "hatching date",
        y = "final size")
 
-fig6 <- ggplot(subset(ind_fewsync, subset = (meta == 1)),
-       aes(x = hatch_date, y = growth_rate, color = species)) + mytheme +
-  geom_point(size = 1.5, alpha = 0.8, position = 'jitter') +
+fig6 <- ggplot(ind_fewsync,
+       aes(x = hatch_date, y = growth_rate, color = species, size = as.factor(meta))) + mytheme +
+  geom_jitter(alpha = 0.7, position = 'jitter') +
   #stat_smooth(se = F) +
   facet_grid(mean_fish1 ~ sync_fish1) + 
   scale_x_continuous(limits = c(0, 140), breaks = seq(0, 120, by = 30)) +
   scale_y_continuous(limits = c(0, 0.3), breaks = seq(0, 0.3, by = 0.05)) +
+  scale_size_manual(values = c(0.7, 2.5)) +
   labs(x = "arrival date",
        y = "growth rate (final size / lifespan)") +
   theme(panel.grid.major = element_line(color = 'gray')) + 

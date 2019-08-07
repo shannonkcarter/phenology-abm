@@ -81,7 +81,7 @@ First, load the data. I've done a ton of different experiments in NetLogo, and n
 
 ```{r load table data}
 ## First, import the data
-data <- read.table("sens1sp_w+.csv",
+data <- read.table("bs_CRnometa_23.csv",
                    header = T,  
                    sep = ',',        # define the separator between columns
                    skip = 6,         # 6 header rows we don't need
@@ -329,7 +329,7 @@ sens <- ggplot(data = run, aes(x = as.factor(synchrony), y = abs_value,
   theme(legend.position = "none") +
   scale_x_discrete(breaks = c("0", "15", "30"), labels = c("high", "med", "low"))
 sens
-ggsave("1sp_sens_perturb.tiff")
+#ggsave("1sp_sens_perturb.tiff")
 
 
 ```
@@ -505,7 +505,7 @@ variable_labeller_rel <- function(variable, value){
 # build mean differences plot
 mean_diffs <- ggplot(meandiffs_trt, aes(x = as.factor(synchrony), y = umd, 
                           color = asymmetry, shape = asymmetry, fill = asymmetry, group = asymmetry)) +
-  geom_smooth(method = "lm", formula = y ~ poly(x, 2)) +
+  geom_smooth(method = lm, formula = y ~ splines::bs(x, 3)) +
   geom_errorbar(width = 0, position = position_dodge(width = 0.5), size = 1,
                 aes(ymax = umd + umd_se, ymin = umd - umd_se)) +
   geom_point(size = 2.5, color = "black", position = position_dodge(width = 0.5)) +
@@ -520,15 +520,15 @@ mean_diffs <- ggplot(meandiffs_trt, aes(x = as.factor(synchrony), y = umd,
   labs(x = "phenological synchrony", 
        y = "proportional difference from corresponding asymmetry at high synchrony") +
   scale_x_discrete(breaks = c("0", "15", "30"), labels = c("high", "med", "low"))
-
+mean_diffs
 # put them together. can't neatly put a legend in, so do some janky pasting
 fig2 <- plot_grid(rawdata, mean_diffs, ncol = 2)
 
 fig2
-#ggsave("fig2x.tiff")
- #tiff("fig2.tiff", height = 7500, width = 5200, units = "px", res = 800, compression = "lzw")
-#plot(fig2)
-#dev.off()
+
+tiff("fig2.tiff", height = 7500, width = 5200, units = "px", res = 800, compression = "lzw")
+plot(fig2)
+dev.off()
 ```
 
 

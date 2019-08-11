@@ -526,11 +526,47 @@ fig2 <- plot_grid(rawdata, mean_diffs, ncol = 2)
 
 fig2
 
-tiff("fig2.tiff", height = 7500, width = 5200, units = "px", res = 800, compression = "lzw")
-plot(fig2)
-dev.off()
+# tiff("fig2.tiff", height = 7500, width = 5200, units = "px", res = 800, compression = "lzw")
+# plot(fig2)
+# dev.off()
 ```
 
+```{r}
+dead_avgs <- ind %>% 
+  group_by(run_num) %>%
+  # only survivors get factored into these metrics-- we don't care how long it took someone to die
+  filter(meta == 0) %>%                                # response variables only consider survivors
+  summarise(mean_mass = mean(final_size),              # should be biom/surv
+            #se_mass   = sd(final_size)/sqrt(n_dead),# error
+            mean_emer = mean(end_date),                # emer is emergence date-- phenology of emergence
+            #se_emer   = sd(end_date)/sqrt(n_dead),  # error
+            mean_grow = mean(growth_rate)) %>%              # grow is individual time to development, maxsize/time
+            #se_grow   = sd(growth_rate)/sqrt(n_dead)) %>% 
+  gather(mean_mass, mean_emer,       # gather all response variables
+         mean_grow,  
+         key = "variable", value = "abs_value") %>% 
+  separate(variable, into = c("prop", "var"), by = "_") %>% # separate the name-- mean/se and variable
+  spread(prop, abs_value) %>%                               # spread so mean and se are separate columns
+  arrange(run_num)
+
+dead_avgs <- left_join(dead_avgs, params, by = c("run_num"))
+dead_trt <- dead_avgs %>% 
+  group_by(synchrony, asymmetry, var) %>% 
+  summarise(abs_value_exp = mean(mean),
+            se_exp    = sd(mean)/sqrt(6))
+  
+ded <- ggplot(dead_trt, aes(x = synchrony, y = abs_value_exp, 
+                            color = asymmetry, fill = asymmetry, shape = asymmetry)) +
+  geom_point() + mytheme +
+  geom_smooth(method = "lm", formula = y ~ splines::bs(x, 3)) +
+  geom_errorbar(width = 0, aes(ymax = abs_value_exp + se_exp, ymin = abs_value_exp - se_exp)) +
+  facet_wrap(~var, scales = 'free') +
+  scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_shape_manual(values = c(21, 24, 23))  
+ded
+ggsave("dead_avgs.tiff")  
+```
 
 Putting absolute and relative results in the same df to allow for facet_grid
 ```{r}
@@ -654,7 +690,7 @@ theme_bw(base_size = 15, base_family = "Franklin Gothic Medium") +
         axis.text  = element_text(size = 10, family = "Consolas")) +
   scale_color_manual(values = c("black", "#5DBCD2")) 
 fig4
-ggsave("fig4b.tiff")
+#ggsave("fig4b.tiff")
 
 ```
 

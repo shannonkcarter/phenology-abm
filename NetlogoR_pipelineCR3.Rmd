@@ -56,6 +56,7 @@ When revisiting the same behavior space multiple times, skip the data processing
 ind <- read.csv("ind1sp.csv", header = T)
 run_abs <- read.csv("run1sp.csv", header = T)
 trt <- read.csv("trt1sp.csv", header = T)
+params <- read.csv("params_1sp.csv", header = T)
 
 # Get factors in line
 # Removed synchrony levels bc ended up with regression style numeric values for that
@@ -124,6 +125,7 @@ params$synchrony <- params$sync
 params$asymmetry <- as.factor(params$asym)
 #levels(params$synchrony) <- list("low" = 25, "med" = 15, "high" = 5)
 levels(params$asymmetry) <- list("none" = 0, "weak" = 0.5, "strong" = 1)
+write.csv(params, "params_1sp.csv")
 
 ```
 
@@ -554,16 +556,28 @@ dead_trt <- dead_avgs %>%
   group_by(synchrony, asymmetry, var) %>% 
   summarise(abs_value_exp = mean(mean),
             se_exp    = sd(mean)/sqrt(6))
+dead_trt <- dead_trt[is.finite(dead_trt$abs_value_exp),]
+
+variable_names <- list(
+  'mass' = "per capita mass",
+  'grow' = "per capita growth", 
+  'emer' = "advancement date"
+)
+
+variable_labeller <- function(variable, value){
+  return(variable_names[value])
+}
   
 ded <- ggplot(dead_trt, aes(x = synchrony, y = abs_value_exp, 
                             color = asymmetry, fill = asymmetry, shape = asymmetry)) +
-  geom_point() + mytheme +
   geom_smooth(method = "lm", formula = y ~ splines::bs(x, 3)) +
+  geom_point(size = 2.5, color = "black") + mytheme +
   geom_errorbar(width = 0, aes(ymax = abs_value_exp + se_exp, ymin = abs_value_exp - se_exp)) +
-  facet_wrap(~var, scales = 'free') +
+  facet_wrap(~var, scales = 'free', labeller = variable_labeller) +
   scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
   scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
-  scale_shape_manual(values = c(21, 24, 23))  
+  scale_shape_manual(values = c(21, 24, 23)) +
+  labs(x = "phenological synchrony", y = "measurement")
 ded
 ggsave("dead_avgs.tiff")  
 ```

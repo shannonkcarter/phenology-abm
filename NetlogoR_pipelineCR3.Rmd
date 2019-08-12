@@ -54,19 +54,19 @@ When revisiting the same behavior space multiple times, skip the data processing
 # Processing to creat these dfs is done below, but can load these if working w same BS
 #ind_time <- read.csv("ind_time1sp.csv", header = T)
 ind <- read.csv("ind1sp.csv", header = T)
-run_abs <- read.csv("run1sp.csv", header = T)
+run <- read.csv("run1sp.csv", header = T)
 trt <- read.csv("trt1sp.csv", header = T)
 params <- read.csv("params_1sp.csv", header = T)
 
 # Get factors in line
 # Removed synchrony levels bc ended up with regression style numeric values for that
-ind_time$asymmetry <- factor(ind_time$asymmetry, levels = c("none", "weak", "strong"))
+#ind_time$asymmetry <- factor(ind_time$asymmetry, levels = c("none", "weak", "strong"))
 #ind_time$synchrony <- factor(ind_time$synchrony, levels = c("low", "med", "high"))
 
 ind$asymmetry <- factor(ind$asymmetry, levels = c("none", "weak", "strong"))
 #ind$synchrony <- factor(ind$synchrony, levels = c("low", "med", "high"))
 
-run_abs$asymmetry <- factor(run_abs$asymmetry, levels = c("none", "weak", "strong"))
+run$asymmetry <- factor(run$asymmetry, levels = c("none", "weak", "strong"))
 #run$synchrony <- factor(run$synchrony, levels = c("low", "med", "high"))
 
 trt$asymmetry <- factor(trt$asymmetry, levels = c("none", "weak", "strong"))
@@ -488,7 +488,7 @@ rawdata <- ggplot(data = run, aes(x = as.factor(synchrony), y = abs_value,
   theme(legend.position = "none",
         axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0))) +
   scale_x_discrete(breaks = c("0", "15", "30"), labels = c("high", "med", "low"))
-
+rawdata
 ## NOW, MEAN DIFFERENCES PLOT
 
 # write out response variable names for facet wrap
@@ -532,6 +532,47 @@ fig2
 # plot(fig2)
 # dev.off()
 ```
+
+# alive/dead boxplots
+
+```{r}
+## FIRST, ABSOLUTE DATA PLOT
+
+ind_fewsync <- subset(ind, subset = synchrony == c(3, 15, 27))
+ind_fewsync$synchrony1 <- as.character(ind_fewsync$synchrony)
+ind_fewsync$synchrony1 <- fct_recode(ind_fewsync$synchrony1, "high synchrony" = "3", "medium synchrony" = "15", "low synchrony" = "27")
+
+ind_fewsync$synchrony1 <- factor(ind_fewsync$synchrony1, levels = c("high synchrony", "medium synchrony", "low synchrony"))
+
+# write out response variable names for facet wrap
+variable_names_abs <- list(
+  'mass' = "per capita mass (a.u.)",
+  'grow' = "per capita growth (mass/life span)", 
+  'emer' = "advancement date (doy)"
+)
+
+variable_labeller_abs <- function(variable, value){
+  return(variable_names_abs[value])
+}
+
+# build absolute data plot
+rawdata <- ggplot(data = ind_fewsync, aes(x = synchrony1, y = abs_value, 
+                fill = asymmetry, color = asymmetry, group = asymmetry, shape = asymmetry)) + 
+  mytheme +
+  geom_point(size = 1.5, alpha = 1/2,
+             position = position_dodge(width = 0.5)) +
+  facet_wrap(~var, ncol = 1, scales = "free_y", labeller = variable_labeller_abs) +
+  labs(y = "absolute measurement", 
+       x = "phenological synchrony") + 
+  scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_shape_manual(values = c(21, 24, 23))  + 
+  theme(legend.position = "none",
+        axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0))) +
+  scale_x_discrete(breaks = c("0", "15", "30"), labels = c("high", "med", "low"))
+rawdata
+```
+
 
 ```{r}
 dead_avgs <- ind %>% 
@@ -690,21 +731,27 @@ ggplot(ind_fewsync, aes(x = hatch_date, y = (end_date - hatch_date), color = as.
 fig4 <- ggplot(ind_fewsync, aes(x = hatch_date, y = growth_rate, color = outcome)) +
   geom_point(size = 1.5, alpha = 0.8, position = 'jitter') +
   #stat_smooth(se = F) +
-  #geom_hline(yintercept = c(0.05, 0.15), linetype = 'dashed', alpha = 0.5) +
+  #geom_hline(yintercept = c(0.05, 0.15), linetype = 'dashed', alpha = 0.5) +  
+  geom_boxplot(data = ind_fewsync, mapping = aes(y = growth_rate, x = 165, color = outcome, fill = outcome),
+               width = 30, alpha = 0.5, size = 1.2) +
   facet_grid(asymmetry1 ~ synchrony1) + mytheme +
-  scale_x_continuous(limits = c(0, 140), breaks = seq(0, 120, by = 30)) +
+  scale_x_continuous(limits = c(0, 180), breaks = seq(0, 120, by = 30)) +
   ylim(0,0.25) +
+  geom_vline(aes(xintercept = 140), linetype = "dashed") +
   labs(x = "arrival date",
-       y = "growth rate (final size / life span)") +
-theme_bw(base_size = 15, base_family = "Franklin Gothic Medium") +
-  theme(legend.text = element_text(size = 10),
-        legend.title = element_text(size = 11),
-        text = element_text(size = 14),     
-        axis.title = element_text(size = 12),
-        axis.text  = element_text(size = 10, family = "Consolas")) +
-  scale_color_manual(values = c("black", "#5DBCD2")) 
+       y = "growth rate (final size / life span)") + mytheme +
+# theme_bw(base_size = 15, base_family = "Franklin Gothic Medium") +
+#   theme(legend.text = element_text(size = 10),
+#         legend.title = element_text(size = 11),
+#         text = element_text(size = 14),     
+#         axis.title = element_text(size = 12),
+#         axis.text  = element_text(size = 10, family = "Consolas")) +
+  scale_color_manual(values = c("black", "#5DBCD2")) +
+  scale_fill_manual(values = c("black", "#5DBCD2")) 
+
+
 fig4
-#ggsave("fig4b.tiff")
+ggsave("fig4b.tiff")
 
 ```
 

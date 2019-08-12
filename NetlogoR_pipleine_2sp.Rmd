@@ -475,24 +475,24 @@ ggplot(ind, aes(x = hatch_date, y = max_size, color = sp)) + mytheme +
        x = "hatching date",
        y = "final size")
 
-fig6 <- ggplot(ind_fewsync,
-       aes(x = hatch_date, y = growth_rate, color = species, size = as.factor(meta))) + mytheme +
+fig6 <- ggplot(subset(ind_fewsync, subset = (meta == 1)),
+       aes(x = hatch_date, y = growth_rate, color = species)) +
   geom_jitter(alpha = 0.7, position = 'jitter') +
+  geom_boxplot(data = subset(ind_fewsync, subset = (meta ==1)), 
+               mapping = aes(y = growth_rate, x = 150, color = species, fill = species),
+               width = 30, alpha = 0.5, size = 1.2) +
   #stat_smooth(se = F) +
   facet_grid(mean_fish1 ~ sync_fish1) + 
-  scale_x_continuous(limits = c(0, 140), breaks = seq(0, 120, by = 30)) +
+  scale_x_continuous(limits = c(0, 165), breaks = seq(0, 120, by = 30)) +
+  geom_vline(aes(xintercept = 120), linetype = "dashed") +
   scale_y_continuous(limits = c(0, 0.3), breaks = seq(0, 0.3, by = 0.05)) +
   scale_size_manual(values = c(0.7, 2.5)) +
   labs(x = "arrival date",
        y = "growth rate (final size / lifespan)") +
   theme(panel.grid.major = element_line(color = 'gray')) + 
   scale_color_manual(values = c("#5DBCD2", "#FFB986")) + 
-  theme_bw(base_size = 15, base_family = "Franklin Gothic Medium") +
-  theme(legend.text = element_text(size = 10),
-        legend.title = element_text(size = 11),
-        text = element_text(size = 14),     
-        axis.title = element_text(size = 12),
-        axis.text  = element_text(size = 10, family = "Consolas"))
+  scale_fill_manual(values = c("#5DBCD2", "#FFB986")) + 
+ mytheme
 fig6
 ggsave("fig6.tiff")
 ```

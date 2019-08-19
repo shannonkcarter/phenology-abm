@@ -54,6 +54,7 @@ When revisiting the same behavior space multiple times, skip the data processing
 ind <- read.csv("ind2sp.csv", header = T)
 run <- read.csv("run2sp.csv", header = T)
 trt <- read.csv("trt2sp.csv", header = T)
+params <- read.csv("params_2sp.csv", header = T)
 
 # Get factors in line
 #ind_time$asym_fish <- factor(ind_time$asym_fish, levels = c("none", "mild", "strong"))
@@ -132,6 +133,7 @@ params$mean_fish <- as.factor(params$mean_fish)
 #params$mean_dfly <- as.factor(params$mean_dfly)
 #levels(params$sync_dfly) <- c("high", "med", "low")
 #levels(params$mean_dfly) <- c("early", "same", "late")
+#write.csv(params, "params_2sp.csv")
 
 ```
 
@@ -593,3 +595,112 @@ ggplot(ind_surv, aes(end_date)) + mytheme +
        y = "density of individuals")
 
 ```
+
+```{r presentation figures}
+# ggtheme with larger fonts suitable for presentations
+pres_theme <- theme_bw(base_size = 15, base_family = "Franklin Gothic Medium") +
+  theme(legend.text = element_text(size = 12),
+        legend.title = element_text(size = 14),
+        text = element_text(size = 14),     
+        axis.title = element_text(size = 14),
+        axis.text  = element_text(size = 12, family = "Consolas"),
+        #axis.text.x = element_blank(),
+        #axis.ticks.x = element_blank(),
+        panel.grid = element_blank(), 
+        strip.text = element_text(size = 14))
+
+## write out response variable names for facet wrap
+variable_names_abs <- list(
+  'surv' = "proportion survival",
+  'biom' = "biomass export (a.u.)",
+  'mass' = "per capita mass (a.u.)",
+  'grow' = "per capita growth (mass/life span)", 
+  'emer' = "advancement date (doy)"
+)
+
+variable_labeller_abs <- function(variable, value){
+  return(variable_names_abs[value])
+}
+
+## write out response variable names for facet wrap
+variable_names_rel <- list(
+  'surv' = "survival (%Δ high sync)",
+  'biom' = "biomass export (%Δ high sync)",
+  'mass' = "per capita mass (%Δ high sync)",
+  'grow' = "per capita growth (%Δ high sync)", 
+  'emer' = "advancement date (%Δ high sync)"
+)
+
+variable_labeller_rel <- function(variable, value){
+  return(variable_names_rel[value])
+}
+
+
+## write out response variable names for facet wrap
+baseline_means <- subset(trt, subset = (sync_fish == 0))
+baseline_means <- baseline_means %>%
+  subset(sp == "f") %>% 
+  select(c("sync_fish", "mean_fish", "var", "mean")) 
+baseline_means <- baseline_means[,3:5]
+colnames(baseline_means)[3] <- "baseline_mean"
+
+# now, add in baseline averages (conditions at med sync and symmetic comp) to run data
+trt_dabest <- trt %>% 
+  subset(sp == "f") %>% 
+  select(c("sync_fish", "mean_fish", "var", "mean", "se"))
+trt_dabest <- left_join(trt_dabest, baseline_means, by = c("var", "mean_fish"))
+   
+meandiffs_trt <- trt_dabest %>% 
+  mutate(umd = (mean - baseline_mean)/baseline_mean,
+         umd_se = (se/baseline_mean))
+#meandiffs_trt <- subset(meandiffs_trt, subset = (sync_fish != 0))
+#meandiffs_trt$sync_fish <- factor(meandiffs_trt$sync_fish, levels = c("med", "high"))
+
+meandiffs_trt$var <- factor(meandiffs_trt$var, levels = c("surv", "biom", "mass", "grow", "emer"))
+run$var <- factor(run$var, levels = c("surv", "biom", "mass", "grow", "emer"))
+run1 <- subset(run, subset = (mean_fish != 50 & mean_fish != 70))
+
+## first, the raw data
+rawdata <- ggplot(data = subset(run, subset = (sp == "f")), aes(x = as.factor(sync_fish), y = mean, 
+                fill = mean_fish, color = mean_fish, group = mean_fish, shape = mean_fish)) + 
+  pres_theme +
+  #geom_smooth(method = "lm", formula = y ~ poly(x, 2)) +
+  geom_point(size = 1.5, alpha = 0.5,
+             position = position_dodge(width = 0.5)) +
+  facet_wrap(~var, ncol = 1, scales = "free_y", labeller = variable_labeller_abs) +
+  labs(y = "absolute measurement", 
+       x = "phenological synchrony", y = NULL) + 
+  scale_color_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
+  scale_fill_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
+  scale_shape_manual(values = c(21, 24, 23))  + 
+  theme(legend.position = "none", panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0))) +
+  scale_x_discrete(breaks = c("0", "15", "30"), labels = c("high", "med", "low"))
+rawdata
+## Now, making the mean_diffs df
+mean_diffs <- ggplot(meandiffs_trt, aes(x = as.factor(sync_fish), y = umd, 
+                          color = mean_fish, shape = mean_fish, fill = mean_fish, group = mean_fish)) +
+  pres_theme +
+  geom_smooth(span = 5) +
+  geom_errorbar(aes(ymax = umd + umd_se, ymin = umd - umd_se), width = 0,
+                position = position_dodge(width = 0.5), size = 1) +
+  geom_point(size = 2.5, color = "black",
+             position = position_dodge(width = 0.5)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  scale_color_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
+  scale_fill_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
+  scale_shape_manual(values = c(21, 24, 23))  + 
+  facet_wrap(~var, ncol = 1, scales = "free_y", labeller = variable_labeller_rel) +
+  theme(legend.position = "none",
+        axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0))) +
+  labs(x = "phenological synchrony",
+       y = "proportional difference from corresponding asymmetry at high synchrony", 
+       color = "relative mean arrival of focal species",
+       shape = "relative mean arrival of focal species",
+       fill = "relative mean arrival of focal species") +
+  scale_x_discrete(breaks = c("0", "15" ,"30"), labels = c("high", "med", "low"))
+mean_diffs
+fig4 <- plot_grid(rawdata, mean_diffs, ncol = 2)
+```
+

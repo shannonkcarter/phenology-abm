@@ -493,11 +493,11 @@ rawdata
 
 # write out response variable names for facet wrap
 variable_names_rel <- list(
-  'surv' = "survival (%Δ high sync)",
-  'biom' = "biomass export (%Δ high sync)",
-  'mass' = "per capita mass (%Δ high sync)",
-  'grow' = "per capita growth (%Δ high sync)", 
-  'emer' = "advancement date (%Δ high sync)"
+  'surv' = "survival (%change from high sync)",
+  'biom' = "biomass export (%change from high sync)",
+  'mass' = "per capita mass (%change from high sync)",
+  'grow' = "per capita growth (%change from high sync)", 
+  'emer' = "advancement date (%change from high sync)"
 )
 
 variable_labeller_rel <- function(variable, value){
@@ -531,6 +531,76 @@ fig2
 # tiff("fig2.tiff", height = 7500, width = 5200, units = "px", res = 800, compression = "lzw")
 # plot(fig2)
 # dev.off()
+```
+
+
+Presentation figure versions
+
+```{r}
+
+## Presentation theme - larger fonts
+pres_theme <- theme_bw(base_size = 17, base_family = "Franklin Gothic Medium") +
+  theme(legend.text = element_text(size = 12),
+        legend.title = element_text(size = 14),
+        text = element_text(size = 16),     
+        axis.title = element_text(size = 14),
+        axis.text  = element_text(size = 12, family = "Consolas"),
+        panel.grid = element_blank())
+
+## Now, making the mean_diffs df
+meandiffs_pres <- ggplot(subset(meandiffs_trt, subset = (var != "emer")),
+                     aes(x = as.factor(synchrony), y = umd, 
+                          color = asymmetry, shape = asymmetry, fill = asymmetry, group = asymmetry)) + pres_theme +
+  geom_smooth(span = 5) +
+  geom_errorbar(aes(ymax = umd + umd_se, ymin = umd - umd_se), width = 0,
+                position = position_dodge(width = 0.5), size = 1) +
+  geom_point(size = 4, color = "black",
+             position = position_dodge(width = 0.5)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_shape_manual(values = c(21, 24, 23))  + 
+  facet_wrap(~var, ncol = 2, scales = "free_y", labeller = variable_labeller_rel) +
+  #theme(legend.position = "none") +
+        #axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0))) +
+  labs(x = "phenological synchrony", 
+       y = "proportional difference from corresponding\nasymmetry at high synchrony",
+       color = "competitive\nasymmetry",
+       shape = "competitive\nasymmetry",
+       fill = "competitive\nasymmetry") +
+  scale_x_discrete(breaks = c("0", "15" ,"30"), labels = c("high", "med", "low"))
+meandiffs_pres
+ggsave("mean_diffs1sp.tiff")
+
+
+ind_fewsync <- subset(ind, subset = synchrony == c(3, 15, 27))
+ind_fewsync$synchrony1 <- as.character(ind_fewsync$synchrony)
+ind_fewsync$synchrony1 <- fct_recode(ind_fewsync$synchrony1, "high synchrony" = "3", "medium synchrony" = "15", "low synchrony" = "27")
+
+ind_fewsync$synchrony1 <- factor(ind_fewsync$synchrony1, levels = c("high synchrony", "medium synchrony", "low synchrony"))
+
+ind_fewsync$asymmetry1 <- fct_recode(ind_fewsync$asymmetry, "competitive symmetry" = "none", "weak asymmetry" = "weak", "strong asymmetry" = "strong")
+
+ind_fewsync$outcome <- as.character(ind_fewsync$meta)
+ind_fewsync$outcome <- fct_recode(ind_fewsync$outcome, "survived" = "1", "died" = "0")
+
+
+# growth rate by hatch date
+ind_grow <- ggplot(ind_fewsync, aes(x = hatch_date, y = growth_rate, color = outcome)) +
+  geom_point(size = 1.5, alpha = 0.8, position = 'jitter') +
+  geom_boxplot(data = ind_fewsync, mapping = aes(y = growth_rate, x = 165, color = outcome, fill = outcome),
+               width = 30, alpha = 0.5, size = 1.2) +
+  facet_grid(asymmetry1 ~ synchrony1) + mytheme +
+  scale_x_continuous(limits = c(0, 180), breaks = seq(0, 120, by = 30)) +
+  ylim(0,0.25) +
+  geom_vline(aes(xintercept = 140), linetype = "dashed") +
+  labs(x = "arrival date",
+       y = "growth rate (final size / life span)") + pres_theme +
+  scale_color_manual(values = c("black", "#5DBCD2")) +
+  scale_fill_manual(values = c("black", "#5DBCD2")) 
+
+ind_grow
+ggsave("ind_grow.tiff")
 ```
 
 # alive/dead boxplots
@@ -620,7 +690,7 @@ ded <- ggplot(dead_trt, aes(x = synchrony, y = abs_value_exp,
   scale_shape_manual(values = c(21, 24, 23)) +
   labs(x = "phenological synchrony", y = "measurement")
 ded
-ggsave("dead_avgs.tiff")  
+#ggsave("dead_avgs.tiff")  
 ```
 
 Putting absolute and relative results in the same df to allow for facet_grid
@@ -751,7 +821,7 @@ fig4 <- ggplot(ind_fewsync, aes(x = hatch_date, y = growth_rate, color = outcome
 
 
 fig4
-ggsave("fig4b.tiff")
+#ggsave("fig4b.tiff")
 
 ```
 

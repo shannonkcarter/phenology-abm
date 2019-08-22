@@ -407,8 +407,10 @@ rawdata <- ggplot(data = subset(run, subset = (sp == "f")), aes(x = as.factor(sy
     axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0))) +
   scale_x_discrete(breaks = c("0", "15", "30"), labels = c("high", "med", "low"))
 rawdata
+
 ## Now, making the mean_diffs df
-mean_diffs <- ggplot(meandiffs_trt, aes(x = as.factor(sync_fish), y = umd, 
+mean_diffs <- ggplot(meandiffs_trt,
+                     aes(x = as.factor(sync_fish), y = umd, 
                           color = mean_fish, shape = mean_fish, fill = mean_fish, group = mean_fish)) + mytheme +
   geom_smooth(span = 5) +
   geom_errorbar(aes(ymax = umd + umd_se, ymin = umd - umd_se), width = 0,
@@ -424,11 +426,12 @@ mean_diffs <- ggplot(meandiffs_trt, aes(x = as.factor(sync_fish), y = umd,
         axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0))) +
   labs(x = "phenological synchrony",
        y = "proportional difference from corresponding asymmetry at high synchrony", 
-       color = "relative mean arrival of focal species",
-       shape = "relative mean arrival of focal species",
-       fill = "relative mean arrival of focal species") +
+       color = "relative mean arrival\nof focal species",
+       shape = "relative mean arrival\nof focal species",
+       fill = "relative mean arrival\nof focal species") +
   scale_x_discrete(breaks = c("0", "15" ,"30"), labels = c("high", "med", "low"))
 mean_diffs
+
 fig4 <- plot_grid(rawdata, mean_diffs, ncol = 2)
 fig4
 tiff("fig4.tiff", height = 7500, width = 5200, units = "px", res = 800, compression = "lzw")
@@ -447,6 +450,45 @@ ggplot(ind, aes(x = hatch_date, color = sp, fill = sp)) + mytheme +
   labs(title = "Hatching timing treatments",
        x = "hatching date",
        y = "density of individuals") 
+```
+
+Presentation figure versions
+
+```{r}
+
+## Presentation theme - larger fonts
+pres_theme <- theme_bw(base_size = 17, base_family = "Franklin Gothic Medium") +
+  theme(legend.text = element_text(size = 12),
+        legend.title = element_text(size = 14),
+        text = element_text(size = 16),     
+        axis.title = element_text(size = 14),
+        axis.text  = element_text(size = 12, family = "Consolas"),
+        panel.grid = element_blank())
+
+## Now, making the mean_diffs df
+meandiffs_pres <- ggplot(subset(meandiffs_trt, subset = (var != "emer")),
+                     aes(x = as.factor(sync_fish), y = umd, 
+                          color = mean_fish, shape = mean_fish, fill = mean_fish, group = mean_fish)) + pres_theme +
+  geom_smooth(span = 5) +
+  geom_errorbar(aes(ymax = umd + umd_se, ymin = umd - umd_se), width = 0,
+                position = position_dodge(width = 0.5), size = 1) +
+  geom_point(size = 4, color = "black",
+             position = position_dodge(width = 0.5)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  scale_color_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
+  scale_fill_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
+  scale_shape_manual(values = c(21, 24, 23))  + 
+  facet_wrap(~var, ncol = 2, scales = "free_y", labeller = variable_labeller_rel) +
+  #theme(legend.position = "none") +
+        #axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0))) +
+  labs(x = "phenological synchrony",
+       y = "proportional difference from corresponding\nasymmetry at high synchrony", 
+       color = "relative mean arrival\nof focal species",
+       shape = "relative mean arrival\nof focal species",
+       fill = "relative mean arrival\nof focal species") +
+  scale_x_discrete(breaks = c("0", "15" ,"30"), labels = c("high", "med", "low"))
+meandiffs_pres
+ggsave("mean_diffs.tiff")
 ```
 
 

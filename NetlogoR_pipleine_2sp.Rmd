@@ -8,6 +8,8 @@ output:
     toc_float: true
     theme: united
     highlight: tango 
+editor_options: 
+  chunk_output_type: console
 ---
 
 # Goal
@@ -18,7 +20,7 @@ The objective here is to make a clean reproducible pipeline to transform Netlogo
 knitr::opts_chunk$set(echo = T, warning = F, message = F)
 
 ## Set working directory and clear memory
-setwd("C:\\Users\\Shannon\\Desktop\\GitHub Repos\\phenology-abm")
+setwd("/Users/shannoncarter/Desktop/GitHub_Repos/phenology-abm")
 rm(list = ls(all = T))
 
 ## Load required packages
@@ -29,18 +31,20 @@ library(lme4)
 library(wesanderson)
 library(ggsci)
 library(extrafont)
+library(dabestr)
 library(cowplot)
-#extrafont::loadfonts(device = "win")
+#font_import()
+#extrafont::loadfonts(device = "pdf")
 
 ## Load universal plotting elements
-mytheme <- theme_bw(base_size = 15, base_family = "Franklin Gothic Medium") +
+## Fonts won't work on another system, unless you load library to R
+mytheme <-   theme_bw(base_size = 15, base_family = "Trebuchet MS") +
   theme(legend.text = element_text(size = 10),
         legend.title = element_text(size = 11),
-        text = element_text(size = 14),     
+        text = element_text(size = 14),
         axis.title = element_text(size = 12),
-        axis.text  = element_text(size = 10, family = "Consolas"),
+        axis.text  = element_text(size = 10, family = "Andale Mono"),
         panel.grid = element_blank())
-
 ```
 
 # Load Final Data
@@ -256,7 +260,7 @@ run <- ind %>%
          mean_grow, se_grow, 
          mean_biom, se_biom, mean_surv, se_surv,
          key = "variable", value = "abs_value") %>% 
-  separate(variable, into = c("prop", "var"), by = "_") %>% # separate the name-- mean/se and variable
+  separate(variable, into = c("prop", "var"), sep = "_") %>% # separate the name-- mean/se and variable
   spread(prop, abs_value) %>%                               # spread so mean and se are separate columns
   arrange(run_num, sp)
 
@@ -381,7 +385,8 @@ trt_dabest <- left_join(trt_dabest, baseline_means, by = c("var", "mean_fish"))
    
 meandiffs_trt <- trt_dabest %>% 
   mutate(umd = (mean - baseline_mean)/baseline_mean,
-         umd_se = (se/baseline_mean))
+         umd_se = (se/baseline_mean),
+         lrr = log10(mean/baseline_mean))
 #meandiffs_trt <- subset(meandiffs_trt, subset = (sync_fish != 0))
 #meandiffs_trt$sync_fish <- factor(meandiffs_trt$sync_fish, levels = c("med", "high"))
 
@@ -393,6 +398,7 @@ run1 <- subset(run, subset = (mean_fish != 50 & mean_fish != 70))
 rawdata <- ggplot(data = subset(run, subset = (sp == "f")), aes(x = as.factor(sync_fish), y = mean, 
                 fill = mean_fish, color = mean_fish, group = mean_fish, shape = mean_fish)) + 
   mytheme +
+  geom_smooth(span = 5) +
   #geom_smooth(method = "lm", formula = y ~ poly(x, 2)) +
   geom_point(size = 1.5, alpha = 0.5,
              position = position_dodge(width = 0.5)) +
@@ -404,7 +410,7 @@ rawdata <- ggplot(data = subset(run, subset = (sp == "f")), aes(x = as.factor(sy
   scale_shape_manual(values = c(21, 24, 23))  + 
   theme(legend.position = "none", panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
-    axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0))) +
+    axis.title.y = element_text(margin = margin(t = 0, r = 0, b = 0, l = 0))) +
   scale_x_discrete(breaks = c("0", "15", "30"), labels = c("high", "med", "low"))
 rawdata
 
@@ -423,9 +429,9 @@ mean_diffs <- ggplot(meandiffs_trt,
   scale_shape_manual(values = c(21, 24, 23))  + 
   facet_wrap(~var, ncol = 1, scales = "free_y", labeller = variable_labeller_rel) +
   theme(legend.position = "none",
-        axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0))) +
+        axis.title.y = element_text(margin = margin(t = 0, r = 0, b = 0, l = 0))) +
   labs(x = "phenological synchrony",
-       y = "proportional difference from corresponding asymmetry at high synchrony", 
+       y = "proportional difference form corresponding asymmetry at high synchrony", 
        color = "relative mean arrival\nof focal species",
        shape = "relative mean arrival\nof focal species",
        fill = "relative mean arrival\nof focal species") +
@@ -434,7 +440,7 @@ mean_diffs
 
 fig4 <- plot_grid(rawdata, mean_diffs, ncol = 2)
 fig4
-tiff("fig4.tiff", height = 7500, width = 5200, units = "px", res = 800, compression = "lzw")
+tiff("fig4.tiff", height = 7500, width = 5400, units = "px", res = 800, compression = "lzw")
 plot(fig4)
 dev.off()
 ```
@@ -534,11 +540,13 @@ fig6 <- ggplot(subset(ind_fewsync, subset = (meta == 1)),
   labs(x = "arrival date",
        y = "growth rate (final size / lifespan)") +
   theme(panel.grid.major = element_line(color = 'gray')) + 
-  scale_color_manual(values = c("#5DBCD2", "#FFB986")) + 
-  scale_fill_manual(values = c("#5DBCD2", "#FFB986")) + 
+  scale_color_manual(values = c("#5DBCD2", "#EC8B5E")) + 
+  scale_fill_manual(values = c("#5DBCD2", "#EC8B5E")) + 
  mytheme
 fig6
-ggsave("fig6.tiff")
+tiff("fig6.tiff", height = 4500, width = 7000, units = "px", res = 800, compression = "lzw")
+plot(fig6)
+dev.off()
 ```
 
 ```{r, echo = F}

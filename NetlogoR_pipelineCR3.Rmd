@@ -18,7 +18,7 @@ The objective here is to make a clean reproducible pipeline to transform Netlogo
 knitr::opts_chunk$set(echo = T, warning = F, message = F)
 
 ## Set working directory and clear memory
-setwd("C:\\Users\\Shannon\\Desktop\\GitHub Repos\\phenology-abm")
+setwd("/Users/shannoncarter/Desktop/GitHub_Repos/phenology-abm")
 rm(list = ls(all = T))
 
 ## Load required packages
@@ -31,16 +31,17 @@ library(ggsci)
 library(extrafont)
 library(dabestr)
 library(cowplot)
-#extrafont::loadfonts(device = "win")
+#font_import()
+#extrafont::loadfonts(device = "pdf")
 
 ## Load universal plotting elements
 ## Fonts won't work on another system, unless you load library to R
-mytheme <- theme_bw(base_size = 15, base_family = "Franklin Gothic Medium") +
+mytheme <-   theme_bw(base_size = 15, base_family = "Trebuchet MS") +
   theme(legend.text = element_text(size = 10),
         legend.title = element_text(size = 11),
-        text = element_text(size = 14),     
+        text = element_text(size = 14),
         axis.title = element_text(size = 12),
-        axis.text  = element_text(size = 10, family = "Consolas"),
+        axis.text  = element_text(size = 10, family = "Andale Mono"),
         panel.grid = element_blank())
 
 ```
@@ -256,10 +257,10 @@ run <- ind %>%
             mean_grow = mean(growth_rate),             # grow is individual time to development, maxsize/time
             se_grow   = sd(growth_rate)/sqrt(sum(meta))) %>% 
   gather(mean_mass, se_mass, mean_emer, se_emer,       # gather all response variables
-         mean_grow, se_grow, 
+         mean_grow, se_grow,
          mean_biom, se_biom, mean_surv, se_surv,
-         key = "variable", value = "abs_value") %>% 
-  separate(variable, into = c("prop", "var"), by = "_") %>% # separate the name-- mean/se and variable
+         key = "variable", value = "abs_value") %>%
+  separate(variable, into = c("prop", "var"), sep = "_") %>% # separate the name-- mean/se and variable
   spread(prop, abs_value) %>%                               # spread so mean and se are separate columns
   arrange(run_num)
 
@@ -362,14 +363,14 @@ ggplot(trt_nobaseline,
              position = position_dodge(width = 0.5)) +
   coord_flip() +
   scale_y_continuous(limits = c(-0.5, 0.5), expand = c(0.005, 0.005)) +
-  scale_shape_manual(name = "Synchrony & Symmetry",
-                     labels = c("low synchrony, mild asymmetry", "low synchrony, strong asymmetry", 
-                                "high synchrony, mild asymmetry", "high synchrony, strong asymmetry"),
-                     values = c(19, 17, 19, 17)) +
-  scale_color_manual(name = "Synchrony & Symmetry",
-                     labels = c("low synchrony, mild asymmetry", "low synchrony, strong asymmetry", 
-                                "high synchrony, mild asymmetry", "high synchrony, strong asymmetry"),
-                     values = c("#D8B709", "#D8B709", "#02401B", "#02401B")) +
+  # scale_shape_manual(name = "Synchrony & Symmetry",
+  #                    labels = c("low synchrony, mild asymmetry", "low synchrony, strong asymmetry", 
+  #                               "high synchrony, mild asymmetry", "high synchrony, strong asymmetry"),
+  #                    values = c(19, 17, 19, 17)) +
+  # scale_color_manual(name = "Synchrony & Symmetry",
+  #                    labels = c("low synchrony, mild asymmetry", "low synchrony, strong asymmetry", 
+  #                               "high synchrony, mild asymmetry", "high synchrony, strong asymmetry"),
+  #                    values = c("#D8B709", "#D8B709", "#02401B", "#02401B")) +
   labs(x = NULL, y = "Proportional deviation from baseline case\n(medium synchrony, symmetric competition)") +
   scale_x_discrete(breaks = c("surv", "mass", "biom", "emer", "grow"),
                    labels = c("survival", "mean per\ncapita size", "biomass export", "time to\nemergence", "mean per\ncapita growth rate")) +
@@ -394,11 +395,12 @@ variable_labeller <- function(variable, value){
 
 ggplot(trt, aes(x = synchrony, y = abs_value_exp, 
                 fill = asymmetry, color = asymmetry, group = asymmetry, shape = asymmetry)) + 
-  mytheme +
+  #mytheme +
+  theme_bw() +
   geom_line() +
   geom_point(size = 3, color = "black") +
-  geom_errorbar(aes(ymin = (abs_value_exp - se_exp.x), ymax = abs_value_exp + se_exp.x), width = 0) +
-  facet_wrap(~var, scales = "free", labeller = variable_labeller) +
+  geom_errorbar(aes(ymin = (abs_value_exp - se_exp), ymax = abs_value_exp + se_exp), width = 0) +
+  facet_wrap(~var, scales = "free") #+ #, labeller = variable_labeller) +
   labs(title = "Responses of population vital rates to phenological manipulations",
        y = "mean +/- se", 
        x = "phenological synchrony at hatching") + 
@@ -442,14 +444,18 @@ trt_dabest <- trt[,1:5]
 trt_dabest <- left_join(trt_dabest, mean_diffs, by = c("var", "asymmetry"))
 
 # and calculate the proportional deviation between trt and baseline value
+# NEW: also calculate log response ratio-- better for representing small baseline values
 meandiffs_run <- run_dabest %>% 
-  mutate(umd = (abs_value - baseline_mean)/baseline_mean)
+  mutate(umd = (abs_value - baseline_mean)/baseline_mean,
+         lrr = log(abs_value/baseline_mean))
 #meandiffs_run <- subset(meandiffs_run, subset = (synchrony != "low"))
+
 
 # ...and to the treatment data too
 meandiffs_trt <- trt_dabest %>% 
   mutate(umd = (abs_value_exp - baseline_mean)/baseline_mean,
-         umd_se = (se_exp/baseline_mean))
+         umd_se = (se_exp/baseline_mean),
+         lrr = log(abs_value_exp/baseline_mean))
 #meandiffs_trt <- subset(meandiffs_trt, subset = (synchrony != "low"))
 
 # put factor levels of response variables in an intuitive order
@@ -477,6 +483,7 @@ variable_labeller_abs <- function(variable, value){
 rawdata <- ggplot(data = run, aes(x = as.factor(synchrony), y = abs_value, 
                 fill = asymmetry, color = asymmetry, group = asymmetry, shape = asymmetry)) + 
   mytheme +
+  geom_smooth(method = lm, formula = y ~ splines::bs(x, 3)) +
   geom_point(size = 1.5, alpha = 1/2,
              position = position_dodge(width = 0.5)) +
   facet_wrap(~var, ncol = 1, scales = "free_y", labeller = variable_labeller_abs) +
@@ -485,19 +492,19 @@ rawdata <- ggplot(data = run, aes(x = as.factor(synchrony), y = abs_value,
   scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
   scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
   scale_shape_manual(values = c(21, 24, 23))  + 
-  theme(legend.position = "none",
-        axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0))) +
+  theme(legend.position = 'none',
+        axis.title.y = element_text(margin = margin(t = 0, r = 0, b = 0, l = 0))) +
   scale_x_discrete(breaks = c("0", "15", "30"), labels = c("high", "med", "low"))
 rawdata
 ## NOW, MEAN DIFFERENCES PLOT
 
 # write out response variable names for facet wrap
 variable_names_rel <- list(
-  'surv' = "survival (%change from high sync)",
-  'biom' = "biomass export (%change from high sync)",
-  'mass' = "per capita mass (%change from high sync)",
-  'grow' = "per capita growth (%change from high sync)", 
-  'emer' = "advancement date (%change from high sync)"
+  'surv' = "survival (%Δ high sync)",
+  'biom' = "biomass export (%Δ high sync)",
+  'mass' = "per capita mass (%Δ high sync)",
+  'grow' = "per capita growth (%Δ high sync)", 
+  'emer' = "advancement date (%Δ high sync)"
 )
 
 variable_labeller_rel <- function(variable, value){
@@ -518,9 +525,9 @@ mean_diffs <- ggplot(meandiffs_trt, aes(x = as.factor(synchrony), y = umd,
   scale_shape_manual(values = c(21, 24, 23))  + 
   mytheme +
   theme(legend.position = "none",
-        axis.title.y = element_text(margin = margin(t = 0, r = 30, b = 0, l = 0))) +
+        axis.title.y = element_text(margin = margin(t = 0, r = 0, b = 0, l = 0))) +
   labs(x = "phenological synchrony", 
-       y = "proportional difference from corresponding asymmetry at high synchrony") +
+       y = "proportional difference form corresponding asymmetry at high synchrony") +
   scale_x_discrete(breaks = c("0", "15", "30"), labels = c("high", "med", "low"))
 mean_diffs
 # put them together. can't neatly put a legend in, so do some janky pasting
@@ -528,9 +535,9 @@ fig2 <- plot_grid(rawdata, mean_diffs, ncol = 2)
 
 fig2
 
-# tiff("fig2.tiff", height = 7500, width = 5200, units = "px", res = 800, compression = "lzw")
-# plot(fig2)
-# dev.off()
+tiff("fig2.tiff", height = 7500, width = 5400, units = "px", res = 800, compression = "lzw")
+plot(fig2)
+dev.off()
 ```
 
 
@@ -821,7 +828,9 @@ fig4 <- ggplot(ind_fewsync, aes(x = hatch_date, y = growth_rate, color = outcome
 
 
 fig4
-#ggsave("fig4b.tiff")
+tiff("fig4.tiff", height = 5000, width = 7000, units = "px", res = 800, compression = "lzw")
+plot(fig4)
+dev.off()
 
 ```
 

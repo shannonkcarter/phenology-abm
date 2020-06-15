@@ -128,10 +128,10 @@ test <- data %>%
 # I'll rejoin the output data with params later, after some summarizing/processing
 # Here, add qualitative levels for the treatment parameters. This will be different for each BS
 params <- test[,1:15]
-#params$sync_fish <- as.factor(params$sync_fish)
+params$sync_fish <- as.factor(params$sync_fish)
 params$mean_fish <- as.factor(params$mean_fish)
 #levels(params$sync_fish) <- c("high", "med", "low")
-#levels(params$mean_fish) <- c("early", "same", "late")
+levels(params$mean_fish) <- c("early", "same", "late")
 
 #params$sync_dfly <- as.factor(params$sync_dfly)
 #params$mean_dfly <- as.factor(params$mean_dfly)
@@ -332,7 +332,7 @@ sens <- ggplot(data = subset(run, subset = (sp == "f")), aes(x = as.factor(sync_
   theme(legend.position = "none") +
   scale_x_discrete(breaks = c("0", "15", "30"), labels = c("high", "med", "low"))
 sens
-ggsave("2sp_sens_perturb.tiff")
+#ggsave("2sp_sens_perturb.tiff")
 
 
 ```
@@ -472,7 +472,7 @@ pres_theme <- theme_bw(base_size = 17, base_family = "Franklin Gothic Medium") +
         panel.grid = element_blank())
 
 ## Now, making the mean_diffs df
-meandiffs_pres <- ggplot(subset(meandiffs_trt, subset = (var != "emer")),
+meandiffs_pres <- ggplot(meandiffs_trt, #subset(meandiffs_trt, subset = (var != "emer")),
                      aes(x = as.factor(sync_fish), y = umd, 
                           color = mean_fish, shape = mean_fish, fill = mean_fish, group = mean_fish)) + pres_theme +
   geom_smooth(span = 5) +
@@ -494,7 +494,7 @@ meandiffs_pres <- ggplot(subset(meandiffs_trt, subset = (var != "emer")),
        fill = "relative mean arrival\nof focal species") +
   scale_x_discrete(breaks = c("0", "15" ,"30"), labels = c("high", "med", "low"))
 meandiffs_pres
-ggsave("mean_diffs.tiff")
+#ggsave("mean_diffs.tiff")
 ```
 
 
@@ -544,10 +544,28 @@ fig6 <- ggplot(subset(ind_fewsync, subset = (meta == 1)),
   scale_fill_manual(values = c("#5DBCD2", "#EC8B5E")) + 
  mytheme
 fig6
-tiff("fig6.tiff", height = 4500, width = 7000, units = "px", res = 800, compression = "lzw")
-plot(fig6)
-dev.off()
+#tiff("fig6.tiff", height = 4500, width = 7000, units = "px", res = 800, compression = "lzw")
+#plot(fig6)
+#dev.off()
 ```
+
+## Selection Gradient Analysis, Jun 14, 2020
+
+```{r}
+## ANCOVA MODEL 
+# fitness = arrival_time + competition_mode + arrival_time_sd + 
+#           arrival_time*competition_mode + 
+#           arrival_time*arrival_time_sd +
+#           competition_mode*arrival_time_sd +
+#           arrival_time*competition_mode*arrival_time_sd
+
+# fitness = survival or mass at metamorphosis
+# arrival_time = arrival time of an individual
+# arrival_time_sd = variance of population (i.e, synchrony treatment)
+# competition mode = FOR SINGLE SPECIES MODEL, competitive asymmetry 
+# competition mode = FOR 2-SPECIES MODEL, relative arrival time
+```
+
 
 ```{r, echo = F}
 

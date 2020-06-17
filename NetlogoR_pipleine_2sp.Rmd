@@ -33,6 +33,7 @@ library(ggsci)
 library(extrafont)
 library(dabestr)
 library(cowplot)
+
 #font_import()
 #extrafont::loadfonts(device = "pdf")
 
@@ -564,6 +565,30 @@ fig6
 # arrival_time_sd = variance of population (i.e, synchrony treatment)
 # competition mode = FOR SINGLE SPECIES MODEL, competitive asymmetry 
 # competition mode = FOR 2-SPECIES MODEL, relative arrival time
+```
+
+
+```{r}
+# pool all results- individuals from the same treatment can be treated the same
+d <- ind %>% 
+  select(-c(X, run_num, id, sync_dfly, mean_dfly)) %>% 
+  filter(sp == "f") %>% 
+  filter(!is.na(max_size)) %>% 
+  group_by(sync_fish, mean_fish) %>% 
+  mutate(size_relative = max(max_size) - max_size)
+
+m_size <- aov(data = d, size_relative ~ hatch_date + sync_fish + mean_fish +
+                   hatch_date*sync_fish +
+                   hatch_date*mean_fish +
+                   sync_fish*mean_fish +
+                   hatch_date*sync_fish*mean_fish)
+m_surv <- aov(data = d, meta ~ hatch_date + sync_fish + mean_fish +
+                   hatch_date*sync_fish +
+                   hatch_date*mean_fish +
+                   sync_fish*mean_fish +
+                   hatch_date*sync_fish*mean_fish)
+print(summary(m_surv))
+
 ```
 
 

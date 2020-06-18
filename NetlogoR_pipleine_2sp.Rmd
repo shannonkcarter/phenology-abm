@@ -569,25 +569,39 @@ fig6
 
 
 ```{r}
-# pool all results- individuals from the same treatment can be treated the same
-d <- ind %>% 
-  select(-c(X, run_num, id, sync_dfly, mean_dfly)) %>% 
-  filter(sp == "f") %>% 
-  filter(!is.na(max_size)) %>% 
-  group_by(sync_fish, mean_fish) %>% 
-  mutate(size_relative = max(max_size) - max_size)
+## Prepare data
 
-m_size <- aov(data = d, size_relative ~ hatch_date + sync_fish + mean_fish +
-                   hatch_date*sync_fish +
-                   hatch_date*mean_fish +
+d <- ind %>% 
+  # remove run_num to pool all replicates of a treatment. also remove others we don't need
+  select(-c(X, run_num, biom_fish, biom_dfly, biom_tot, end_date, growth_rate, id, sync_dfly, mean_dfly)) %>% 
+  # "fish" is focal species that we manipulated
+  filter(sp == "f") %>% 
+  # don't really know what these are... I think maybe the simulation ended before they "hatched"
+  filter(!is.na(max_size)) %>% 
+  # group by treatment to do the relativazation calculations
+  group_by(sync_fish, mean_fish) %>% 
+  # relativize fitness (is this right? nothing happens for survival which is binary right?)
+  mutate(size_relative = max(max_size) - max_size) %>% 
+  # standardize arrival date for each treatment combination
+  mutate(hatch_date_relative = hatch_date - min(hatch_date))
+
+## Fitness = mass model
+m_size <- aov(data = d, size_relative ~ hatch_date_relative + sync_fish + mean_fish +
+                   hatch_date_relative*sync_fish +
+                   hatch_date_relative*mean_fish +
                    sync_fish*mean_fish +
-                   hatch_date*sync_fish*mean_fish)
-m_surv <- aov(data = d, meta ~ hatch_date + sync_fish + mean_fish +
-                   hatch_date*sync_fish +
-                   hatch_date*mean_fish +
+                   hatch_date_relative*sync_fish*mean_fish)
+print(summary(m_size))
+coef(m_size)
+
+## Fitness = survival model
+m_surv <- aov(data = d, meta ~ hatch_date_relative + sync_fish + mean_fish +
+                   hatch_date_relative*sync_fish +
+                   hatch_date_relative*mean_fish +
                    sync_fish*mean_fish +
-                   hatch_date*sync_fish*mean_fish)
+                   hatch_date_relative*sync_fish*mean_fish)
 print(summary(m_surv))
+coef(m_surv)
 
 ```
 

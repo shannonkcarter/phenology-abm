@@ -52,7 +52,7 @@ mytheme <-   theme_bw(base_size = 15, base_family = "Trebuchet MS") +
 
 When revisiting the same behavior space multiple times, skip the data processing and just load the final tidy data. Every time I do a new behavior space in NetLogo, I'll run the processing steps below and these data frames will be updated.
 
-```{r load data, echo = F, include = F}
+```{r setup, echo = F, include = F}
 
 # Processing to creat these dfs is done below, but can load these if working w same BS
 #ind_time <- read.csv("ind_time2sp.csv", header = T)
@@ -581,25 +581,29 @@ d <- ind %>%
   # group by treatment to do the relativazation calculations
   group_by(sync_fish, mean_fish) %>% 
   # relativize fitness (is this right? nothing happens for survival which is binary right?)
-  mutate(size_relative = max(max_size) - max_size) %>% 
+  mutate(size_relative = max_size / mean(max_size)) %>% 
   # standardize arrival date for each treatment combination
-  mutate(hatch_date_relative = hatch_date - min(hatch_date))
+  mutate(trt_max_hatch_date = max(hatch_date),
+         trt_min_hatch_date = min(hatch_date),
+         trt_mean_hatch_date = mean(hatch_date),
+         hatch_percentile = round((hatch_date - trt_mean_hatch_date)/(trt_max_hatch_date - trt_min_hatch_date), 3))
 
 ## Fitness = mass model
-m_size <- aov(data = d, size_relative ~ hatch_date_relative + sync_fish + mean_fish +
-                   hatch_date_relative*sync_fish +
-                   hatch_date_relative*mean_fish +
+m_size <- aov(data = d, size_relative ~ hatch_percentile + sync_fish + mean_fish +
+                   hatch_percentile*sync_fish +
+                   hatch_percentile*mean_fish +
                    sync_fish*mean_fish +
-                   hatch_date_relative*sync_fish*mean_fish)
+                   hatch_percentile*sync_fish*mean_fish)
 print(summary(m_size))
 coef(m_size)
 
 ## Fitness = survival model
-m_surv <- aov(data = d, meta ~ hatch_date_relative + sync_fish + mean_fish +
-                   hatch_date_relative*sync_fish +
-                   hatch_date_relative*mean_fish +
+m_surv <- aov(data = d, meta ~ hatch_percentile + sync_fish + mean_fish +
+                   hatch_percentile*sync_fish +
+                   hatch_percentile*mean_fish +
                    sync_fish*mean_fish +
-                   hatch_date_relative*sync_fish*mean_fish)
+                   hatch_percentile*sync_fish*mean_fish,
+              family=binomial(link="logit"))
 print(summary(m_surv))
 coef(m_surv)
 

@@ -1,0 +1,136 @@
+---
+title: "Netlogo to R Pipeline: Resource Competition"
+author: "Shannon Carter"
+date: "March 11, 2019"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: united
+    highlight: tango 
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = F}
+knitr::opts_chunk$set(echo = T, warning = F, message = F)
+
+## Set working directory and clear memory
+setwd("/Users/shannoncarter/Desktop/GitHub_Repos/phenology-abm")
+rm(list = ls(all = T))
+
+## Load required packages
+library(tidyverse)
+library(lme4)
+
+## Load universal plotting elements
+mytheme <-   theme_bw(base_size = 15, base_family = "Trebuchet MS") +
+  theme(legend.text = element_text(size = 10),
+        legend.title = element_text(size = 11),
+        text = element_text(size = 14),
+        axis.title = element_text(size = 12),
+        axis.text  = element_text(size = 10, family = "Andale Mono"),
+        panel.grid = element_blank())
+```
+
+# Load Data
+This has already been processed and cleaned in another script. This data has one row per individual and gives info on treatment parameters (11 levels of synchrony, 3 mean treatments), results of the simulation (number of survivors, biomass), and stats for the individual (hatching date, survival status, development time, final size).
+
+```{r setup, echo = F, include = F}
+
+# Processing to creat these dfs is done below, but can load these if working w same BS
+ind <- read.csv("ind2sp.csv", header = T)
+head(ind, 10)
+
+```
+
+# Survival Model
+
+## Prepare data
+
+Essentially, pool replicate treatments, filter for focal species, and calcuate standardized metrics for each treatment.
+
+```{r}
+## Prepare data
+survival_model_data <- ind %>% 
+  # remove run_num to pool all replicates of a treatment. also remove others we don't need
+  select(-c(X, run_num, biom_fish, biom_dfly, biom_tot, end_date, growth_rate, id, sync_dfly, mean_dfly)) %>% 
+  # "fish" is focal species that we manipulated
+  filter(sp == "f") %>% 
+  # only a few of these... I think the simulation ended before they "hatched"
+  filter(!is.na(max_size)) %>% 
+  # group by treatment to do the relativazation calculations
+  group_by(sync_fish, mean_fish) %>% 
+  # standardize arrival date for each treatment combination
+  mutate(trt_max_hatch_date = max(hatch_date),
+         trt_min_hatch_date = min(hatch_date),
+         trt_mean_hatch_date = mean(hatch_date),
+         hatch_percentile = round((hatch_date - trt_mean_hatch_date)/(trt_max_hatch_date - trt_min_hatch_date), 3))
+
+head(survival_model_data, 10)
+```
+
+## Model
+
+Logistic regression model with survival as a binary outcome
+
+```{r}
+## Fitness = survival model
+m_surv <- glm(data = survival_model_data, meta ~ hatch_percentile + sync_fish + mean_fish +
+                   hatch_percentile*sync_fish +
+                   hatch_percentile*mean_fish +
+                   sync_fish*mean_fish +
+                   hatch_percentile*sync_fish*mean_fish,
+              family=binomial(link="logit"))
+print(summary(m_surv))
+coef(m_surv)
+```
+
+
+# Mass Model
+
+## Prepare data
+
+Almost the same as before, except we also filter out individuals that did not survive, and calculate relative size in each treatment
+
+```{r}
+## Prepare data
+size_model_data <- ind %>% 
+  # remove run_num to pool all replicates of a treatment. also remove others we don't need
+  select(-c(X, run_num, biom_fish, biom_dfly, biom_tot, end_date, growth_rate, id, sync_dfly, mean_dfly)) %>% 
+  # "fish" is focal species that we manipulated
+  filter(sp == "f") %>% 
+  # filter only those that survived
+  filter(meta == 1) %>% 
+  # only a few of these... I think the simulation ended before they "hatched"
+  filter(!is.na(max_size)) %>% 
+  # group by treatment to do the relativazation calculations
+  group_by(sync_fish, mean_fish) %>% 
+  # standardize fitness by dividing mass by treatment mean
+  mutate(size_relative = max_size / mean(max_size)) %>% 
+  # standardize arrival date for each treatment combination
+  mutate(trt_max_hatch_date = max(hatch_date),
+         trt_min_hatch_date = min(hatch_date),
+         trt_mean_hatch_date = mean(hatch_date),
+         hatch_percentile = round((hatch_date - trt_mean_hatch_date)/(trt_max_hatch_date - trt_min_hatch_date), 3))
+
+head(size_model_data, 10)
+
+# View distribution of final sizes - pretty normal
+ggplot(size_model_data, aes(x = size_relative)) + geom_histogram()
+
+```
+
+```{r}
+## Fitness = mass model
+m_size <- glm(data = size_model_data, 
+              size_relative ~
+                hatch_percentile + sync_fish + mean_fish +
+                hatch_percentile*sync_fish +
+                hatch_percentile*mean_fish +
+                sync_fish*mean_fish +
+                hatch_percentile*sync_fish*mean_fish)
+print(summary(m_size))
+coef(m_size)
+```
+

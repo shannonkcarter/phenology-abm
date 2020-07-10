@@ -571,7 +571,7 @@ fig6
 ```{r}
 ## Prepare data
 
-d <- ind %>% 
+survival_model_data <- ind %>% 
   # remove run_num to pool all replicates of a treatment. also remove others we don't need
   select(-c(X, run_num, biom_fish, biom_dfly, biom_tot, end_date, growth_rate, id, sync_dfly, mean_dfly)) %>% 
   # "fish" is focal species that we manipulated
@@ -588,17 +588,8 @@ d <- ind %>%
          trt_mean_hatch_date = mean(hatch_date),
          hatch_percentile = round((hatch_date - trt_mean_hatch_date)/(trt_max_hatch_date - trt_min_hatch_date), 3))
 
-## Fitness = mass model
-m_size <- aov(data = d, size_relative ~ hatch_percentile + sync_fish + mean_fish +
-                   hatch_percentile*sync_fish +
-                   hatch_percentile*mean_fish +
-                   sync_fish*mean_fish +
-                   hatch_percentile*sync_fish*mean_fish)
-print(summary(m_size))
-coef(m_size)
-
 ## Fitness = survival model
-m_surv <- aov(data = d, meta ~ hatch_percentile + sync_fish + mean_fish +
+m_surv <- aov(data = survival_model_data, meta ~ hatch_percentile + sync_fish + mean_fish +
                    hatch_percentile*sync_fish +
                    hatch_percentile*mean_fish +
                    sync_fish*mean_fish +
@@ -607,6 +598,40 @@ m_surv <- aov(data = d, meta ~ hatch_percentile + sync_fish + mean_fish +
 print(summary(m_surv))
 coef(m_surv)
 
+## Prepare data
+size_model_data <- ind %>% 
+  # remove run_num to pool all replicates of a treatment. also remove others we don't need
+  select(-c(X, run_num, biom_fish, biom_dfly, biom_tot, end_date, growth_rate, id, sync_dfly, mean_dfly)) %>% 
+  # "fish" is focal species that we manipulated
+  filter(sp == "f") %>% 
+  # filter only those that survived
+  filter(meta == 1) %>% 
+  # don't really know what these are... I think maybe the simulation ended before they "hatched"
+  filter(!is.na(max_size)) %>% 
+  # group by treatment to do the relativazation calculations
+  group_by(sync_fish, mean_fish) %>% 
+  # relativize fitness (is this right? nothing happens for survival which is binary right?)
+  mutate(size_relative = max_size / mean(max_size)) %>% 
+  # standardize arrival date for each treatment combination
+  mutate(trt_max_hatch_date = max(hatch_date),
+         trt_min_hatch_date = min(hatch_date),
+         trt_mean_hatch_date = mean(hatch_date),
+         hatch_percentile = round((hatch_date - trt_mean_hatch_date)/(trt_max_hatch_date - trt_min_hatch_date), 3))
+
+# View distribution of final sizes
+# pretty normal
+ggplot(size_model_data, aes(x = size_relative)) + geom_histogram()
+
+## Fitness = mass model
+m_size <- glm(data = size_model_data, 
+              size_relative ~
+                hatch_percentile + sync_fish + mean_fish +
+                hatch_percentile*sync_fish +
+                hatch_percentile*mean_fish +
+                sync_fish*mean_fish +
+                hatch_percentile*sync_fish*mean_fish)
+print(summary(m_size))
+coef(m_size)
 ```
 
 

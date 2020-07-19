@@ -80,9 +80,31 @@ m_surv <- glm(data = survival_model_data, meta ~ hatch_percentile + sync_fish + 
                    hatch_percentile*mean_fish +
                    sync_fish*mean_fish +
                    hatch_percentile*sync_fish*mean_fish,
-              family=binomial(link="logit"))
-print(summary(m_surv))
+              family = binomial(link = "logit"))
+
+summary(m_surv)
 coef(m_surv)
+
+# make a data frame of individuals to add predicted survival to
+predict_df <- data.frame(hatch_percentile = survival_model_data$hatch_percentile,
+                sync_fish = survival_model_data$sync_fish,
+                mean_fish = survival_model_data$mean_fish)
+
+# calculate predicted survival + new value for each individual
+m2 <- predict_df %>% 
+  mutate(predicted_survival = predict(m_surv, type = "response")) %>% 
+  mutate(coef = predicted_survival * (1 - predicted_survival))
+
+# histogram of predicted survival
+ggplot(m2, aes(x = predicted_survival)) + geom_histogram()
+ggplot(m2, aes(x = coef)) + geom_histogram()
+
+# calculate selection coefficients -- absolute and standardized
+selection_coefficients <- m2 %>% 
+  summarize(selection_coef = mean(coef), # absolute: 0.0628
+            standardized_selection_coef = selection_coef/mean(survival_model_data$meta)) # standardized: 0.110
+
+selection_coefficients
 ```
 
 
@@ -131,8 +153,37 @@ m_size <- glm(data = size_model_data,
                 hatch_percentile*mean_fish +
                 sync_fish*mean_fish +
                 hatch_percentile*sync_fish*mean_fish)
-print(summary(m_size))
+summary(m_size)
 coef(m_size)
+```
+
+#### Plotting
+
+```{r}
+# adjust data for plotting-- remove some sync levels and put factors in order
+m2_fewsync <- m2 %>% 
+  filter(sync_fish == 3 | sync_fish == 15 | sync_fish == 27) %>% 
+  mutate(synchrony_fish = case_when(sync_fish == 3 ~ "high",
+                                    sync_fish == 15 ~ "medium",
+                                    sync_fish == 27 ~ "low")) %>% 
+  mutate(synchrony_fish = factor(synchrony_fish, levels = c("low", "medium", "high")), 
+         mean_fish = factor(mean_fish, levels = c("early", "same", "late")))
+
+ggplot(data = m2_fewsync, aes(x = hatch_percentile, y = predicted_survival, color = mean_fish, fill = mean_fish, shape = mean_fish)) +
+  geom_point() + 
+  geom_smooth() + #method = "lm", formula = y ~ poly(x, 3)) +
+  facet_wrap(~synchrony_fish) +
+  ylim(0, 1) +
+  mytheme +
+  labs(color = "relative mean arrival\nof focal species",
+       fill = "relative mean arrival\nof focal species",
+       shape = "relative mean arrival\nof focal species",
+       x = "relative hatching date",
+       y = "predicted survival") +
+  scale_color_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
+  scale_fill_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
+  scale_shape_manual(values = c(21, 24, 23))
+  
 ```
 
 # 1-Species Models
@@ -172,7 +223,7 @@ head(survival_model_data_1)
 Logistic regression model with survival as a binary outcome
 
 ```{r}
-m_surv <- glm(data = survival_model_data_1, 
+m_surv1 <- glm(data = survival_model_data_1, 
               meta ~ 
                 hatch_percentile + sync + asym +
                 hatch_percentile*sync +
@@ -180,8 +231,26 @@ m_surv <- glm(data = survival_model_data_1,
                 sync*asym +
                 hatch_percentile*sync*asym,
               family=binomial(link="logit"))
-print(summary(m_surv))
-coef(m_surv)
+print(summary(m_surv1))
+coef(m_surv1)
+
+# make a data frame of individuals to add predicted survival to
+predict_df1 <- data.frame(hatch_percentile = survival_model_data_1$hatch_percentile,
+                sync = survival_model_data_1$sync,
+                asym = survival_model_data_1$asym)
+
+# calculate predicted survival + new value for each individual
+m1 <- as_tibble(predict(m_surv1, predict_df1, type = "response")) %>% 
+  mutate(coef = value * (1 - value))
+m1 <- cbind(predict_df1, m1)
+
+# calculate selection coefficients -- absolute and standardized
+selection_coefficients_1sp <- m1 %>% 
+  summarize(selection_coef = mean(coef, na.rm = T), # absolute: 0.06667
+            standardized_selection_coef = selection_coef/mean(survival_model_data_1$meta, na.rm = T)) # standardized: 0.0889
+
+selection_coefficients_1sp
+
 ```
 
 ## Mass model
@@ -223,6 +292,36 @@ m_size_1 <- glm(data = size_model_data_1,
                 hatch_percentile*asym +
                 sync*asym +
                 hatch_percentile*sync*asym)
-print(summary(m_size_1))
+summary(m_size_1)
 coef(m_size_1)
+```
+
+#### Plotting
+
+```{r}
+# adjust data for plotting-- remove some sync levels and put factors in order
+m1_fewsync <- m1 %>% 
+  filter(sync == 3 | sync == 15 | sync == 27) %>% 
+  mutate(synchrony = case_when(sync == 3 ~ "high",
+                                    sync == 15 ~ "medium",
+                                    sync == 27 ~ "low")) %>% 
+  mutate(asymmetry = case_when(asym == 0 ~ "none", 
+                               asym == 0.5 ~ "weak",
+                               asym == 1 ~ "strong")) %>% 
+  mutate(synchrony = factor(synchrony, levels = c("low", "medium", "high")), 
+         asymmetry = factor(asymmetry, levels = c("none", "weak", "strong")))
+
+ggplot(data = m1_fewsync, aes(x = hatch_percentile, y = value, color = asymmetry, fill = asymmetry)) +
+  geom_point() + 
+  geom_smooth() + #method = "lm", formula = y ~ poly(x, 3)) +
+  facet_wrap(~synchrony) +
+  ylim(0, 1) +
+  mytheme +
+  labs(color = "competitive asymmetry",
+       fill ="competitive asymmetry",
+       x = "relative hatching date",
+       y = "predicted survival") +
+scale_color_manual(values = c("#acbab3",  "#fbd364", "#446353")) +
+  scale_fill_manual(values = c("#acbab3",  "#fbd364", "#446353")) 
+  
 ```

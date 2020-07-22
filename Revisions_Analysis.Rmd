@@ -96,11 +96,13 @@ m2 <- predict_df %>%
   mutate(coef = predicted_survival * (1 - predicted_survival))
 
 # histogram of predicted survival
-ggplot(m2, aes(x = predicted_survival)) + geom_histogram()
+ggplot(m2, aes(x = predicted_survival)) + geom_histogram() +
+  facet_grid(sync_fish ~ mean_fish)
 ggplot(m2, aes(x = coef)) + geom_histogram()
 
 # calculate selection coefficients -- absolute and standardized
 selection_coefficients <- m2 %>% 
+  group_by(sync_fish, mean_fish) %>% 
   summarize(selection_coef = mean(coef), # absolute: 0.0628
             standardized_selection_coef = selection_coef/mean(survival_model_data$meta)) # standardized: 0.110
 
@@ -163,23 +165,24 @@ coef(m_size)
 # adjust data for plotting-- remove some sync levels and put factors in order
 m2_fewsync <- m2 %>% 
   filter(sync_fish == 3 | sync_fish == 15 | sync_fish == 27) %>% 
-  mutate(synchrony_fish = case_when(sync_fish == 3 ~ "high",
-                                    sync_fish == 15 ~ "medium",
-                                    sync_fish == 27 ~ "low")) %>% 
+  mutate(synchrony_fish = case_when(sync_fish == 3 ~ "high synchrony",
+                                    sync_fish == 15 ~ "medium synchrony",
+                                    sync_fish == 27 ~ "low synchrony")) %>% 
   mutate(synchrony_fish = factor(synchrony_fish, levels = c("low", "medium", "high")), 
          mean_fish = factor(mean_fish, levels = c("early", "same", "late")))
 
-ggplot(data = m2_fewsync, aes(x = hatch_percentile, y = predicted_survival, color = mean_fish, fill = mean_fish, shape = mean_fish)) +
+# or use y predicted_survival
+ggplot(data = m2_fewsync, aes(x = hatch_percentile, y = coef, color = mean_fish, fill = mean_fish, shape = mean_fish)) +
   geom_point() + 
-  geom_smooth() + #method = "lm", formula = y ~ poly(x, 3)) +
+  geom_smooth(se = F) + #method = "lm", formula = y ~ poly(x, 3)) +
   facet_wrap(~synchrony_fish) +
-  ylim(0, 1) +
+  #ylim(0, 1) +
   mytheme +
   labs(color = "relative mean arrival\nof focal species",
        fill = "relative mean arrival\nof focal species",
        shape = "relative mean arrival\nof focal species",
        x = "relative hatching date",
-       y = "predicted survival") +
+       y = "selection coefficient") +
   scale_color_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
   scale_fill_manual(values = c("#01A08A",  "#F4AC00", "#FF2401")) +
   scale_shape_manual(values = c(21, 24, 23))
@@ -246,6 +249,7 @@ m1 <- cbind(predict_df1, m1)
 
 # calculate selection coefficients -- absolute and standardized
 selection_coefficients_1sp <- m1 %>% 
+  group_by(sync, asym) %>% 
   summarize(selection_coef = mean(coef, na.rm = T), # absolute: 0.06667
             standardized_selection_coef = selection_coef/mean(survival_model_data_1$meta, na.rm = T)) # standardized: 0.0889
 

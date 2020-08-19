@@ -210,6 +210,8 @@ Essentially, pool replicate treatments and calcuate standardized metrics for eac
 survival_model_data_1 <- ind_1 %>% 
   # remove run_num to pool all replicates of a treatment. also remove others we don't need
   select(-c(X, run_num, synchrony, asymmetry, n_surv, n_dead, biomass, mean_size, end_date, growth_time, growth_rate)) %>% 
+  # 2 individuals have an inf hatch date bc hatched after simulation ended. remove them
+  filter(hatch_date < Inf) %>% 
   # group by treatment to do the relativazation calculations
   group_by(sync, asym) %>% 
   # standardize arrival date for each treatment combination
@@ -219,6 +221,9 @@ survival_model_data_1 <- ind_1 %>%
          hatch_percentile = round((hatch_date - trt_mean_hatch_date)/(trt_max_hatch_date - trt_min_hatch_date), 3))
 
 head(survival_model_data_1)
+ggplot(survival_model_data_1, aes(x = hatch_percentile)) +
+  geom_histogram() +
+  facet_grid(sync~asym)
 ```
 
 #### Model survival
